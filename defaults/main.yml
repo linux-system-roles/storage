@@ -1,0 +1,3 @@
+---
+# defaults file for template
+this_subsystem_provider: "{{ some_default_service_or_toolset }}"

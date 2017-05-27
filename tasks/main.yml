@@ -1,0 +1,29 @@
+---
+# tasks file for template
+
+- name: Set version specific variables
+  include_vars: "{{ item }}"
+  with_first_found:
+      - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+      - "{{ ansible_distribution }}.yml"
+      - "{{ ansible_os_family }}.yml"
+      - "default.yml"
+
+- name: Install packages
+  package:
+      name: "{{ SOME_PACKAGE_NAMES_VARIABLE | default([]) }}"
+      state: present
+
+- name: Enable SUBSYSTEM service
+  service:
+      name: "{{ SUBSYSTEM_service_name }}"
+      state: started
+      enabled: yes
+
+- name: Generate /etc/SUBSYSTEM.conf
+  template:
+    src: SUBSYSTEM.conf.j2
+    dest: /etc/SUBSYSTEM.conf
+    backup: yes
+  notify: restart SUBSYSTEM
+
