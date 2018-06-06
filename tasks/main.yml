@@ -1,29 +1,49 @@
 ---
-# tasks file for template
 
-- name: Set version specific variables
-  include_vars: "{{ item }}"
-  with_first_found:
-      - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
-      - "{{ ansible_distribution }}.yml"
-      - "{{ ansible_os_family }}.yml"
-      - "default.yml"
+# TODO: Figure out how to include defaults.
+#
+#- name: Resolve the device
+#  devspec:
+#    spec: "{{ device }}"
+#  register: resolved  # resolved.device is the device node path
 
-- name: Install packages
-  package:
-      name: "{{ SOME_PACKAGE_NAMES_VARIABLE | default([]) }}"
-      state: present
+- name: Resolve disks
+  devspec:
+    spec: "{{ item }}"
+  with_items: "{{ disks }}"
+  register: resolved_disks
 
-- name: Enable SUBSYSTEM service
-  service:
-      name: "{{ SUBSYSTEM_service_name }}"
-      state: started
-      enabled: yes
+- name: Show disks
+  debug:
+    var: resolved_disks
 
-- name: Generate /etc/SUBSYSTEM.conf
-  template:
-    src: SUBSYSTEM.conf.j2
-    dest: /etc/SUBSYSTEM.conf
-    backup: yes
-  notify: restart SUBSYSTEM
+- name: Create disklabels as needed
+  debug:
+    msg: "Creating {{ disklabel_type }} disklabel on {{ item.device }}"
+  when: use_partitions and device_type != 'disk'
+  with_items: "{{ resolved_disks.results }}"
+
+# See if the vg exists.
+#   If so, see if the lv exists.
+#     If so, move on to encryption and fs.
+#     Else create it.
+#   Else create pv(s), then vg.
+#
+# TODO: Figure out how to get the name of the new partition.
+# TODO: Figure out how to determine partition disk(s) and size(s).
+- name: Create partition if needed
+  debug:
+    msg: "Creating partition of size {{ size }} on {{ resolved_disks.results[0]['device'] }}"
+  when: (use_partitions and device_type != 'disk') or device_type == "partition"
+
+- name: Create filesystem as needed
+  debug:
+    msg: "Creating {{ fs_type }}"
+  when: fs_type != ""
+
+# Set up the mount using a stable device identifier.
+- name: Set up the mount
+  debug:
+    msg: "Adding mount entry for {{ mount_point }} using {{ mount_device_identifier }}"
+  when: mount_point != ""
 
