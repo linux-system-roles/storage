@@ -2,21 +2,6 @@
 # defaults file for template
 #storage_provider: "{{ some_default_service_or_toolset }}"
 device_type: "lvm"
-fs_type: "xfs"
-encryption: false
-compression: false
-deduplication: false
-
-partition_alignment: "optimal"  # use optimal alignment when creating partitions
-overwrite_existing_formatting: false  # clobber existing filesystems when creating new ones
-lvm_vg_size: "max"  # make new VGs as large as possible
-
-fs_label_from_name: true  # TODO: be prepared to adjust formatting to meet fs label requirements
-fs_create_options: ""
-fs_destroy_options: "-af"
----
-
-device_type: "lvm"
 device_name: ""  # this can be UUID=<uuid>, /dev/disk/by-*, &c if existing
 size: "100%"
 disks: []  # use the first unused disk by default, can be /dev/disk/by-*
@@ -36,17 +21,21 @@ mount_check: 0
 mount_passno: 0
 mount_device_identifier: "uuid"  # uuid|label
 
-# encryption
-# should these be namespaced under 'luks' instead?
-encryption: false
-encryption_key_size: ""
-encryption_key_file: ""
-encryption_passphrase: ""
-encryption_cipher: ""
+# luks encryption
+luks: false
+luks_key_size: ""
+luks_key_file: ""
+luks_passphrase: ""
+luks_cipher: ""
+luks_version: 1
 
-# data optimization
-compression: false
-deduplication: true
+# vdo data optimization
+vdo: false
+vdo_compression: true
+vdo_deduplication: true
+vdo_logical_size: ""
+vdo_write_policy: ""
+vdo_emulate_512: false
 
 # raid
 # chunk_size and spares might be md-specific, so should they
