@@ -19,7 +19,8 @@ mount_point: ""
 mount_options: ""
 mount_check: 0
 mount_passno: 0
-mount_device_identifier: "uuid"  # uuid|label
+mount_state: "present"
+mount_device_identifier: "uuid"  # uuid|label|user
 
 # luks encryption
 luks: false
@@ -55,7 +56,7 @@ partition_flags: []
 
 # lvm
 lvm_type: "linear"
-lvm_vg: ""
+lvm_vg: ""  # TODO: Select a good default. Hostname?
 lvm_vg_size: "max"
 lvm_pool: ""
 # Can the below be handled via generic 'lv_options' and 'vg_options'?

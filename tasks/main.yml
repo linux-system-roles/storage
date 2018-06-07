@@ -1,6 +1,8 @@
 ---
 
-# TODO: Figure out how to include defaults.
+# TODO: Argument validation.
+# TODO: Figure out how to update defaults as needed based on args, eg: lv name from mount point
+
 #
 #- name: Resolve the device
 #  devspec:
@@ -19,7 +21,7 @@
 
 - name: Create disklabels as needed
   debug:
-    msg: "Creating {{ disklabel_type }} disklabel on {{ item.device }}"
+    msg: "Creating {{ partition_table_type }} partition table on {{ item.device }}"
   when: use_partitions and device_type != 'disk'
   with_items: "{{ resolved_disks.results }}"
 
@@ -36,14 +38,47 @@
     msg: "Creating partition of size {{ size }} on {{ resolved_disks.results[0]['device'] }}"
   when: (use_partitions and device_type != 'disk') or device_type == "partition"
 
-- name: Create filesystem as needed
+# TODO: Make sure lvm_vg is defined and non-empty.
+- name: Make sure VG exists if needed
+  lvg:
+    vg: "{{ lvm_vg }}"
+    pvs: "{{resolved_disks.results|join(',', attribute='device')}}"
+    pesize: "{{ lvm_extent_size }}"
+  when: device_type == "lvm" and false
+
+- name: Make sure VG exists
   debug:
-    msg: "Creating {{ fs_type }}"
+    msg: "running lvg with name {{ lvm_vg }} and pvs [{{resolved_disks.results|join(',', attribute='device')}}]"
+  when: device_type == "lvm"
+
+- name: Make sure LV exists
+  #lvol:
+  #  lv: "{{ device_name }}"
+  #  vg: "{{ lvm_vg }}"
+  debug:
+    msg: "running lvol with name {{ device_name }} and size {{ size }} in vg {{ lvm_vg }}"
+  when: device_type == "lvm"
+
+# TODO: Get the device node path. Could be disk, partition, luks, lvm, md, vdo.
+
+- name: Create filesystem as needed
+  #filesystem:
+  #  dev: "{{device}}"
+  #  fstype: "{{ fs_type }}"
+  #  opts: "{{ fs_create_options }}"
+  debug:
+    msg: "Creating {{ fs_type }} on {{ device_name }}"
   when: fs_type != ""
 
 # Set up the mount using a stable device identifier.
 - name: Set up the mount
+  #mount:
+  #  src: "{{ device }}"
+  #  path: "{{ mount_point }}"
+  #  fstype: "{{ fs_type }}"
+  #  opts: "{{ mount_options }}"
+  #  state: "{{ mount_state }}"
   debug:
-    msg: "Adding mount entry for {{ mount_point }} using {{ mount_device_identifier }}"
+    msg: "Adding mount entry for {{ device_name }} on {{ mount_point }} as {{ fs_type }} using {{ mount_device_identifier }}"
   when: mount_point != ""
 
