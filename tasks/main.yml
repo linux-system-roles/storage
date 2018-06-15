@@ -5,12 +5,12 @@
 
 #
 #- name: Resolve the device
-#  devspec:
+#  resolve_blockdev:
 #    spec: "{{ device }}"
 #  register: resolved  # resolved.device is the device node path
 
 - name: Resolve disks
-  devspec:
+  resolve_blockdev:
     spec: "{{ item }}"
   with_items: "{{ disks }}"
   register: resolved_disks
