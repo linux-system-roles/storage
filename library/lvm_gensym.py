@@ -58,7 +58,7 @@ lv_name:
 
 
 def get_os_name():
-    """Searches the hosts /etc/os-release file and outputs the name in the ID column"""
+    """Search the host file and return the name in the ID column"""
     for line in open('/etc/os-release').readlines():
         if not line.find('ID='):
             os_name = line[3:]
@@ -68,16 +68,14 @@ def get_os_name():
     return os_name
 
 def name_is_unique(name, used_names):
-    """Given a string input and a list of strings, function returns a boolean value based on whether
-       that item exists in the used_names lists"""
+    """Check if name is contained in the used_names list and return boolean value"""
     if name not in used_names:
         return True
 
     return False
 
 def get_unique_name_from_base(base_name, used_names):
-    """Determines if base_name input is contained in used_names. If true, it concats a counter to the end, and continues testing.
-       Else, returns the unique name"""
+    """Generate a unique name given a base name and a list of used names, and return that unique name"""
     counter = 0
     while not name_is_unique(base_name, used_names):
         if counter == 0:
@@ -90,7 +88,7 @@ def get_unique_name_from_base(base_name, used_names):
 
 
 def get_vg_name_base(host_name, os_name):
-    """This method generates and returns a base volume group name based on string parameters"""
+    """Return a base name for a volume group based on the host and os names"""
     if host_name != None and len(host_name) != 0:
         vg_default = os_name + '_' + host_name
     else:
@@ -100,7 +98,7 @@ def get_vg_name_base(host_name, os_name):
 
 
 def get_vg_name(host_name, lvm_facts):
-    """Generates a unique volume group name based on system information contained in parameters, and helper functions"""
+    """Generate a base volume group name, verify its uniqueness, and return that unique name"""
     used_vg_names = lvm_facts['vgs'].keys()
     os_name = get_os_name()
     name = get_vg_name_base(host_name, os_name)
@@ -108,7 +106,7 @@ def get_vg_name(host_name, lvm_facts):
     return get_unique_name_from_base(name, used_vg_names)
 
 def get_lv_name_base(fs_type, mount_point):
-    """This method generates and returns a base logical volume name based on file system type and mount point"""
+    """Return a logical volume base name using given parameters"""
     if 'swap' in fs_type.lower():
         lv_default = 'swap'
     elif mount_point.startswith('/'):
@@ -123,14 +121,14 @@ def get_lv_name_base(fs_type, mount_point):
 
 
 def get_lv_name(fs_type, mount_point, lvm_facts):
-    """Generates a unique logical volume name based on specified file system type, mount point, and system facts"""
+    """Return a unique logical volume name based on specified file system type, mount point, and system facts"""
     used_lv_names = lvm_facts['lvs'].keys()
     name = get_lv_name_base(fs_type, mount_point)
 
     return get_unique_name_from_base(name, used_lv_names)
 
 def run_module():
-    """Driver that handles setting up and initializing the ansible module data"""
+    """Setup and initialize all relevant ansible module data"""
     module_args = dict(
         mount=dict(type='str', required=True),
         fs_type=dict(type='str', required=True)

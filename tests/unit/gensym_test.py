@@ -25,12 +25,12 @@ lvm_facts = {'lvs': {'Home': '', 'Swap': '', 'Root': '',
             }
 
 def test_unique_base_name():
-    """Tests whether the returned name is unique using a supplied list of test names"""
+    """Test whether the returned name is unique using a supplied list of test names"""
     assert get_unique_name_from_base('root', used_lv_names) == 'root_4'
     assert get_unique_name_from_base('rhel_user', test_vg_names) == 'rhel_user_4'
 
 def test_return_val():
-    """Verifies that a supplied unique name and a list of used names, returns True"""
+    """Verify that a supplied unique name and a list of used names returns True"""
     for (index, name) in enumerate(test_vg_names):
         assert name_is_unique(name[index], used_vg_names)
 
