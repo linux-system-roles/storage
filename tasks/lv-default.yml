@@ -1,0 +1,10 @@
+---
+- name: Make sure LV exists
+  lvol:
+    lv: "{{ device_name }}"
+    vg: "{{ lvm_vg }}"
+    size: "{{ size }}"
+    state: "{{ state }}"
+    force: yes
+    shrink: no
+  when: device_type == "lvm" and lvm_vg != ""

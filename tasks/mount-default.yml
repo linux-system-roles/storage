@@ -1,0 +1,29 @@
+---
+- name: Stat the final device file
+  include_tasks: stat_device.yml
+
+# TODO: set the mount device identifier correctly
+- set_fact:
+    mount_device_id: "{{ device_path }}"
+  when: mount_device_identifier == "path"
+
+- name: Collect file system UUID
+  block:
+    - shell: blkid -s UUID -o value {{ device_path }}
+      register: blkid_output
+    - set_fact:
+        mount_device_id: "UUID=\"{{ blkid_output.stdout }}\""
+  rescue:
+    - set_fact:
+        mount_device_id: "{{ device_path }}"
+  when: mount_device_identifier == "uuid" and device_status.stat.exists
+
+# Set up the mount using a stable device identifier.
+- name: Set up the mount
+  mount:
+    src: "{{ device_path }}"
+    path: "{{ mount_point }}"
+    fstype: "{{ fs_type }}"
+    opts: "{{ mount_options }}"
+    state: "{{ state }}"
+  when: mount_point != "" and device_path != ""
