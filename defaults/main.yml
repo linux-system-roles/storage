@@ -3,7 +3,7 @@
 #storage_provider: "{{ some_default_service_or_toolset }}"
 device_type: "lvm"
 device_name: ""  # this can be UUID=<uuid>, /dev/disk/by-*, &c if existing
-size: "100%"
+size: "100%FREE"
 disks: []  # use the first unused disk by default, can be /dev/disk/by-*
 use_partitions: false
 
@@ -16,10 +16,10 @@ fs_overwrite_existing: true
 
 # mount
 mount_point: ""
-mount_options: ""
+mount_options: "defaults"
 mount_check: 0
 mount_passno: 0
-mount_state: "present"
+mount_state: "mounted"
 mount_device_identifier: "uuid"  # uuid|label|user
 
 # luks encryption
@@ -57,7 +57,7 @@ partition_flags: []
 # lvm
 lvm_type: "linear"
 lvm_vg: ""  # TODO: Select a good default. Hostname?
-lvm_vg_size: "max"
+lvm_vg_size: "max"  # "max", "min", or eg: "50G"
 lvm_pool: ""
 # Can the below be handled via generic 'lv_options' and 'vg_options'?
 #lvm_origin: ""
