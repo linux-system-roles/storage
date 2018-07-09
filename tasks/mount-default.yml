@@ -36,5 +36,5 @@
     path: "{{ mount_point }}"
     fstype: "{{ fs_type }}"
     opts: "{{ mount_options }}"
-    state: "{{ state }}"
+    state: "{{ mount_state }}"
   when: mount_point != "" and device_path != ""
