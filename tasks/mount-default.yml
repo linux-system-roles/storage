@@ -18,6 +18,17 @@
         mount_device_id: "{{ device_path }}"
   when: mount_device_identifier == "uuid" and device_status.stat.exists
 
+#
+# Activate configured mounts.
+#
+- set_fact:
+    mount_state: "{{ state }}"
+  when: state != "present"
+
+- set_fact:
+    mount_state: "mounted"
+  when: state == "present"
+
 # Set up the mount using a stable device identifier.
 - name: Set up the mount
   mount:
