@@ -43,12 +43,12 @@
   when: device_type == "lvm" and state == "absent"
 
 - set_fact:
-    remove_vg: lvs_cmd.stdout == ""
-  when: device_type == "lvm" and state == "absent" and not ansible_check_mode
-
-- set_fact:
     remove_vg: false
   when: device_type != "lvm" or state == "present" or ansible_check_mode
+
+- set_fact:
+    remove_vg: true
+  when: device_type == "lvm" and state == "absent" and not ansible_check_mode and lvs_cmd.stdout == ""
 
 #
 # Configure the VG
@@ -66,8 +66,12 @@
   when: device_type == "lvm" and lvm_vg != "" and (state == "present" or remove_vg)
 
 - name: Wipe VG metadata as needed
-  shell: pvremove {{ pv_path }}
-  with_items: "{{ pvs }}"
-  loop_control:
-    loop_var: pv_path
+  block:
+   - shell: pvremove {{ pv_path }}
+     with_items: "{{ pvs }}"
+     loop_control:
+       loop_var: pv_path
+  rescue:
+    - debug:
+        msg: "Failed to wipe pv signatures."
   when: remove_vg
