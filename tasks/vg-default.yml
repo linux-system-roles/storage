@@ -44,7 +44,6 @@
 
 - set_fact:
     remove_vg: false
-  when: device_type != "lvm" or state == "present" or ansible_check_mode
 
 - set_fact:
     remove_vg: true
