@@ -1,0 +1,76 @@
+---
+#
+# Set the list of PV devices.
+#
+# TODO: Decide on semantics. Playbook PV specs should probably be complete to enable idempotency.
+#
+- name: Get current PVs
+  block:
+    - shell: pvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
+      register: pvs_cmd
+      become: true
+  rescue:
+    - debug:
+        msg: "Failed to run pvs"
+  when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
+
+- set_fact:
+    pvs: "{{ disk_paths }}"
+  when: device_type == "lvm"
+
+- set_fact:
+    pvs: "{{ pvs_cmd.stdout.split() }}"
+  when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
+
+- set_fact:
+    pvs: "{{ pvs|unique }}"
+  when: device_type == "lvm"
+
+
+#
+# Get list of LVs.
+#
+# We will only remove VG if there are no more LVs and state is "absent".
+#
+- name: Get current LVs
+  block:
+    - shell: lvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
+      register: lvs_cmd
+      become: true
+  rescue:
+    - debug:
+        msg: "Failed to run lvs"
+  when: device_type == "lvm" and state == "absent"
+
+- set_fact:
+    remove_vg: false
+
+- set_fact:
+    remove_vg: true
+  when: device_type == "lvm" and state == "absent" and not ansible_check_mode and lvs_cmd.stdout == ""
+
+#
+# Configure the VG
+#
+- name: Make sure VG exists if needed
+  block:
+    - lvg:
+        vg: "{{ lvm_vg }}"
+        pvs: "{{ pvs }}"
+        #pesize: "{{ lvm_extent_size }}"
+        state: "{{ state }}"
+  rescue:
+    - debug:
+        msg: "Failed to configure vg"
+  when: device_type == "lvm" and lvm_vg != "" and (state == "present" or remove_vg)
+
+- name: Wipe VG metadata as needed
+  block:
+   - shell: pvremove {{ pv_path }}
+     with_items: "{{ pvs }}"
+     loop_control:
+       loop_var: pv_path
+  rescue:
+    - debug:
+        msg: "Failed to wipe pv signatures."
+  when: remove_vg

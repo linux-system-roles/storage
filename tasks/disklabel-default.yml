@@ -1,0 +1,11 @@
+---
+
+# TODO: Choose a disklabel type based on platform and disk size.
+#
+- name: Create disklabels as needed
+  parted:
+    device: "{{ item }}"
+    label: "gpt"
+    state: "{{ state }}"
+  when: use_partitions and device_type != 'disk'
+  with_items: "{{ disk_paths }}"

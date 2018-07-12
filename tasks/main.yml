@@ -1,84 +1,60 @@
 ---
 
 # TODO: Argument validation.
-# TODO: Figure out how to update defaults as needed based on args, eg: lv name from mount point
+#
+# TODO: Set defaults as needed: lvm_vg, device_name, disks
 
 #
-#- name: Resolve the device
-#  resolve_blockdev:
-#    spec: "{{ device }}"
-#  register: resolved  # resolved.device is the device node path
-
+# Resolve specified disks to device node paths.
+#
 - name: Resolve disks
   resolve_blockdev:
     spec: "{{ item }}"
   with_items: "{{ disks }}"
   register: resolved_disks
 
+- debug: var=resolved_disks
+
+- set_fact:
+    disk_paths: "{{ resolved_disks.results|map(attribute='device')|list }}"
+
 - name: Show disks
   debug:
-    var: resolved_disks
+    var: disk_paths
 
-- name: Create disklabels as needed
-  debug:
-    msg: "Creating {{ partition_table_type }} partition table on {{ item.device }}"
-  when: use_partitions and device_type != 'disk'
-  with_items: "{{ resolved_disks.results }}"
-
-# See if the vg exists.
-#   If so, see if the lv exists.
-#     If so, move on to encryption and fs.
-#     Else create it.
-#   Else create pv(s), then vg.
 #
-# TODO: Figure out how to get the name of the new partition.
-# TODO: Figure out how to determine partition disk(s) and size(s).
-- name: Create partition if needed
-  debug:
-    msg: "Creating partition of size {{ size }} on {{ resolved_disks.results[0]['device'] }}"
-  when: (use_partitions and device_type != 'disk') or device_type == "partition"
+# Set the path for the final device based on device type.
+#
+- set_fact:
+    device_path: "{{ disk_paths[0] }}"
+  when: device_type == "disk"
 
-# TODO: Make sure lvm_vg is defined and non-empty.
-- name: Make sure VG exists if needed
-  lvg:
-    vg: "{{ lvm_vg }}"
-    pvs: "{{resolved_disks.results|join(',', attribute='device')}}"
-    pesize: "{{ lvm_extent_size }}"
-  when: device_type == "lvm" and false
-
-- name: Make sure VG exists
-  debug:
-    msg: "running lvg with name {{ lvm_vg }} and pvs [{{resolved_disks.results|join(',', attribute='device')}}]"
+- set_fact:
+    device_path: "/dev/mapper/{{ lvm_vg }}-{{ device_name }}"
   when: device_type == "lvm"
 
-- name: Make sure LV exists
-  #lvol:
-  #  lv: "{{ device_name }}"
-  #  vg: "{{ lvm_vg }}"
-  debug:
-    msg: "running lvol with name {{ device_name }} and size {{ size }} in vg {{ lvm_vg }}"
-  when: device_type == "lvm"
+- debug: var=device_path
 
-# TODO: Get the device node path. Could be disk, partition, luks, lvm, md, vdo.
 
-- name: Create filesystem as needed
-  #filesystem:
-  #  dev: "{{device}}"
-  #  fstype: "{{ fs_type }}"
-  #  opts: "{{ fs_create_options }}"
-  debug:
-    msg: "Creating {{ fs_type }} on {{ device_name }}"
-  when: fs_type != ""
+- name: Remove the Specified Storage Volume
+  include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
+  with_items: "{{ storage_layers[::-1] }}"
+  loop_control:
+    loop_var: layer
+  when: state == "absent"
 
-# Set up the mount using a stable device identifier.
-- name: Set up the mount
-  #mount:
-  #  src: "{{ device }}"
-  #  path: "{{ mount_point }}"
-  #  fstype: "{{ fs_type }}"
-  #  opts: "{{ mount_options }}"
-  #  state: "{{ mount_state }}"
-  debug:
-    msg: "Adding mount entry for {{ device_name }} on {{ mount_point }} as {{ fs_type }} using {{ mount_device_identifier }}"
-  when: mount_point != ""
 
+- name: Configure the Specified Storage Volume
+  include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
+  with_items: "{{ storage_layers }}"
+  loop_control:
+    loop_var: layer
+  when: state == "present"
+
+#
+# Update facts since we may have changed system state.
+#
+# Should this be in a handler instead?
+#
+- name: Update facts
+  setup:
