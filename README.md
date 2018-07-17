@@ -1,50 +1,53 @@
-storage
-=======
+Linux Storage Role
+==================
 
-A role to manage storage on linux.
+This role allows users to configure local storage with minimal input.
 
-To Do
------
+As of now, the role supports managing file systems and mount entries on
+- unpartitioned disks
+- lvm (unpartitioned whole-disk physical volumes only)
 
-- decide delivery phases
-  - partitions, lvm (linear), filesystem, mount
-  - encryption, vdo, md, lvm (thin, cache, raid)
-- module selection logic (action plugin?)
-- individual roles/tasks for disk, partition, volgroup, logvol, etc.?
-- top-level role
-- tags for task filtering
-- bundled module(s)?
-  - resolve device
-  - size units
-    - read sizes, eg: 10G, 500m, 500GiB
-    - format size strings for use by lvm, parted
-  - partition specs based on final device size
-- install required packages as needed
-  - util-linux, parted, xfsprogs, e2fsprogs, lvm2, cryptsetup, vdo-manager, mdadm
-- augment existing storage facts
-  - even 'lsblk -J' would be a modest improvement over current hand-rolled sysfs bundling
-
-
-Requirements
-------------
-
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+#### `device_type`
+The `device_type` specifies the type of device on which the file system will reside.
+Valid values for `device_type`: `lvm`(the default) or `disk`.
 
-```yaml
-some_feature:
-  option: foo
-  location: /tmp/bar
-```
+#### `disks`
+The `disks` specifies the set of disks to use as backing storage for the file system.
+This is relevant for all values of `device_type`.
 
-Dependencies
-------------
+#### `size`
+The `size` specifies the size of the file system. The format for this is intended to
+be human-readable, eg: "10g", "50 GiB", or "100%" (use all available space on the
+specified disks).
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+#### `device_name`
+The `device_name` specifies the name of the block device. This is only applicable
+for values of `device_type` that allow user-specified names, such as `lvm`.
+
+#### `fs_type`
+The `fs_type` indicates the desired file system type to use, eg: "xfs"(the default),
+"ext4", "swap".
+
+#### `fs_label`
+The `fs_label` is a string to be used for a file system label.
+
+#### `fs_create_options`
+The `fs_create_options` specifies custom arguments to `mkfs` as a string.
+
+#### `mount_point`
+The `mount_point` specifies the directory on which the file system will be mounted.
+
+#### `mount_options`
+The `mount_options` specifies custom mount options as a string, eg: 'ro'.
+
+#### `lvm_vg`
+The `lvm_vg` specifies the name of the LVM volume group to manage/create as a
+string.
+
 
 Example Playbook
 ----------------
@@ -52,43 +55,42 @@ Example Playbook
 ```yaml
 
 ---
-
 - hosts: all
 
-  roles:
-    - storage:
-      name: shared
-      size: 100g
-      #type: lvm
-      disks: {{ app_data_wwns }}
-      #fs_type: xfs
-      fs_mount_point: {{ app_root }}/shared
-      lvm_vg_name: {{ app_name }}
-      state: present
+  tasks:
+    - include_role:
+        name: storage
+      vars:
+        device_name: "shared"
+        size: "100g"
+        #device_type: lvm
+        disks: "{{ app_data_wwns }}"
+        #fs_type: "xfs"
+        mount_point: "{{ app_root }}/shared"
+        lvm_vg: "{{ app_name }}"
+        state: present
 
-    - storage:
-      name: users
-      size: 400g
-      luks: true
-      luks_key_file: {{ luks_key_file }}
-      fs_mount_point: {{ app_root }}/users
-      state: present
+    - include_role:
+        name: storage
+      vars:
+        device_name: "users"
+        size: "400g"
+        disks: "{{ app_data_wwns }}"
+        fs_type: "ext4"
+        fs_mount_point: {{ app_root }}/users
+        lvm_vg: "{{ app_name }}"
+        state: present
 
-    - storage:
-      name: virt_images
-      disks: [ {{ ansible_devices.unused_disks[0] }} ]  # unused_disks doesn't exist yet
-      vdo: true
-      fs_mount_point: {{ virt_root }}/img/
-      state: present
-
+    - include_role:
+        name: storage
+      vars:
+        disks: ["mpathc"]
+        mount_point: "/opt/images"
+        fs_label: "images"
 ```
+
 
 License
 -------
 
-assign accordingly, default GPLv3
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+GPLv3
