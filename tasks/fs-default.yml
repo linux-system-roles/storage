@@ -2,6 +2,24 @@
 - name: Stat the final device file
   include_tasks: stat_device.yml
 
+- name: Install xfsprogs for xfs file system type
+  package:
+    name: xfsprogs
+    state: present
+  when: fs_type == "xfs"
+
+- name: Install e2fsprogs for ext file system type
+  package:
+    name: e2fsprogs
+    state: present
+  when: fs_type == "ext2" or fs_type == "ext3" or fs_type == "ext4"
+
+- name: Install util-linux as needed
+  package:
+    name: util-linux
+    state: present
+  when: fs_type == "swap" or state == "absent"
+
 - name: Remove file system as needed
   shell: wipefs {{ fs_destroy_options }} {{ device_path }}
   when: fs_type == "" or state == "absent" and device_status.stat.exists

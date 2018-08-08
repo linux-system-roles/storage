@@ -1,4 +1,10 @@
 ---
+- name: Install LVM2 commands as needed
+  package:
+    name: lvm2
+    state: present
+  when: device_type == "lvm"
+
 - name: Make sure LV exists
   lvol:
     lv: "{{ device_name }}"

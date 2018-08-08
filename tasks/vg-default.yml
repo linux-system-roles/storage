@@ -4,6 +4,12 @@
 #
 # TODO: Decide on semantics. Playbook PV specs should probably be complete to enable idempotency.
 #
+- name: Install LVM2 commmands as needed
+  package:
+    name: lvm2
+    state: present
+  when: device_type == "lvm"
+  
 - name: Get current PVs
   block:
     - shell: pvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
