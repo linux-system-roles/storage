@@ -6,7 +6,7 @@
   package:
     name: xfsprogs
     state: present
-  when: fs_type == "xfs"
+  when: fs_type == "xfs" and not ansible_check_mode
 
 - name: Install e2fsprogs for ext file system type
   package:
@@ -22,7 +22,7 @@
 
 - name: Remove file system as needed
   command: wipefs {{ fs_destroy_options }} {{ device_path }}
-  when: not fs_type or state == "absent" and device_status.stat.exists
+  when: not fs_type or state == "absent" and device_status.stat.exists and not ansible_check_mode
 
 - name: Create filesystem as needed
   filesystem:

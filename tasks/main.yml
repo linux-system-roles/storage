@@ -62,3 +62,4 @@
 #
 - name: Update facts
   setup:
+  when: not ansible_check_mode

@@ -16,7 +16,7 @@
       set_fact:
         mount_device_id: "UUID=\"{{ blkid_output.stdout }}\""
   rescue:
-  when: mount_device_identifier == "uuid" and device_status.stat.exists
+  when: mount_device_identifier == "uuid" and device_status.stat.exists and not ansible_check_mode
 
 #
 # Activate configured mounts.

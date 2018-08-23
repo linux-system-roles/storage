@@ -14,6 +14,7 @@
     - name: collect list of current pvs
       command: pvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
       register: pvs_cmd
+      changed_when: false
       become: true
   rescue:
     - debug:
@@ -39,6 +40,7 @@
     - name: collect list of current lvs
       command: lvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
       register: lvs_cmd
+      changed_when: false
       become: true
   rescue:
     - debug:
@@ -72,6 +74,7 @@
 - block:
    - name: wipe pvs
      command: pvremove {{ pv_path }}
+     changed_when: false
      with_items: "{{ pvs }}"
      loop_control:
        loop_var: pv_path
