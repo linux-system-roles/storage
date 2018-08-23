@@ -22,7 +22,7 @@ def test_bsize():
     # accept units case insensitive, without space, convert
     assert Size("1000kilObytes").get("autodec", "%d") == "1"
 
-    # check conversion from decimal to binary 
+    # check conversion from decimal to binary
     assert Size("1048.576 KB").get("mebibytes", "%0.5f %sb") == "1.00000 MiB"
 
     # check string to bytes conversion
