@@ -1,6 +1,3 @@
-import sys
-sys.path.append('../../library')
-
 import pytest
 import find_unused_disk
 import os
