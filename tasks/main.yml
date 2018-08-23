@@ -5,6 +5,15 @@
 # TODO: Set defaults as needed: lvm_vg, device_name, disks
 
 #
+# Validate and process the user-specified size
+#
+- name: parse the specified size
+  bsize:
+    size: "{{ size }}"
+  register: parsed_size
+  when: device_type != "disk"
+
+#
 # Resolve specified disks to device node paths.
 #
 - name: Resolve disks

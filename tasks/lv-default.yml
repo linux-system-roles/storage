@@ -9,7 +9,7 @@
   lvol:
     lv: "{{ device_name }}"
     vg: "{{ lvm_vg }}"
-    size: "{{ size }}"
+    size: "{{ parsed_size.lvm }}"
     state: "{{ state }}"
     force: yes
     shrink: no
