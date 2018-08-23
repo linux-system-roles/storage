@@ -68,10 +68,6 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
 
-    # if in check mode: do no changes just return the current state
-    if module.check_mode:
-        return result
-
     size = Size(module.params['size'])
 
     result['size'] = size.get(fmt="%d %sb")
