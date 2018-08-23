@@ -13,4 +13,4 @@
     state: "{{ state }}"
     force: yes
     shrink: no
-  when: device_type == "lvm" and lvm_vg != ""
+  when: device_type == "lvm" and lvm_vg

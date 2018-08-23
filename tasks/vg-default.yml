@@ -10,9 +10,9 @@
     state: present
   when: device_type == "lvm"
   
-- name: Get current PVs
-  block:
-    - shell: pvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
+- block:
+    - name: collect list of current pvs
+      command: pvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
       register: pvs_cmd
       become: true
   rescue:
@@ -20,27 +20,24 @@
         msg: "Failed to run pvs"
   when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
 
-- set_fact:
+- name: Set pvs based on disk set
+  set_fact:
     pvs: "{{ disk_paths }}"
   when: device_type == "lvm"
 
-- set_fact:
+- name: Set pvs from current vg
+  set_fact:
     pvs: "{{ pvs_cmd.stdout.split() }}"
   when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
-
-- set_fact:
-    pvs: "{{ pvs|unique }}"
-  when: device_type == "lvm"
-
 
 #
 # Get list of LVs.
 #
 # We will only remove VG if there are no more LVs and state is "absent".
 #
-- name: Get current LVs
-  block:
-    - shell: lvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
+- block:
+    - name: collect list of current lvs
+      command: lvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
       register: lvs_cmd
       become: true
   rescue:
@@ -48,19 +45,21 @@
         msg: "Failed to run lvs"
   when: device_type == "lvm" and state == "absent"
 
-- set_fact:
+- name: determine whether vg is being removed (1/2)
+  set_fact:
     remove_vg: false
 
-- set_fact:
+- name: determine whether vg is being removed (2/2)
+  set_fact:
     remove_vg: true
-  when: device_type == "lvm" and state == "absent" and not ansible_check_mode and lvs_cmd.stdout == ""
+  when: device_type == "lvm" and state == "absent" and not ansible_check_mode and not lvs_cmd.stdout
 
 #
 # Configure the VG
 #
-- name: Make sure VG exists if needed
-  block:
-    - lvg:
+- block:
+    - name: configure vg
+      lvg:
         vg: "{{ lvm_vg }}"
         pvs: "{{ pvs }}"
         #pesize: "{{ lvm_extent_size }}"
@@ -68,11 +67,11 @@
   rescue:
     - debug:
         msg: "Failed to configure vg"
-  when: device_type == "lvm" and lvm_vg != "" and (state == "present" or remove_vg)
+  when: device_type == "lvm" and lvm_vg and (state == "present" or remove_vg)
 
-- name: Wipe VG metadata as needed
-  block:
-   - shell: pvremove {{ pv_path }}
+- block:
+   - name: wipe pvs
+     command: pvremove {{ pv_path }}
      with_items: "{{ pvs }}"
      loop_control:
        loop_var: pv_path

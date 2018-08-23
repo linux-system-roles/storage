@@ -21,12 +21,12 @@
   when: fs_type == "swap" or state == "absent"
 
 - name: Remove file system as needed
-  shell: wipefs {{ fs_destroy_options }} {{ device_path }}
-  when: fs_type == "" or state == "absent" and device_status.stat.exists
+  command: wipefs {{ fs_destroy_options }} {{ device_path }}
+  when: not fs_type or state == "absent" and device_status.stat.exists
 
 - name: Create filesystem as needed
   filesystem:
     dev: "{{ device_path }}"
     fstype: "{{ fs_type }}"
     opts: "{{ fs_create_options }}"
-  when: fs_type != "" and state == "present" and device_status.stat.exists
+  when: fs_type and state == "present" and device_status.stat.exists

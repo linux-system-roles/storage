@@ -13,9 +13,11 @@
   with_items: "{{ disks }}"
   register: resolved_disks
 
-- debug: var=resolved_disks
+- debug:
+    var: resolved_disks
 
-- set_fact:
+- name: set list of resolved disk paths
+  set_fact:
     disk_paths: "{{ resolved_disks.results|map(attribute='device')|list }}"
 
 - name: Show disks
@@ -25,16 +27,18 @@
 #
 # Set the path for the final device based on device type.
 #
-- set_fact:
+- name: set final device path for whole disk
+  set_fact:
     device_path: "{{ disk_paths[0] }}"
   when: device_type == "disk"
 
-- set_fact:
+- name: set final device path for lv
+  set_fact:
     device_path: "/dev/mapper/{{ lvm_vg }}-{{ device_name }}"
   when: device_type == "lvm"
 
-- debug: var=device_path
-
+- debug:
+    var: device_path
 
 - name: Remove the Specified Storage Volume
   include_tasks: "{{ layer }}-{{ storage_backend }}.yml"

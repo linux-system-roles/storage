@@ -3,29 +3,31 @@
   include_tasks: stat_device.yml
 
 # TODO: set the mount device identifier correctly
-- set_fact:
+- name: set path-based device identifier to be used in /etc/fstab
+  set_fact:
     mount_device_id: "{{ device_path }}"
   when: mount_device_identifier == "path"
 
-- name: Collect file system UUID
-  block:
-    - shell: blkid -s UUID -o value {{ device_path }}
+- block:
+    - name: collect file system UUID
+      command: blkid -s UUID -o value {{ device_path }}
       register: blkid_output
-    - set_fact:
+    - name: set uuid-based device identifier to be used in /etc/fstab
+      set_fact:
         mount_device_id: "UUID=\"{{ blkid_output.stdout }}\""
   rescue:
-    - set_fact:
-        mount_device_id: "{{ device_path }}"
   when: mount_device_identifier == "uuid" and device_status.stat.exists
 
 #
 # Activate configured mounts.
 #
-- set_fact:
+- name: configure mount state (1/2)
+  set_fact:
     mount_state: "{{ state }}"
   when: state != "present"
 
-- set_fact:
+- name: configure mount state (2/2)
+  set_fact:
     mount_state: "mounted"
   when: state == "present"
 
@@ -37,4 +39,4 @@
     fstype: "{{ fs_type }}"
     opts: "{{ mount_options }}"
     state: "{{ mount_state }}"
-  when: mount_point != "" and device_path != ""
+  when: mount_point and device_path
