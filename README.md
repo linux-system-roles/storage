@@ -93,4 +93,4 @@ Example Playbook
 License
 -------
 
-GPLv3
+MIT
