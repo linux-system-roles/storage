@@ -8,28 +8,28 @@
   package:
     name: lvm2
     state: present
-  when: device_type == "lvm"
+  when: volume_type == "lvm"
   
 - block:
     - name: collect list of current pvs
-      command: pvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
+      command: pvs -o name --noheadings --select 'vg_name={{ pool_name }}'
       register: pvs_cmd
       changed_when: false
       become: true
   rescue:
     - debug:
         msg: "Failed to run pvs"
-  when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
+  when: disks == [] and volume_type == "lvm" and pool_name in ansible_facts.lvm.vgs
 
 - name: Set pvs based on disk set
   set_fact:
     pvs: "{{ disk_paths }}"
-  when: device_type == "lvm"
+  when: volume_type == "lvm"
 
 - name: Set pvs from current vg
   set_fact:
     pvs: "{{ pvs_cmd.stdout.split() }}"
-  when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
+  when: disks == [] and volume_type == "lvm" and pool_name in ansible_facts.lvm.vgs
 
 #
 # Get list of LVs.
@@ -38,14 +38,14 @@
 #
 - block:
     - name: collect list of current lvs
-      command: lvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
+      command: lvs -o name --noheadings --select 'vg_name={{ pool_name }}'
       register: lvs_cmd
       changed_when: false
       become: true
   rescue:
     - debug:
         msg: "Failed to run lvs"
-  when: device_type == "lvm" and state == "absent"
+  when: volume_type == "lvm" and state == "absent"
 
 - name: determine whether vg is being removed (1/2)
   set_fact:
@@ -54,7 +54,7 @@
 - name: determine whether vg is being removed (2/2)
   set_fact:
     remove_vg: true
-  when: device_type == "lvm" and state == "absent" and not ansible_check_mode and not lvs_cmd.stdout
+  when: volume_type == "lvm" and state == "absent" and not ansible_check_mode and not lvs_cmd.stdout
 
 #
 # Configure the VG
@@ -62,14 +62,13 @@
 - block:
     - name: configure vg
       lvg:
-        vg: "{{ lvm_vg }}"
+        vg: "{{ pool_name }}"
         pvs: "{{ pvs }}"
-        #pesize: "{{ lvm_extent_size }}"
         state: "{{ state }}"
   rescue:
     - debug:
         msg: "Failed to configure vg"
-  when: device_type == "lvm" and lvm_vg and (state == "present" or remove_vg)
+  when: volume_type == "lvm" and pool_name and (state == "present" or remove_vg)
 
 - block:
    - name: wipe pvs
