@@ -2,11 +2,9 @@
 - name: Stat the final device file
   include_tasks: stat_device.yml
 
-# TODO: set the mount device identifier correctly
 - name: set path-based device identifier to be used in /etc/fstab
   set_fact:
     mount_device_id: "{{ device_path }}"
-  when: mount_device_identifier == "path"
 
 - block:
     - name: collect file system UUID
@@ -16,27 +14,23 @@
       set_fact:
         mount_device_id: "UUID=\"{{ blkid_output.stdout }}\""
   rescue:
-  when: mount_device_identifier == "uuid" and device_status.stat.exists and not ansible_check_mode
+    - debug:
+        msg: "Failed to get UUID for {{ device_path }}; trying with device path."
+  when: volume.mount_device_identifier == "uuid" and device_status.stat.exists and not ansible_check_mode
 
 #
 # Activate configured mounts.
 #
-- name: configure mount state (1/2)
+- name: configure mount state
   set_fact:
-    mount_state: "{{ state }}"
-  when: state != "present"
-
-- name: configure mount state (2/2)
-  set_fact:
-    mount_state: "mounted"
-  when: state == "present"
+    mount_state: "{{ volume.state if volume.state == 'absent' else 'mounted' }}"
 
 # Set up the mount using a stable device identifier.
 - name: Set up the mount
   mount:
-    src: "{{ device_path }}"
-    path: "{{ mount_point }}"
-    fstype: "{{ fs_type }}"
-    opts: "{{ mount_options }}"
+    src: "{{ mount_device_id }}"
+    path: "{{ volume.mount_point }}"
+    fstype: "{{ volume.fs_type }}"
+    opts: "{{ volume.mount_options }}"
     state: "{{ mount_state }}"
-  when: mount_point and device_path
+  when: volume.mount_point and device_path

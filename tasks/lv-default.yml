@@ -3,14 +3,14 @@
   package:
     name: lvm2
     state: present
-  when: volume_type == "lvm"
+  when: volume.type == "lvm"
 
 - name: Make sure LV exists
   lvol:
-    lv: "{{ volume_name }}"
-    vg: "{{ pool_name }}"
-    size: "{{ parsed_size.lvm }}"
-    state: "{{ state }}"
+    lv: "{{ volume.name }}"
+    vg: "{{ volume.pool_name }}"
+    size: "{{ size.lvm }}"
+    state: "{{ volume.state }}"
     force: yes
     shrink: no
-  when: volume_type == "lvm" and pool_name
+  when: volume.type == "lvm" and volume.pool_name

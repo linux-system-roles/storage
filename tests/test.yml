@@ -3,34 +3,29 @@
   become: true
 
   roles:
-#    - { role: ../linux-storage-role, "disks": ["vdb"], mount_point: '/opt/test1', volume_name: 'test1', lvm_vg: 'foo', size: '5g'}
-#    - { role: ../linux-storage-role, "disks": ["vdb"], mount_point: '/opt/test2', volume_name: 'test2', lvm_vg: 'foo'}
-#    - { role: ../linux-storage-role, "disks": ["vdc"], mount_point: '/opt/test3', volume_type: 'disk'}
-  tasks:
-    - include_role:
-        name: ../linux-storage-role
-      vars:
-        volume_name: 'test1'
-        disks: ['vdb']
-        lvm_vg: 'foo'
-        mount_point: '/opt/test1'
-        size: '5g'
-        #state: 'absent'
-
-    - include_role:
-        name: ../linux-storage-role
-      vars:
-        volume_name: 'test2'
-        disks: ['vdb']
-        fs_type: 'ext4'
-        lvm_vg: 'foo'
-        mount_point: '/opt/test2'
-        #state: 'absent'
-
-    - include_role:
-        name: ../linux-storage-role
-      vars:
-        volume_type: 'disk'
-        disks: ['vdc']
-        mount_point: '/opt/test3'
-        #state: 'absent'
+    - name: storage
+      volumes:
+        - name: test1
+          size: 10g
+          mount_point: '/opt/test1'
+          pool_name: foo
+          disks: ['vdb']
+          state: "absent"
+        - name: test2
+          size: 8g
+          mount_point: /opt/test2
+          pool_name: bar
+          disks: ['vdc']
+          #state: "absent"
+        - name: test3
+          state: absent
+          size: 2g
+          mount_point: /opt/test3
+          pool_name: bar
+          disks: ['vdc']
+          #state: "absent"
+        - name: sumpin
+          state: "absent"
+          disks: ['vdd']
+          type: disk
+          mount_point: /opt/test4

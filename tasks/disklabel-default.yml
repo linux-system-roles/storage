@@ -6,12 +6,12 @@
   package:
     name: parted
     state: present
-  when: use_partitions and volume_type != 'disk'
+  when: use_partitions and volume.type != 'disk'
 
 - name: Create disklabels as needed
   parted:
     device: "{{ item }}"
     label: "gpt"
     state: "{{ state }}"
-  when: use_partitions and volume_type != 'disk'
-  with_items: "{{ disk_paths }}"
+  when: use_partitions and volume.type != 'disk'
+  loop: "{{ disks }}"

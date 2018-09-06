@@ -6,27 +6,27 @@
   package:
     name: xfsprogs
     state: present
-  when: fs_type == "xfs" and not ansible_check_mode
+  when: volume.fs_type == "xfs" and not ansible_check_mode
 
 - name: Install e2fsprogs for ext file system type
   package:
     name: e2fsprogs
     state: present
-  when: fs_type == "ext2" or fs_type == "ext3" or fs_type == "ext4"
+  when: volume.fs_type in ["ext2", "ext3", "ext4"]
 
 - name: Install util-linux as needed
   package:
     name: util-linux
     state: present
-  when: fs_type == "swap" or state == "absent"
+  when: volume.fs_type == "swap" or volume.state == "absent"
 
 - name: Remove file system as needed
-  command: wipefs {{ fs_destroy_options }} {{ device_path }}
-  when: not fs_type or state == "absent" and device_status.stat.exists and not ansible_check_mode
+  command: wipefs {{ volume.fs_destroy_options }} {{ device_path }}
+  when: (not volume.fs_type or volume.state == "absent") and device_status.stat.exists and not ansible_check_mode
 
 - name: Create filesystem as needed
   filesystem:
     dev: "{{ device_path }}"
-    fstype: "{{ fs_type }}"
-    opts: "{{ fs_create_options }}"
-  when: fs_type and state == "present" and device_status.stat.exists
+    fstype: "{{ volume.fs_type }}"
+    opts: "{{ volume.fs_create_options }}"
+  when: volume.fs_type and volume.state == "present" and device_status.stat.exists

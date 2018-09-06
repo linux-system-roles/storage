@@ -1,0 +1,76 @@
+---
+
+# TODO: Argument validation.
+#
+# TODO: Set defaults as needed: lvm_vg, device_name, disks
+#
+- debug:
+    var: volume
+
+#
+# Resolve specified disks to device node paths.
+#
+- name: Resolve disks
+  resolve_blockdev:
+    spec: "{{ item }}"
+  with_items: "{{ volume.disks }}"
+  register: resolved_disks
+  when: volume.disks is defined
+
+- debug:
+    var: resolved_disks
+  when: volume.disks is defined
+
+- name: set list of resolved disk paths
+  set_fact:
+    disks: "{{ resolved_disks.results|map(attribute='device')|list }}"
+  when: volume.disks is defined
+
+- name: Show disks
+  debug:
+    var: volume_disks
+  when: volume.disks is defined
+
+#
+# Set the path for the final device based on device type.
+#
+- name: set final device path for whole disk
+  set_fact:
+    device_path: "{{ volume_disks[0] }}"
+  when: volume.type == "disk"
+
+- name: set final device path for lv
+  set_fact:
+    device_path: "/dev/mapper/{{ volume.pool_name }}-{{ volume.name }}"
+  when: volume.type == "lvm"
+
+- debug:
+    var: device_path
+
+- set_fact:
+    removing: volume.state == "absent"
+
+- name: parse the specified size
+  bsize:
+    size: "{{ volume.size if volume.size is defined else 0 }}"
+  register: size
+  when: volume.type != "disk" and volume.state == "present" and volume.size is defined
+
+- name: Manage the Specified Volume
+  include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
+  loop: "{{ storage_layers if not removing else storage_layers[::-1] }}"
+  loop_control:
+    loop_var: layer
+  when: volume
+
+- debug:
+    msg: "Done with {{ volume.name }}"
+
+#
+# Update facts since we may have changed system state.
+#
+# Should this be in a handler instead?
+#
+- name: Update facts
+  setup:
+  when: not ansible_check_mode
