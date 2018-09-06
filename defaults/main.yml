@@ -2,25 +2,25 @@
 # defaults file for template
 storage_backend: "default"
 storage_layers: ["disklabel", "partitions", "vg", "lv", "fs", "mount"]  # luks, md, vdo
-state: "present"
-volume_type: "lvm"
-volume_name: ""  # this can be UUID=<uuid>, /dev/disk/by-*, &c if existing
-size: "100%FREE"
-disks: []  # use the first unused disk by default, can be /dev/disk/by-*
+
 use_partitions: false
 
-# file system
-fs_type: "xfs"
-fs_label: ""
-fs_create_options: ""
-fs_destroy_options: "-af"
-fs_overwrite_existing: true
+volume_defaults:
+  state: "present"
+  type: lvm
+  size: null
+  disks: []
 
-# mount
-mount_point: ""
-mount_options: "defaults"
-mount_check: 0
-mount_passno: 0
-mount_device_identifier: "uuid"  # uuid|label|path
+  fs_type: "xfs"
+  fs_label: ""
+  fs_create_options: ""
+  fs_destroy_options: "-af"
+  fs_overwrite_existing: true
 
-pool_name: ""  # TODO: Select a good default. Hostname?
+  mount_point: ""
+  mount_options: "defaults"
+  mount_check: 0
+  mount_passno: 0
+  mount_device_identifier: "uuid"  # uuid|label|path
+
+  pool_name: ""

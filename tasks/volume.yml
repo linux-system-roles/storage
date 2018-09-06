@@ -4,6 +4,9 @@
 #
 # TODO: Set defaults as needed: lvm_vg, device_name, disks
 #
+- set_fact:
+    volume: "{{ volume_defaults|combine(raw_volume) }}"
+
 - debug:
     var: volume
 
@@ -65,6 +68,9 @@
 
 - debug:
     msg: "Done with {{ volume.name }}"
+
+- set_fact:
+    volume: null
 
 #
 # Update facts since we may have changed system state.

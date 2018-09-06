@@ -4,5 +4,5 @@
   include_tasks: volume.yml
   loop: "{{ volumes }}"
   loop_control:
-    loop_var: volume
+    loop_var: raw_volume
   when: volumes is defined and volumes
