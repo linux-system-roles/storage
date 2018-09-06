@@ -18,50 +18,50 @@
     spec: "{{ item }}"
   with_items: "{{ volume.disks }}"
   register: resolved_disks
-  when: volume.disks is defined
+  when: volume.disks is defined and volume.type != "lvm"
 
 - debug:
     var: resolved_disks
-  when: volume.disks is defined
+  when: volume.type != "lvm" and volume.disks is defined
 
 - name: set list of resolved disk paths
   set_fact:
     disks: "{{ resolved_disks.results|map(attribute='device')|list }}"
-  when: volume.disks is defined
+  when: volume.type != "lvm" and volume.disks is defined
 
 - name: Show disks
   debug:
-    var: volume_disks
-  when: volume.disks is defined
+    var: disks
+  when: volume.type != "lvm" and volume.disks is defined
 
 #
 # Set the path for the final device based on device type.
 #
 - name: set final device path for whole disk
   set_fact:
-    device_path: "{{ volume_disks[0] }}"
+    device_path: "{{ disks[0] }}"
   when: volume.type == "disk"
 
 - name: set final device path for lv
   set_fact:
-    device_path: "/dev/mapper/{{ volume.pool_name }}-{{ volume.name }}"
+    device_path: "/dev/mapper/{{ pool.name }}-{{ volume.name }}"
   when: volume.type == "lvm"
 
 - debug:
     var: device_path
 
 - set_fact:
-    removing: volume.state == "absent"
+    removing: volume.state == "absent" or (pool is defined and pool.state == "absent")
 
 - name: parse the specified size
   bsize:
-    size: "{{ volume.size if volume.size is defined else 0 }}"
+    size: "{{ volume.size }}"
   register: size
   when: volume.type != "disk" and volume.state == "present" and volume.size is defined
 
 - name: Manage the Specified Volume
   include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
-  loop: "{{ storage_layers if not removing else storage_layers[::-1] }}"
+  loop: "{{ volume_layers if not removing else volume_layers[::-1] }}"
   loop_control:
     loop_var: layer
   when: volume

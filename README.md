@@ -11,6 +11,23 @@ As of now, the role supports managing file systems and mount entries on
 Role Variables
 --------------
 
+#### `pools`
+The `pools` variable is a list of pools to manage. Each pool contains a
+nested list of `volume` dicts as described below, as well as the following
+keys:
+
+#### `name`
+This specifies the name of the pool to manage/create as a string. (One
+example of a pool is an LVM volume group.)
+
+#### `type`
+This specifies the type of pool to manage.
+Valid values for `type`: `lvm`.
+
+#### `disks`
+This specifies the set of disks to use as backing storage for the pool.
+
+
 #### `volumes`
 The `volumes` variable is a list of volumes to manage. Each volume has the following
 variables:
@@ -24,7 +41,7 @@ Valid values for `type`: `lvm`(the default) or `disk`.
 
 #### `disks`
 This specifies the set of disks to use as backing storage for the file system.
-This is relevant for all types of volume.
+This is relevant for volumes of type `disk` or `partition`.
 
 #### `size`
 The `size` specifies the size of the file system. The format for this is intended to
@@ -46,10 +63,6 @@ The `mount_point` specifies the directory on which the file system will be mount
 #### `mount_options`
 The `mount_options` specifies custom mount options as a string, eg: 'ro'.
 
-#### `pool_name`
-The `pool_name` specifies the name of the pool to manage/create as a string. (One
-example of a pool is an LVM volume group.)
-
 
 Example Playbook
 ----------------
@@ -61,20 +74,20 @@ Example Playbook
 
   roles:
     - name: storage
+      pools:
+        - name: "{{ app_name }}"
+          disks: "{{ app_data_wwns }}"
+          volumes:
+            - name: shared
+              size: "100 GiB"
+              mount_point: "{{ app_root}}/shared"
+              #fs_type: xfs
+              state: present
+            - name: users
+              size: "400g"
+              fs_type: ext4
+              mount_point: "{{ app_root }}/users"
       volumes:
-        - name: shared
-          size: "100 GiB"
-          mount_point: "{{ app_root}}/shared"
-          #fs_type: xfs
-          pool_name: "{{ app_name }}"
-          disks: "{{ app_data_wwns }}"
-          state: present
-        - name: users
-          size: "400g"
-          fs_type: ext4
-          disks: "{{ app_data_wwns }}"
-          mount_point: "{{ app_root }}/users"
-          pool_name: "{{ app_name }}"
         - name: images
           type: disk
           disks: ["mpathc"]

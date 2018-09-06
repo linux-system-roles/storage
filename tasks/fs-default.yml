@@ -18,15 +18,15 @@
   package:
     name: util-linux
     state: present
-  when: volume.fs_type == "swap" or volume.state == "absent"
+  when: volume.fs_type == "swap" or volume.state == "absent" or (pool is defined and pool.state == "absent")
 
 - name: Remove file system as needed
   command: wipefs {{ volume.fs_destroy_options }} {{ device_path }}
-  when: (not volume.fs_type or volume.state == "absent") and device_status.stat.exists and not ansible_check_mode
+  when: (not volume.fs_type or (volume.state == "absent" or (pool is not defined or pool.state == "absent"))) and device_status.stat.exists and not ansible_check_mode
 
 - name: Create filesystem as needed
   filesystem:
     dev: "{{ device_path }}"
     fstype: "{{ volume.fs_type }}"
     opts: "{{ volume.fs_create_options }}"
-  when: volume.fs_type and volume.state == "present" and device_status.stat.exists
+  when: volume.fs_type and volume.state == "present" and (pool is not defined or pool.state == "present") and device_status.stat.exists

@@ -12,49 +12,24 @@
   
 - block:
     - name: collect list of current pvs
-      command: pvs -o name --noheadings --select 'vg_name={{ volume.pool_name }}'
+      command: pvs -o name --noheadings --select 'vg_name={{ pool.name }}'
       register: pvs_cmd
       changed_when: false
       become: true
   rescue:
     - debug:
         msg: "Failed to run pvs"
-  when: volume.disks == [] and volume.type == "lvm" and volume.pool_name in ansible_facts.lvm.vgs
+  when: disks == [] and pool.type == "lvm" and pool.name in ansible_facts.lvm.vgs
 
 - name: Set pvs based on disk set
   set_fact:
-    pvs: "{{ volume_disks }}"
-  when: volume.type == "lvm"
+    pvs: "{{ disks }}"
+  when: pool.type == "lvm"
 
 - name: Set pvs from current vg
   set_fact:
     pvs: "{{ pvs_cmd.stdout.split() }}"
-  when: volume_disks == [] and volume.type == "lvm" and volume.pool_name in ansible_facts.lvm.vgs
-
-#
-# Get list of LVs.
-#
-# We will only remove VG if there are no more LVs and state is "absent".
-#
-- block:
-    - name: collect list of current lvs
-      command: lvs -o name --noheadings --select 'vg_name={{ volume.pool_name }}'
-      register: lvs_cmd
-      changed_when: false
-      become: true
-  rescue:
-    - debug:
-        msg: "Failed to run lvs"
-  when: volume.type == "lvm" and volume.state == "absent"
-
-- name: determine whether vg is being removed (1/2)
-  set_fact:
-    remove_vg: false
-
-- name: determine whether vg is being removed (2/2)
-  set_fact:
-    remove_vg: true
-  when: volume.type == "lvm" and volume.state == "absent" and not ansible_check_mode and not lvs_cmd.stdout
+  when: disks == [] and pool.type == "lvm" and pool.name in ansible_facts.lvm.vgs
 
 #
 # Configure the VG
@@ -62,13 +37,13 @@
 - block:
     - name: configure vg
       lvg:
-        vg: "{{ volume.pool_name }}"
+        vg: "{{ pool.name }}"
         pvs: "{{ pvs }}"
-        state: "{{ volume.state }}"
+        state: "{{ pool.state }}"
   rescue:
     - debug:
         msg: "Failed to configure vg"
-  when: volume.type == "lvm" and volume.pool_name and (volume.state == "present" or remove_vg)
+  when: pool.type == "lvm" and pool.name
 
 - block:
    - name: wipe pvs
@@ -80,4 +55,4 @@
   rescue:
     - debug:
         msg: "Failed to wipe pv signatures."
-  when: remove_vg
+  when: pool.state == "absent"

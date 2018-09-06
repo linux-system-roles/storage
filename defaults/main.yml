@@ -1,15 +1,19 @@
 ---
 # defaults file for template
 storage_backend: "default"
-storage_layers: ["disklabel", "partitions", "vg", "lv", "fs", "mount"]  # luks, md, vdo
+pool_layers: ["disklabel", "partitions", "vg"]  # md, luks, vdo under vg
+volume_layers: ["disklabel", "partitions", "lv", "fs", "mount"]  # luks under fs
 
 use_partitions: false
+
+pool_defaults:
+  state: "present"
+  type: lvm
 
 volume_defaults:
   state: "present"
   type: lvm
   size: null
-  disks: []
 
   fs_type: "xfs"
   fs_label: ""
@@ -22,5 +26,3 @@ volume_defaults:
   mount_check: 0
   mount_passno: 0
   mount_device_identifier: "uuid"  # uuid|label|path
-
-  pool_name: ""

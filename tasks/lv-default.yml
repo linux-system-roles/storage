@@ -8,9 +8,9 @@
 - name: Make sure LV exists
   lvol:
     lv: "{{ volume.name }}"
-    vg: "{{ volume.pool_name }}"
+    vg: "{{ pool.name }}"
     size: "{{ size.lvm }}"
-    state: "{{ volume.state }}"
+    state: "{{ volume.state if pool.state != 'absent' else pool.state }}"
     force: yes
     shrink: no
-  when: volume.type == "lvm" and volume.pool_name
+  when: volume.type == "lvm" and pool.name

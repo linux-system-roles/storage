@@ -21,9 +21,14 @@
 #
 # Activate configured mounts.
 #
-- name: configure mount state
+- name: configure mount state (1/2)
   set_fact:
     mount_state: "{{ volume.state if volume.state == 'absent' else 'mounted' }}"
+
+- name: configure mount state (2/2)
+  set_fact:
+    mount_state: "{{ pool.state }}"
+  when: pool is defined and pool.state == "absent"
 
 # Set up the mount using a stable device identifier.
 - name: Set up the mount
