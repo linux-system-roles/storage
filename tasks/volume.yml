@@ -51,7 +51,7 @@
     var: device_path
 
 - set_fact:
-    removing: volume.state == "absent" or (pool is defined and pool.state == "absent")
+    removing: "{{ volume.state == 'absent' or (pool.state is defined and pool.state == 'absent') }}"
 
 - name: parse the specified size
   bsize:
