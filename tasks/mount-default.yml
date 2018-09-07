@@ -28,7 +28,7 @@
 - name: configure mount state (2/2)
   set_fact:
     mount_state: "{{ pool.state }}"
-  when: pool is defined and pool.state == "absent"
+  when: pool.state is defined and pool.state == "absent"
 
 # Set up the mount using a stable device identifier.
 - name: Set up the mount
