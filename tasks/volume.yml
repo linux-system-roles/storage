@@ -57,7 +57,7 @@
   bsize:
     size: "{{ volume.size }}"
   register: size
-  when: volume.type != "disk" and volume.state == "present" and volume.size is defined
+  when: volume.type != "disk"
 
 - name: Manage the Specified Volume
   include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
