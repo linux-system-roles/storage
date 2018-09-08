@@ -61,7 +61,7 @@
   rescue:
     - debug:
         msg: "failed to find existing fs type"
-  when: device_status.stat.exists and device_path not in ansible_facts.mounts|map(attribute='device')
+  when: device_status.stat.exists
 
 - set_fact:
     removing: "{{ volume.state == 'absent' or (pool.state is defined and pool.state == 'absent') }}"
