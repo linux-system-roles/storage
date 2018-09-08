@@ -20,9 +20,27 @@
     state: present
   when: volume.fs_type == "swap" or volume.state == "absent" or (pool.state is defined and pool.state == "absent")
 
+# Reformatting
+# - need to know we're about to reformat
+#   - if we are, first we must unmount
+#
+- set_fact:
+    mountpoints: "{{ ansible_facts.mounts|selectattr('device', 'eq', device_path)|map(attribute='mount')|list }}"
+
+- set_fact:
+    reformatting: "{{ device_status.stat.exists and (not volume.fs_type or (not blkid_type.failed and blkid_type.stdout != volume.fs_type)) }}"
+
+- name: unmount fs if we're going to reformat
+  mount:
+    src: "{{ device_path }}"
+    path: "{{ mountpoints|last }}"
+    state: unmounted
+  when: reformatting and mountpoints
+  changed_when: false
+
 - name: Remove file system as needed
   command: wipefs {{ volume.fs_destroy_options }} {{ device_path }}
-  when: (not volume.fs_type or (volume.state == "absent" or (pool.state is not defined or pool.state == "absent"))) and device_status.stat.exists and not ansible_check_mode
+  when: (reformatting or (volume.state == "absent" or (pool.state is defined and pool.state == "absent"))) and device_status.stat.exists and not ansible_check_mode
 
 - name: Create filesystem as needed
   filesystem:

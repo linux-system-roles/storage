@@ -50,6 +50,19 @@
 - debug:
     var: device_path
 
+- name: stat the final device file
+  include_tasks: stat_device.yml
+
+- block:
+  - name: find current fs type
+    command: blkid -s TYPE -o value {{ device_path }}
+    register: blkid_type
+    changed_when: false
+  rescue:
+    - debug:
+        msg: "failed to find existing fs type"
+  when: device_status.stat.exists and device_path not in ansible_facts.mounts|map(attribute='device')
+
 - set_fact:
     removing: "{{ volume.state == 'absent' or (pool.state is defined and pool.state == 'absent') }}"
 
