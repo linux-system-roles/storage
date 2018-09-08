@@ -17,6 +17,7 @@
     - debug:
         msg: "Failed to get UUID for {{ device_path }}; trying with device path."
   when: volume.mount_device_identifier == "uuid" and device_status.stat.exists and not ansible_check_mode
+  changed_when: false
 
 #
 # Activate configured mounts.
