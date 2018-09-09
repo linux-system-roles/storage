@@ -28,7 +28,7 @@
     mountpoints: "{{ ansible_facts.mounts|selectattr('device', 'eq', device_path)|map(attribute='mount')|list }}"
 
 - set_fact:
-    reformatting: "{{ device_status.stat.exists and (not volume.fs_type or (not blkid_type.failed and blkid_type.stdout != volume.fs_type)) }}"
+    reformatting: "{{ device_status.stat.exists and (not volume.fs_type or (blkid_type is defined and not blkid_type.failed and blkid_type.stdout != volume.fs_type)) }}"
 
 - name: unmount fs if we're going to reformat
   mount:
