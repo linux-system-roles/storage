@@ -10,6 +10,7 @@
     - name: collect file system UUID
       command: blkid -s UUID -o value {{ device_path }}
       register: blkid_output
+      changed_when: false
     - name: set uuid-based device identifier to be used in /etc/fstab
       set_fact:
         mount_device_id: "UUID=\"{{ blkid_output.stdout }}\""
@@ -17,7 +18,6 @@
     - debug:
         msg: "Failed to get UUID for {{ device_path }}; trying with device path."
   when: volume.mount_device_identifier == "uuid" and device_status.stat.exists and not ansible_check_mode
-  changed_when: false
 
 #
 # Activate configured mounts.
