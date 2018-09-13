@@ -27,3 +27,8 @@ def test_bsize():
 
     # check string to bytes conversion
     assert Size("1.2 terabyte").bytes == 1.2e12
+
+    # check string without byte prefix gets converted to binary
+    assert Size("5g").get() == "5.0 GiB"
+
+    assert Size("5gb").get() == "4.7 GiB"

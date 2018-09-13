@@ -47,9 +47,13 @@ class Size(object):
         '''
 
         prefix = raw_units
+        no_suffix_flag = True
+        valid_suffix = False
+
         # get rid of possible units suffix ('bytes', 'b' or 'B')
         for suffix in SUFFIXES:
             if raw_units.lower().endswith(suffix.lower()):
+                no_suffix_flag = False
                 prefix = raw_units[:-len(suffix)]
                 break
 
@@ -63,19 +67,24 @@ class Size(object):
         for lst in PREFIXES_DECIMAL:
             lower_lst = [x.lower() for x in lst]
             if prefix.lower() in lower_lst:
+                valid_suffix = True
                 idx = lower_lst.index(prefix.lower())
                 used_factor = DECIMAL_FACTOR
                 break
 
-        if idx < 0:
+        if idx < 0 or no_suffix_flag:
+            if no_suffix_flag:
+                used_factor = BINARY_FACTOR
+
             for lst in PREFIXES_BINARY:
                 lower_lst = [x.lower() for x in lst]
                 if prefix.lower() in lower_lst:
+                    valid_suffix = True
                     idx = lower_lst.index(prefix.lower())
                     used_factor = BINARY_FACTOR
                     break
 
-        if idx < 0:
+        if idx < 0 or not valid_suffix:
             raise ValueError("Unable to identify unit '%s'" % raw_units)
 
         return used_factor, idx+1
@@ -149,4 +158,3 @@ class Size(object):
             value = (float(self.factor ** self.exponent) / float(ftr ** exp)) * self.number
 
         return self._format(fmt, ftr, exp) % value
-
