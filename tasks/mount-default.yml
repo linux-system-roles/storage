@@ -40,3 +40,8 @@
     opts: "{{ volume.mount_options }}"
     state: "{{ mount_state }}"
   when: volume.mount_point and device_path
+  register: mount_info
+
+- name: tell systemd to refresh its view of /etc/fstab
+  command: systemctl daemon-reload
+  when: mount_info is defined and mount_info.changed
