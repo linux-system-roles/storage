@@ -5,7 +5,7 @@
 # TODO: Set defaults as needed: lvm_vg, device_name, disks
 #
 - set_fact:
-    volume: "{{ volume_defaults|combine(raw_volume) }}"
+    volume: "{{ volume_defaults|combine(volume_internal, raw_volume) }}"
 
 - debug:
     var: volume
@@ -26,12 +26,7 @@
 
 - name: set list of resolved disk paths
   set_fact:
-    disks: "{{ resolved_disks.results|map(attribute='device')|list }}"
-  when: volume.type != "lvm" and volume.disks is defined
-
-- name: Show disks
-  debug:
-    var: disks
+    volume: "{{ volume|combine({'disks': resolved_disks.results|map(attribute='device')|list}) }}"
   when: volume.type != "lvm" and volume.disks is defined
 
 #
@@ -39,32 +34,55 @@
 #
 - name: set final device path for whole disk
   set_fact:
-    device_path: "{{ disks[0] }}"
+    volume: "{{ volume|combine({'_device': volume.disks[0] }) }}"
   when: volume.type == "disk"
+
+- name: set final device path for partition
+  set_fact:
+    volume: "{{ volume|combine({'_device': volume.disks[0]+'1'}) }}"
+  when: volume.type == "partition"
+
+- debug:
+    var: volume
 
 - name: set final device path for lv
   set_fact:
-    device_path: "/dev/mapper/{{ pool.name }}-{{ volume.name }}"
+    volume: "{{ volume|combine({'_device': '/dev/mapper/'+pool.name+'-'+volume.name}) }}"
   when: volume.type == "lvm"
-
-- debug:
-    var: device_path
 
 - name: stat the final device file
   include_tasks: stat_device.yml
 
+- set_fact:
+    volume: "{{ volume|combine({'_preexist': device_status.stat.exists}) }}"
+
+#
+# Store Initial fs_type, mount_point
+#
 - block:
   - name: find current fs type
-    command: blkid -s TYPE -o value {{ device_path }}
+    command: blkid -s TYPE -o value {{ volume._device }}
     register: blkid_type
     changed_when: false
+  - name: save current fs type
+    set_fact:
+      volume: "{{ volume|combine({'_orig_fs_type': blkid_type.stdout|default('')|trim}, recursive=True) }}"
   rescue:
     - debug:
         msg: "failed to find existing fs type"
-  when: device_status.stat.exists
+  when: volume._preexist
 
 - set_fact:
-    removing: "{{ volume.state == 'absent' or (pool.state is defined and pool.state == 'absent') }}"
+    volume: "{{ volume|combine({'_orig_mount_point': ansible_facts.mounts|selectattr('device', 'eq', volume._device)|map(attribute='mount')|list|first|default('')}, recursive=True) }}"
+
+- set_fact:
+    volume: "{{ volume|combine({'_wipe': volume._preexist and (not volume.fs_type or (volume._orig_fs_type and volume.fs_type != volume._orig_fs_type))}) }}"
+
+- set_fact:
+    volume: "{{ volume|combine({'_remove': volume.state == 'absent' or (pool is not defined or (pool.state is defined and pool.state == 'absent'))}) }}"
+
+- set_fact:
+    volume: "{{ volume|combine({'_create': volume.state == 'present' and (pool is not defined or (pool.state is not defined or pool.state == 'present'))}) }}"
 
 - name: parse the specified size
   bsize:
@@ -74,7 +92,7 @@
 
 - name: Manage the Specified Volume
   include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
-  loop: "{{ volume_layers if not removing else volume_layers[::-1] }}"
+  loop: "{{ volume_layers if volume._create else volume_layers[::-1] }}"
   loop_control:
     loop_var: layer
   when: volume
