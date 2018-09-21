@@ -1,14 +1,14 @@
 ---
 
 - name: manage pools
-  include_tasks: pool.yml
+  include_tasks: pool-{{ storage_backend }}.yml
   loop: "{{ pools }}"
   loop_control:
     loop_var: raw_pool
   when: pools is defined and pools
 
 - name: manage volumes
-  include_tasks: volume.yml
+  include_tasks: volume-{{ storage_backend }}.yml
   loop: "{{ volumes }}"
   loop_control:
     loop_var: raw_volume

@@ -45,7 +45,7 @@
 # XXX This is only going to remove fstab entries etc. for volumes explicitly listed.
 #
 - name: manage removal of pool volumes
-  include_tasks: volume.yml
+  include_tasks: volume-{{ storage_backend }}.yml
   loop: "{{ pool.volumes }}"
   loop_control:
     loop_var: raw_volume
@@ -58,7 +58,7 @@
     loop_var: layer
 
 - name: manage pool volumes
-  include_tasks: volume.yml
+  include_tasks: volume-{{ storage_backend }}.yml
   loop: "{{ pool.volumes }}"
   loop_control:
     loop_var: raw_volume
