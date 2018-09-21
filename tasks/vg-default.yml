@@ -58,7 +58,7 @@
 
 - block:
    - name: wipe pvs
-     command: pvremove {{ pv_path }}
+     command: wipefs -a {{ pv_path }}
      changed_when: false
      with_items: "{{ pool._orig_members }}"
      loop_control:
