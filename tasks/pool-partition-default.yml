@@ -1,0 +1,12 @@
+---
+
+- block:
+  - name: set up partition parameters
+    set_fact:
+      part_info: "{{ part_defaults|combine({'disk': disk,
+                                            'size': '100%',
+                                            'name': pool.name + ' ' + disk_idx|string,
+                                            'state': pool.state}) }}" # FIXME: state should support switching member types between disk and partition
+  - name: manage partition
+    include_tasks: partition-{{ storage_backend }}.yml
+  when: use_partitions

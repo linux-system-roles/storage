@@ -1,8 +1,0 @@
----
-
-# TODO: Figure out how to get the name of the new partition.
-# TODO: Figure out how to determine partition disk(s) and size(s).
-#- name: Create partition if needed
-#  debug:
-#    msg: "Creating partition of size {{ size }} on {{ disk_paths[0] }}"
-#  when: (use_partitions and volume.type != 'disk') or volume.type == "partition"

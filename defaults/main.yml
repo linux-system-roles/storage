@@ -1,10 +1,11 @@
 ---
 # defaults file for template
 storage_backend: "default"
-pool_layers: ["disklabel", "partitions", "vg"]  # md, luks, vdo under vg
-volume_layers: ["disklabel", "partitions", "lv", "fs", "mount"]  # luks under fs
+pool_layers: ["pool-partitions", "vg"]  # md, luks, vdo under vg
+volume_layers: ["partition", "lv", "fs", "mount"]  # luks under fs
 
 use_partitions: false
+disklabel_type: gpt
 
 pool_defaults:
   state: "present"
@@ -45,3 +46,10 @@ pool_internal:
   _orig_members: []
   _remove: false
   _create: false
+
+part_defaults:
+  disk: null
+  number: 1
+  state: present
+  disklabel: "{{ disklabel_type }}"
+  name: null

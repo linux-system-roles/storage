@@ -26,6 +26,11 @@
     pvs: "{{ pool.disks }}"
   when: pool.type == "lvm" and not use_partitions
 
+- name: Set pv partitions based on disk set
+  set_fact:
+    pvs: "{{ pool.disks|map('regex_replace', '$', '1')|list }}"
+  when: pool.type == "lvm" and use_partitions
+
 - block:
     - name: collect list of current pvs
       command: pvs -o name --noheadings --select 'vg_name={{ pool.name }}'

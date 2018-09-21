@@ -69,6 +69,7 @@
 
 - set_fact:
     pool: null
+    part_info: null
 
 #
 # Update facts since we may have changed system state.

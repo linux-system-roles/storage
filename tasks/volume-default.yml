@@ -90,6 +90,15 @@
   register: size
   when: volume.type != "disk"
 
+- block:
+  - name: set up partition parameters
+    set_fact:
+      part_info: "{{ part_defaults|combine({'disk': volume.disks[0],
+                                            'name': volume.name,
+                                            'size': volume.size,
+                                            'state': volume.state}) }}"
+  when: volume.type == "partition"
+
 - name: Manage the Specified Volume
   include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
   loop: "{{ volume_layers if volume._create else volume_layers[::-1] }}"
@@ -102,6 +111,7 @@
 
 - set_fact:
     volume: null
+    part_info: null
 
 #
 # Update facts since we may have changed system state.

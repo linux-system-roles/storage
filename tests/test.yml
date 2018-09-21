@@ -1,6 +1,8 @@
 ---
 - hosts: localhost
   become: true
+  vars:
+    use_partitions: true
 
   roles:
     - name: storage
