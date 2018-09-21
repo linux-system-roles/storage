@@ -4,11 +4,11 @@
 
 - name: set path-based device identifier to be used in /etc/fstab
   set_fact:
-    mount_device_id: "{{ device_path }}"
+    mount_device_id: "{{ volume._device }}"
 
 - block:
     - name: collect file system UUID
-      command: blkid -s UUID -o value {{ device_path }}
+      command: blkid -s UUID -o value {{ volume._device }}
       register: blkid_output
       changed_when: false
     - name: set uuid-based device identifier to be used in /etc/fstab
@@ -16,7 +16,7 @@
         mount_device_id: "UUID=\"{{ blkid_output.stdout }}\""
   rescue:
     - debug:
-        msg: "Failed to get UUID for {{ device_path }}; trying with device path."
+        msg: "Failed to get UUID for {{ volume._device }}; trying with device path."
   when: volume.mount_device_identifier == "uuid" and device_status.stat.exists and not ansible_check_mode
 
 #
@@ -24,7 +24,7 @@
 #
 - name: configure mount state (1/2)
   set_fact:
-    mount_state: "{{ volume.state if volume.state == 'absent' else 'mounted' }}"
+    mount_state: "{{ 'absent' if not volume._create else 'mounted' }}"
 
 - name: configure mount state (2/2)
   set_fact:
@@ -39,7 +39,7 @@
     fstype: "{{ volume.fs_type }}"
     opts: "{{ volume.mount_options }}"
     state: "{{ mount_state }}"
-  when: volume.mount_point and device_path
+  when: volume.mount_point and volume._device
   register: mount_info
 
 - name: tell systemd to refresh its view of /etc/fstab
