@@ -1,5 +1,5 @@
 ---
 - name: Stat the final device file
   stat:
-    path: "{{ device_path }}"
+    path: "{{ volume._device }}"
   register: device_status

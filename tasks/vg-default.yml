@@ -8,53 +8,44 @@
   package:
     name: lvm2
     state: present
-  when: device_type == "lvm"
+  when: pool.type == "lvm"
   
 - block:
     - name: collect list of current pvs
-      command: pvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
+      command: pvs -o name --noheadings --select 'vg_name={{ pool.name }}'
       register: pvs_cmd
       changed_when: false
       become: true
   rescue:
     - debug:
         msg: "Failed to run pvs"
-  when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
+  when: pool.disks == [] and pool.type == "lvm" and pool.name in ansible_facts.lvm.vgs
 
 - name: Set pvs based on disk set
   set_fact:
-    pvs: "{{ disk_paths }}"
-  when: device_type == "lvm"
+    pvs: "{{ pool.disks }}"
+  when: pool.type == "lvm" and not use_partitions
 
-- name: Set pvs from current vg
+- name: Set pv partitions based on disk set
   set_fact:
-    pvs: "{{ pvs_cmd.stdout.split() }}"
-  when: disks == [] and device_type == "lvm" and lvm_vg in ansible_facts.lvm.vgs
+    pvs: "{{ pool.disks|map('regex_replace', '$', '1')|list }}"
+  when: pool.type == "lvm" and use_partitions
 
-#
-# Get list of LVs.
-#
-# We will only remove VG if there are no more LVs and state is "absent".
-#
 - block:
-    - name: collect list of current lvs
-      command: lvs -o name --noheadings --select 'vg_name={{ lvm_vg }}'
-      register: lvs_cmd
+    - name: collect list of current pvs
+      command: pvs -o name --noheadings --select 'vg_name={{ pool.name }}'
+      register: pvs_cmd
       changed_when: false
       become: true
   rescue:
     - debug:
-        msg: "Failed to run lvs"
-  when: device_type == "lvm" and state == "absent"
+        msg: "Failed to run pvs"
+  when: pool.type == "lvm" and pool.name in ansible_facts.lvm.vgs
 
-- name: determine whether vg is being removed (1/2)
+- name: Set pvs from current vg
   set_fact:
-    remove_vg: false
-
-- name: determine whether vg is being removed (2/2)
-  set_fact:
-    remove_vg: true
-  when: device_type == "lvm" and state == "absent" and not ansible_check_mode and not lvs_cmd.stdout
+    pool: "{{ pool|combine({'_orig_members': pvs_cmd.stdout.split()}) }}"
+  when: pool.type == "lvm" and pool.name in ansible_facts.lvm.vgs and not pvs_cmd.failed
 
 #
 # Configure the VG
@@ -62,23 +53,22 @@
 - block:
     - name: configure vg
       lvg:
-        vg: "{{ lvm_vg }}"
+        vg: "{{ pool.name }}"
         pvs: "{{ pvs }}"
-        #pesize: "{{ lvm_extent_size }}"
-        state: "{{ state }}"
+        state: "{{ pool.state }}"
   rescue:
     - debug:
         msg: "Failed to configure vg"
-  when: device_type == "lvm" and lvm_vg and (state == "present" or remove_vg)
+  when: pool.type == "lvm" and pool.name
 
 - block:
    - name: wipe pvs
-     command: pvremove {{ pv_path }}
+     command: wipefs -a {{ pv_path }}
      changed_when: false
-     with_items: "{{ pvs }}"
+     with_items: "{{ pool._orig_members }}"
      loop_control:
        loop_var: pv_path
   rescue:
     - debug:
         msg: "Failed to wipe pv signatures."
-  when: remove_vg
+  when: pool.type == 'lvm' and pool.state == "absent"

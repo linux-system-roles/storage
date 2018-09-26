@@ -1,27 +1,55 @@
 ---
 # defaults file for template
 storage_backend: "default"
-storage_layers: ["disklabel", "partitions", "vg", "lv", "fs", "mount"]  # luks, md, vdo
-state: "present"
-device_type: "lvm"
-device_name: ""  # this can be UUID=<uuid>, /dev/disk/by-*, &c if existing
-size: "100%FREE"
-disks: []  # use the first unused disk by default, can be /dev/disk/by-*
+pool_layers: ["pool-partitions", "vg"]  # md, luks, vdo under vg
+volume_layers: ["partition", "lv", "fs", "mount"]  # luks under fs
+
 use_partitions: false
+disklabel_type: gpt
 
-# file system
-fs_type: "xfs"
-fs_label: ""
-fs_create_options: ""
-fs_destroy_options: "-af"
-fs_overwrite_existing: true
+pool_defaults:
+  state: "present"
+  type: lvm
 
-# mount
-mount_point: ""
-mount_options: "defaults"
-mount_check: 0
-mount_passno: 0
-mount_device_identifier: "uuid"  # uuid|label|path
+volume_defaults:
+  state: "present"
+  type: lvm
+  size: 0
 
-# lvm
-lvm_vg: ""  # TODO: Select a good default. Hostname?
+  fs_type: "xfs"
+  fs_label: ""
+  fs_create_options: ""
+  fs_destroy_options: "-af"
+  fs_overwrite_existing: true
+
+  mount_point: ""
+  mount_options: "defaults"
+  mount_check: 0
+  mount_passno: 0
+  mount_device_identifier: "uuid"  # uuid|label|path
+
+volume_internal:
+  _device: ""
+  _preexist: false
+  _orig_fs_type: ""
+  _orig_mount_point: ""
+
+  _remove: false
+  _create: false
+
+  _wipe: false
+
+  _mount: false
+
+pool_internal:
+  _preexist: false
+  _orig_members: []
+  _remove: false
+  _create: false
+
+part_defaults:
+  disk: null
+  number: 1
+  state: present
+  disklabel: "{{ disklabel_type }}"
+  name: null
