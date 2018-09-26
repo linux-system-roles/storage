@@ -2,23 +2,32 @@
 - name: Stat the final device file
   include_tasks: stat_device.yml
 
-- name: Install xfsprogs for xfs file system type
-  package:
-    name: xfsprogs
-    state: present
-  when: volume.fs_type == "xfs" and not ansible_check_mode
+- block:
+  - name: Install xfsprogs for xfs file system type
+    package:
+      name: xfsprogs
+      state: present
+  - set_fact:
+      storage_packages: "{{ storage_packages + ['xfsprogs'] }}"
+  when: "'xfsprogs' not in storage_packages and volume.fs_type == 'xfs' and not ansible_check_mode"
 
-- name: Install e2fsprogs for ext file system type
-  package:
-    name: e2fsprogs
-    state: present
-  when: volume.fs_type in ["ext2", "ext3", "ext4"]
+- block:
+  - name: Install e2fsprogs for ext file system type
+    package:
+      name: e2fsprogs
+      state: present
+  - set_fact:
+      storage_packages: "{{ storage_packages + ['e2fsprogs'] }}"
+  when: "'e2fsprogs' not in storage_packages and volume.fs_type in ['ext2', 'ext3', 'ext4'] and not ansible_check_mode"
 
-- name: Install util-linux as needed
-  package:
-    name: util-linux
-    state: present
-  when: volume.fs_type == "swap" or volume.state == "absent" or (pool.state is defined and pool.state == "absent")
+- block:
+  - name: Install util-linux as needed
+    package:
+      name: util-linux
+      state: present
+  - set_fact:
+      storage_packages: "{{ storage_packages + ['util-linux'] }}"
+  when: "'util-linux' not in storage_packages and (volume.fs_type == 'swap' or volume.state == 'absent' or (pool.state is defined and pool.state == 'absent')) and not ansible_check_mode"
 
 - name: unmount fs if we're going to reformat
   mount:

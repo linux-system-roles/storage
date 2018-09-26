@@ -1,9 +1,12 @@
 ---
-- name: Install LVM2 commands as needed
-  package:
-    name: lvm2
-    state: present
-  when: volume.type == "lvm"
+- block:
+  - name: Install LVM2 commands as needed
+    package:
+      name: lvm2
+      state: present
+  - set_fact:
+      storage_packages: "{{ storage_packages + ['lvm2'] }}"
+  when: "'lvm2' not in storage_packages and volume.type == 'lvm' and not ansible_check_mode"
 
 - name: Make sure LV exists
   lvol:

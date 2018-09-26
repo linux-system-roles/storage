@@ -4,12 +4,19 @@
 #
 # TODO: Decide on semantics. Playbook PV specs should probably be complete to enable idempotency.
 #
-- name: Install LVM2 commmands as needed
-  package:
-    name: lvm2
-    state: present
-  when: pool.type == "lvm"
-  
+- block:
+  - name: Install LVM2 commands as needed
+    package:
+      name: lvm2
+      state: present
+  - set_fact:
+      storage_packages: "{{ storage_packages + ['lvm2'] }}"
+  when: "'lvm2' not in storage_packages and pool.type == 'lvm' and not ansible_check_mode"
+
+- name: Update ansible_facts after installing lvm2
+  setup:
+  run_once: true
+
 - block:
     - name: collect list of current pvs
       command: pvs -o name --noheadings --select 'vg_name={{ pool.name }}'
