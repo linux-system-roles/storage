@@ -11,56 +11,60 @@ As of now, the role supports managing file systems and mount entries on
 Role Variables
 --------------
 
-#### `pools`
-The `pools` variable is a list of pools to manage. Each pool contains a
+#### `storage_pools`
+The `storage_pools` variable is a list of pools to manage. Each pool contains a
 nested list of `volume` dicts as described below, as well as the following
 keys:
 
-#### `name`
+##### `name`
 This specifies the name of the pool to manage/create as a string. (One
 example of a pool is an LVM volume group.)
 
-#### `type`
+##### `type`
 This specifies the type of pool to manage.
 Valid values for `type`: `lvm`.
 
-#### `disks`
+##### `disks`
 This specifies the set of disks to use as backing storage for the pool.
 
+##### `volumes`
+This is a list of volumes that belong to the current pool. It follows the
+same pattern as the `storage_volumes` variable, explained below.
 
-#### `volumes`
-The `volumes` variable is a list of volumes to manage. Each volume has the following
+
+#### `storage_volumes`
+The `storage_volumes` variable is a list of volumes to manage. Each volume has the following
 variables:
 
-#### `name`
+##### `name`
 This specifies the name of the volume.
 
-#### `type`
+##### `type`
 This specifies the type of volume on which the file system will reside.
 Valid values for `type`: `lvm`(the default) or `disk`.
 
-#### `disks`
+##### `disks`
 This specifies the set of disks to use as backing storage for the file system.
 This is relevant for volumes of type `disk` or `partition`.
 
-#### `size`
+##### `size`
 The `size` specifies the size of the file system. The format for this is intended to
 be human-readable, eg: "10g", "50 GiB", or "100%" (use all available space on the
 specified disks).
 
-#### `fs_type`
+##### `fs_type`
 This indicates the desired file system type to use, eg: "xfs"(the default), "ext4", "swap".
 
-#### `fs_label`
+##### `fs_label`
 The `fs_label` is a string to be used for a file system label.
 
-#### `fs_create_options`
+##### `fs_create_options`
 The `fs_create_options` specifies custom arguments to `mkfs` as a string.
 
-#### `mount_point`
+##### `mount_point`
 The `mount_point` specifies the directory on which the file system will be mounted.
 
-#### `mount_options`
+##### `mount_options`
 The `mount_options` specifies custom mount options as a string, eg: 'ro'.
 
 
@@ -74,7 +78,7 @@ Example Playbook
 
   roles:
     - name: storage
-      pools:
+      storage_pools:
         - name: "{{ app_name }}"
           disks: "{{ app_data_wwns }}"
           volumes:
@@ -87,7 +91,7 @@ Example Playbook
               size: "400g"
               fs_type: ext4
               mount_point: "{{ app_root }}/users"
-      volumes:
+      storage_volumes:
         - name: images
           type: disk
           disks: ["mpathc"]

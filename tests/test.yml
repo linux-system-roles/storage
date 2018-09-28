@@ -6,7 +6,7 @@
 
   roles:
     - name: storage
-      pools:
+      storage_pools:
         - name: foo
           disks: ['vdb']
           state: "absent"
@@ -25,7 +25,7 @@
               state: absent
               size: 2g
               mount_point: /opt/test3
-      volumes:
+      storage_volumes:
         - name: sumpin
           state: "absent"
           disks: ['vdd']
