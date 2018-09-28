@@ -11,8 +11,8 @@ As of now, the role supports managing file systems and mount entries on
 Role Variables
 --------------
 
-#### `pools`
-The `pools` variable is a list of pools to manage. Each pool contains a
+#### `storage_pools`
+The `storage_pools` variable is a list of pools to manage. Each pool contains a
 nested list of `volume` dicts as described below, as well as the following
 keys:
 
@@ -27,9 +27,13 @@ Valid values for `type`: `lvm`.
 #### `disks`
 This specifies the set of disks to use as backing storage for the pool.
 
-
 #### `volumes`
-The `volumes` variable is a list of volumes to manage. Each volume has the following
+This is a list of volumes that belong to the current pool. It follows the
+same pattern as the `storage_volumes` variable, explained below.
+
+
+#### `storage_volumes`
+The `storage_volumes` variable is a list of volumes to manage. Each volume has the following
 variables:
 
 #### `name`
@@ -74,7 +78,7 @@ Example Playbook
 
   roles:
     - name: storage
-      pools:
+      storage_pools:
         - name: "{{ app_name }}"
           disks: "{{ app_data_wwns }}"
           volumes:
@@ -87,7 +91,7 @@ Example Playbook
               size: "400g"
               fs_type: ext4
               mount_point: "{{ app_root }}/users"
-      volumes:
+      storage_volumes:
         - name: images
           type: disk
           disks: ["mpathc"]
