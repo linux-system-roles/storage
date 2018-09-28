@@ -99,6 +99,11 @@
                                             'state': volume.state}) }}"
   when: volume.type == "partition"
 
+- name: Append volume state info to volumes_list
+  set_fact:
+    volumes_list: "{{ volumes_list + [volume] }}"
+    cacheable: true
+
 - name: Manage the Specified Volume
   include_tasks: "{{ layer }}-{{ storage_backend }}.yml"
   loop: "{{ volume_layers if volume._create else volume_layers[::-1] }}"

@@ -1,0 +1,23 @@
+---
+- name: Read the /etc/fstab file for volume existence
+  command: cat /etc/fstab
+  register: fstab_buffer
+  changed_when: false
+
+- name: Ensure that specified volumes were created correctly
+  assert:
+    that: "item.mount_point in fstab_buffer.stdout"
+    msg: "{{ item.mount_point }} was not found in the fstab_buffer when run in 'present' state"
+  when: "'present' in item.state"
+  loop: "{{ volumes_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Ensure the specified volumes were removed correctly
+  assert:
+    that: "item.mount_point not in fstab_buffer.stdout"
+    msg: "{{ item.mount_point }} was found in the fstab_buffer when run in 'absent' state"
+  when: "'absent' in item.state"
+  loop: "{{ volumes_list }}"
+  loop_control:
+    label: "{{ item.name }}"

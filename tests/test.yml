@@ -2,7 +2,7 @@
 - hosts: localhost
   become: true
   vars:
-    use_partitions: true
+    use_partitions: false
 
   roles:
     - name: storage
@@ -31,3 +31,7 @@
           disks: ['vdd']
           type: disk
           mount_point: /opt/test4
+
+
+  tasks:
+    - include_tasks: "test-verify-volumes.yml"
