@@ -103,6 +103,7 @@
   set_fact:
     volumes_list: "{{ volumes_list + [volume] }}"
     cacheable: true
+  when: volume.type == 'partition' or volume.type == 'disk'
 
 - name: Manage the Specified Volume
   include_tasks: "{{ layer }}-{{ storage_backend }}.yml"

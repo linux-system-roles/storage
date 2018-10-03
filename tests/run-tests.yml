@@ -1,4 +1,10 @@
 ---
+#
+# To-Do:
+# 1. Decrease the amount of output during loop_control
+# 2. Add fs-type verification, and mount verification using ansible_mounts
+# 3. Rebase commits into one
+#
 - name: Run all specified tests
   include_tasks: "test-{{ test }}.yml"
   loop: "{{ tests_list }}"

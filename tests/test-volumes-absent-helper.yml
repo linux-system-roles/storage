@@ -1,8 +1,12 @@
 ---
 - name: Make sure all volumes in pool.volumes are absent
   assert:
-    that: current_volume.mount_point not in fstab_buffer.stdout
-    msg: "The volume {{ current_volume.name }} was found in /etc/fstab file while run in absent state"
+    that:
+      - current_volume.mount_point not in fstab_buffer.stdout
+      - "{{ current_volume.fs_type not in fstab_buffer.stdout if current_volume.fs_type is defined else None }}"
+      - "{{ ansible_mounts|selectattr('fstype', 'equalto', current_volume.fs_type)|list|length==1 if current_volume.fs_type is defined else
+            ansible_mounts|selectattr('fstype', 'equalto', 'xfs')|list|length==1 }}"
+    msg: "The pool volume {{ current_volume.name }} was incorrectly managed."
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume

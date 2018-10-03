@@ -1,16 +1,20 @@
 ---
-#
-# To-Do:
-# 1. Decrease the amount of output during loop_control
-# 2. Test with use_partitions when True
-#
 - name: Read the /etc/fstab file for volume existence
   command: cat /etc/fstab
   register: fstab_buffer
   changed_when: false
 
-- name: Verify that pool.volumes are absent when pool.state is absent
+- name: Verify the volumes listed in storage_pools wree correctly managed
   include_tasks: "{{ current_pool.state is search('absent') | bool | ternary('test-volumes-absent-helper.yml', 'test-volumes-present-helper.yml') }}"
   loop: "{{ pools_list }}"
   loop_control:
     loop_var: current_pool
+
+- name: Verify the volumes listed in storage_volumes were correctly managed
+  assert:
+    that:
+      - "{{ storage_volume.mount_point in fstab_buffer.stdout if storage_volume.state in 'present' else storage_volume.mount_point not in fstab_buffer.stdout }}"
+    msg: "The storage volume {{ storage_volume.name }} was incorrectly managed in the /etc/fstab file."
+  loop: "{{ volumes_list }}"
+  loop_control:
+    loop_var: storage_volume
