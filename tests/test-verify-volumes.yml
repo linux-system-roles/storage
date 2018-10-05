@@ -1,4 +1,9 @@
 ---
+
+- name: Debug ansible mounts
+  debug:
+    var: ansible_mounts
+
 - name: Read the /etc/fstab file for volume existence
   command: cat /etc/fstab
   register: fstab_buffer
@@ -14,7 +19,9 @@
   assert:
     that:
       - "{{ storage_volume.mount_point in fstab_buffer.stdout if storage_volume.state in 'present' else storage_volume.mount_point not in fstab_buffer.stdout }}"
-    msg: "The storage volume {{ storage_volume.name }} was incorrectly managed in the /etc/fstab file."
+      - "{{ ansible_mounts|selectattr('device', 'equalto', storage_volume._device)|list|length==1 if storage_volume.state in 'present' else
+            ansible_mounts|selectattr('device', 'equalto', storage_volume._device|list|length==0) }}"
+    msg: "The storage volume {{ storage_volume.name }} was incorrectly managed."
   loop: "{{ volumes_list }}"
   loop_control:
     loop_var: storage_volume

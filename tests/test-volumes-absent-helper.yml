@@ -3,7 +3,6 @@
   assert:
     that:
       - current_volume.mount_point not in fstab_buffer.stdout
-      - "{{ current_volume.fs_type not in fstab_buffer.stdout if current_volume.fs_type is defined else None }}"
       - "{{ ansible_mounts|selectattr('fstype', 'equalto', current_volume.fs_type)|list|length==1 if current_volume.fs_type is defined else
             ansible_mounts|selectattr('fstype', 'equalto', 'xfs')|list|length==1 }}"
     msg: "The pool volume {{ current_volume.name }} was incorrectly managed."
