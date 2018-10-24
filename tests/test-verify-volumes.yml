@@ -1,27 +1,24 @@
 ---
-
-- name: Debug ansible mounts
-  debug:
-    var: ansible_mounts
-
 - name: Read the /etc/fstab file for volume existence
   command: cat /etc/fstab
   register: fstab_buffer
   changed_when: false
 
-- name: Verify the volumes listed in storage_pools wree correctly managed
+- name: Verify the volumes listed in storage_pools were correctly managed
   include_tasks: "{{ current_pool.state is search('absent') | bool | ternary('test-volumes-absent-helper.yml', 'test-volumes-present-helper.yml') }}"
-  loop: "{{ pools_list }}"
+  loop: "{{ storage_pools_list }}"
   loop_control:
     loop_var: current_pool
 
-- name: Verify the volumes listed in storage_volumes were correctly managed
+- name: Verify the volumes listed in current_volumes were correctly managed
   assert:
     that:
-      - "{{ storage_volume.mount_point in fstab_buffer.stdout if storage_volume.state in 'present' else storage_volume.mount_point not in fstab_buffer.stdout }}"
-      - "{{ ansible_mounts|selectattr('device', 'equalto', storage_volume._device)|list|length==1 if storage_volume.state in 'present' else
-            ansible_mounts|selectattr('device', 'equalto', storage_volume._device|list|length==0) }}"
-    msg: "The storage volume {{ storage_volume.name }} was incorrectly managed."
-  loop: "{{ volumes_list }}"
+      - "{{ current_volume.mount_point in fstab_buffer.stdout if current_volume.state in 'present' \
+            else current_volume.mount_point not in fstab_buffer.stdout }}"
+      - "{{ ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list|length==1 \
+            if current_volume.state in 'present' else  \
+            ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list|length==0 }}"
+    msg: "The storage volume {{ current_volume.name }} was incorrectly managed."
+  loop: "{{ storage_volumes_list }}"
   loop_control:
-    loop_var: storage_volume
+    loop_var: current_volume

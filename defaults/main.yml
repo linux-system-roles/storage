@@ -2,12 +2,14 @@
 # defaults file for template
 storage_backend: "default"
 pool_layers: ["pool-partitions", "vg"]  # md, luks, vdo under vg
-tests_list: ['verify-volumes']
 volume_layers: ["partition", "lv", "fs", "mount"]  # luks under fs
-volumes_list: []
-pools_list: []
+
 use_partitions: false
 disklabel_type: gpt
+
+storage_tests_list: ['verify-volumes']
+storage_volumes_list: []
+storage_pools_list: []
 
 pool_defaults:
   state: "present"

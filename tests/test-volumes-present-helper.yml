@@ -1,18 +1,10 @@
 ---
-- name: Make sure all lvm volumes are present in /etc/fstab when run in present state
+- name: Ensure all lvm volumes were correctly managed in /etc/fstab.
   assert:
-    that: current_volume.mount_point in fstab_buffer.stdout
-    msg: "The volume {{ current_volume.name }} was not found in /etc/fstab file while run in present state."
-  when: "current_volume.state is undefined or 'present' in current_volume.state"
-  loop: "{{ current_pool.volumes }}"
-  loop_control:
-    loop_var: current_volume
-
-- name: Make sure all lvm volumes are absent in /etc/fstab when run in absent state
-  assert:
-    that: current_volume.mount_point not in fstab_buffer.stdout
-    msg: "The volume {{ current_volume.name }} was found in /etc/fstab file while run in present state."
-  when: "current_volume.state is defined and 'absent' in current_volume.state"
+    that: "{{ current_volume.mount_point not in fstab_buffer.stdout if \
+              (current_volume.state is defined and current_volume.state in 'absent') \
+              else current_volume.mount_point in fstab_buffer.stdout }}"
+    msg: "The volume {{ current_volume.name }} was incorrectly managed in /etc/fstab."
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
