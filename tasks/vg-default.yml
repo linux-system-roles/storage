@@ -86,9 +86,19 @@
     num_holders: "{{ ansible_devices[pool_disk_suffix].partitions[part_name].holders | length | bool }}"
   when: part_name is defined
 
-- name: Remove the partition on storage_pools disk if pool.state is absent
-  parted:
-    device: "/dev/{{ pool_disk_suffix }}"
-    state: "{{ pool.state }}"
-    number: 1
+- block:
+    - name: Remove the partition on storage_pools disk if pool.state is absent
+      parted:
+        device: "/dev/{{ pool_disk_suffix }}"
+        state: "{{ pool.state }}"
+        number: 1
+    - name: Remove the partition table after running parted on the partition
+      command: "wipefs -a /dev/{{ pool_disk_suffix }}"
+      changed_when: false
+  rescue:
+    - debug:
+        msg: "wipefs failed on /dev/{{ pool_disk_suffix }}, retrying with -af option."
+    - name: Retry wipefs command
+      command: "wipefs -af /dev/{{ pool_disk_suffix }}"
+      changed_when: false
   when: num_holders is defined and num_holders == 0
