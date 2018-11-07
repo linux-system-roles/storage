@@ -9,6 +9,10 @@
 - debug:
     var: pool
 
+- name: Store the disk suffix
+  set_fact:
+    pool_disk_suffix: "{{ pool.disks[0] }}"
+
 #
 # Resolve specified disks to device node paths.
 #

@@ -9,7 +9,7 @@
     name: lvm2
     state: present
   when: pool.type == "lvm"
-  
+
 - block:
     - name: collect list of current pvs
       command: pvs -o name --noheadings --select 'vg_name={{ pool.name }}'
@@ -72,3 +72,23 @@
     - debug:
         msg: "Failed to wipe pv signatures."
   when: pool.type == 'lvm' and pool.state == "absent"
+
+#
+# Handle removing a partition when pool.state is absent and use_parititions is undefined/false
+#
+- name: Get the name of the pool's primary partition as applicable
+  set_fact:
+    part_name: "{{ ansible_devices[pool_disk_suffix].partitions.keys()[0] }}"
+  when: ansible_devices[pool_disk_suffix].partitions.keys()|length>0 and pool.state == 'absent'
+
+- name: Get the number of holders in the primary partition
+  set_fact:
+    num_holders: "{{ ansible_devices[pool_disk_suffix].partitions[part_name].holders | length | bool }}"
+  when: part_name is defined
+
+- name: Remove the partition on storage_pools disk if pool.state is absent
+  parted:
+    device: "/dev/{{ pool_disk_suffix }}"
+    state: "{{ pool.state }}"
+    number: 1
+  when: num_holders is defined and num_holders == 0
