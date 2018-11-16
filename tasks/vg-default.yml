@@ -73,32 +73,7 @@
         msg: "Failed to wipe pv signatures."
   when: pool.type == 'lvm' and pool.state == "absent"
 
-#
-# Handle removing a partition when pool.state is absent and use_parititions is undefined/false
-#
-- name: Get the name of the pool's primary partition as applicable
-  set_fact:
-    part_name: "{{ ansible_devices[pool_disk_suffix].partitions.keys()[0] }}"
-  when: ansible_devices[pool_disk_suffix].partitions.keys()|length>0 and pool.state == 'absent'
-
-- name: Get the number of holders in the primary partition
-  set_fact:
-    num_holders: "{{ ansible_devices[pool_disk_suffix].partitions[part_name].holders | length | bool }}"
-  when: part_name is defined
-
-- block:
-    - name: Remove the partition on storage_pools disk if pool.state is absent
-      parted:
-        device: "/dev/{{ pool_disk_suffix }}"
-        state: "{{ pool.state }}"
-        number: 1
-    - name: Remove the partition table after running parted on the partition
-      command: "wipefs -a /dev/{{ pool_disk_suffix }}"
-      changed_when: false
-  rescue:
-    - debug:
-        msg: "wipefs failed on /dev/{{ pool_disk_suffix }}, retrying with -af option."
-    - name: Retry wipefs command
-      command: "wipefs -af /dev/{{ pool_disk_suffix }}"
-      changed_when: false
-  when: num_holders is defined and num_holders == 0
+- name: Remove partitions when pool.state is 'absent' and not use_partitions
+  include_tasks: "remove-partitions.yml"
+  with_items: "{{ pool.disks }}"
+  when: pool.state == 'absent' and (use_partitions is undefined or not use_partitions)

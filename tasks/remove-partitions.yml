@@ -1,0 +1,14 @@
+---
+#
+# Remove primary lvm partitions from the current pool disk when pool.state is absent
+#
+- block:
+  - name: Remove the partition on storage_pools disk if pool.state is absent
+    parted:
+      device: "{{ item }}"
+      state: "{{ pool.state }}"
+      number: 1
+  - name: Remove the partition table after running parted on the partition
+    command: wipefs -a "{{ item }}"
+    changed_when: false
+  when: pool.state == 'absent'
