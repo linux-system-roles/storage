@@ -41,6 +41,10 @@
     pool: "{{ pool|combine({'_preexist': pool.name in ansible_facts.lvm.vgs}) }}"
   when: ansible_facts.lvm is defined and pool.type == "lvm"
 
+- name: Add the finished pool to a list of pools
+  set_fact:
+    _storage_pools_list: "{{ _storage_pools_list + [pool] }}"
+
 #
 # XXX This is only going to remove fstab entries etc. for volumes explicitly listed.
 #

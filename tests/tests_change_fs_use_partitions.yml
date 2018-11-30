@@ -1,0 +1,45 @@
+---
+- hosts: all
+  become: true
+  vars:
+    use_partitions: true
+    mount_location: '/opt/test1'
+    volume_size: '5g'
+    fs_type_after: "{{ 'ext3' if (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') else 'ext4' }}"
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+
+    - name: Create an LVM partition with the default file system type
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: bar
+            disks: "{{ unused_disks[0] }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change the LVM partition file system type to "{{ fs_type_after }}"
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: bar
+            disks: "{{ unused_disks[0] }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                fs_type: "{{ fs_type_after }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml

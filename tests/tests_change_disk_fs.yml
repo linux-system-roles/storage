@@ -1,0 +1,40 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test'
+    volume_size: '5g'
+    fs_type_after: "{{ 'ext3' if (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') else 'ext4' }}"
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+
+    - name: Create a disk device with the default file system type
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location }}"
+            disks: "{{ unused_disks[0] }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change the disk device file system type to "{{ fs_type_after }}"
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location }}"
+            fs_type: "{{ fs_type_after }}"
+            disks: "{{ unused_disks[0] }}"
+
+    - include_tasks: verify-role-results.yml

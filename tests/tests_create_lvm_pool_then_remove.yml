@@ -1,0 +1,52 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location1: '/opt/test1'
+    mount_location2: '/opt/test2'
+    volume_group_size: '10g'
+    volume1_size: '5g'
+    volume2_size: '4g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+
+    - name: Create two LVM logical volumes under volume group 'foo'
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks[0] }}"
+            volumes:
+              - name: test1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+              - name: test2
+                size: "{{ volume2_size }}"
+                mount_point: "{{ mount_location2 }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove both of the LVM logical volumes in 'foo' created above
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks[0] }}"
+            state: "absent"
+            volumes:
+              - name: test1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+              - name: test2
+                size: "{{ volume2_size }}"
+                mount_point: "{{ mount_location2 }}"
+
+    - include_tasks: verify-role-results.yml

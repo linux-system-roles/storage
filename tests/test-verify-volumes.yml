@@ -1,0 +1,27 @@
+---
+- name: Read the /etc/fstab file for volume existence
+  command: cat /etc/fstab
+  register: fstab_buffer
+  changed_when: false
+
+- name: Verify the volumes listed in storage_pools were correctly managed
+  include_tasks: "{{ current_pool.state is search('absent') | bool | ternary('test-volumes-absent-helper.yml', 'test-volumes-present-helper.yml') }}"
+  loop: "{{ _storage_pools_list }}"
+  loop_control:
+    loop_var: current_pool
+  when: _storage_pools_list is defined and _storage_pools_list | length > 0
+
+- block:
+  - name: Verify the volumes listed in current_volumes were correctly managed
+    assert:
+      that:
+        - "{{ current_volume.mount_point in fstab_buffer.stdout if current_volume.state in 'present' \
+              else current_volume.mount_point not in fstab_buffer.stdout }}"
+        - "{{ ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list|length==1 \
+              if current_volume.state in 'present' else  \
+              ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list|length==0 }}"
+      msg: "The storage volume {{ current_volume.name }} was incorrectly managed."
+    loop: "{{ _storage_volumes_list }}"
+    loop_control:
+      loop_var: current_volume
+  when: _storage_volumes_list is defined and _storage_volumes_list | length > 0
