@@ -4,12 +4,19 @@
 #
 # TODO: Decide on semantics. Playbook PV specs should probably be complete to enable idempotency.
 #
-- name: Install LVM2 commmands as needed
-  package:
-    name: lvm2
-    state: present
-  when: pool.type == "lvm"
-  
+- block:
+    - name: Install LVM2 commands as needed
+      package:
+        name: lvm2
+        state: present
+    - name: Run the setup module to use ansible_facts.lvm
+      setup:
+    - name: Ensure the setup module runs above by setting a flag that lvm was installed
+      set_fact:
+        lvm_installed: true
+  when: "pool.type == 'lvm' and (['lvm2'] is not subset(ansible_facts.packages.keys()) and \
+        lvm_installed is undefined) and not ansible_check_mode"
+
 - block:
     - name: collect list of current pvs
       command: pvs -o name --noheadings --select 'vg_name={{ pool.name }}'
@@ -40,12 +47,13 @@
   rescue:
     - debug:
         msg: "Failed to run pvs"
-  when: pool.type == "lvm" and pool.name in ansible_facts.lvm.vgs
+  when: pool.type == "lvm" and ansible_facts.lvm is defined and pool.name in ansible_facts.lvm.vgs
 
 - name: Set pvs from current vg
   set_fact:
     pool: "{{ pool|combine({'_orig_members': pvs_cmd.stdout.split()}) }}"
-  when: pool.type == "lvm" and pool.name in ansible_facts.lvm.vgs and not pvs_cmd.failed
+  when: "pool.type == 'lvm' and ansible_facts.lvm is defined and pool.name in \
+        ansible_facts.lvm.vgs and not pvs_cmd.failed and not ansible_check_mode"
 
 #
 # Configure the VG

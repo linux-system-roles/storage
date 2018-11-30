@@ -1,4 +1,12 @@
 ---
+- name: Install parted for partition management
+  package:
+    name: parted
+    state: present
+  register: parted_installed
+  # update this condition when current use_partitions issue (#5) is fixed.
+  when: "use_partitions and ['parted'] is not subset(ansible_facts.packages.keys()) \
+         and parted_installed is undefined and not ansible_check_mode"
 
 - block:
   - name: set up partition parameters

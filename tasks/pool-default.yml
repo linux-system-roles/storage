@@ -39,7 +39,7 @@
 - name: see if pool already exists
   set_fact:
     pool: "{{ pool|combine({'_preexist': pool.name in ansible_facts.lvm.vgs}) }}"
-  when: pool.type == "lvm"
+  when: ansible_facts.lvm is defined and pool.type == "lvm"
 
 #
 # XXX This is only going to remove fstab entries etc. for volumes explicitly listed.
