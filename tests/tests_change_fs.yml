@@ -1,0 +1,44 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test1'
+    volume_size: '5g'
+    fs_after: "{{ (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') | ternary('ext4', 'xfs') }}"
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+
+    - name: Create a LVM logical volume with default fs_type
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks[0] }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change the file system signature on the logical volume created above
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks[0] }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                fs_type: "{{ fs_after }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml

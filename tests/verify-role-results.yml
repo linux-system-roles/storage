@@ -1,0 +1,18 @@
+- set_fact:
+    storage_tests_list: ['verify-volumes']
+
+- name: Print out pool information
+  debug:
+    var: _storage_pools_list
+  when: _storage_pools_list | length > 0
+
+- name: Print out volume information
+  debug:
+    var: _storage_volumes_list
+  when: _storage_volumes_list | length > 0
+
+- name: Ensure the specified devices in the role were correctly configured in the user's system
+  include_tasks: "test-{{ test }}.yml"
+  loop: "{{ storage_tests_list }}"
+  loop_control:
+    loop_var: test

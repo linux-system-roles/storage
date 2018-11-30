@@ -1,0 +1,29 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test1'
+    volume_group_size: '5g'
+    volume_size: '4g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+
+    - name: Create one LVM logical volume under one volume group
+      include_role:
+        name: storage
+      vars:
+          storage_pools:
+            - name: foo
+              disks: "{{ unused_disks[0] }}"
+              volumes:
+                - name: test1
+                  size: "{{ volume_size }}"
+                  mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml

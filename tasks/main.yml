@@ -3,6 +3,14 @@
   package_facts:
     manager: "auto"
 
+- name: define an empty list of pools to be used in testing
+  set_fact:
+    _storage_pools_list: []
+
+- name: define an empty list of volumes to be used in testing
+  set_fact:
+    _storage_volumes_list: []
+
 - name: manage pools
   include_tasks: pool-{{ storage_backend }}.yml
   loop: "{{ storage_pools }}"
