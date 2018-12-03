@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  become: true
+  vars:
+    use_partitions: true
+
+  roles:
+    - name: storage
+      storage_pools:
+        - name: foo
+          disks: ['vdb']
+          volumes:
+            - name: test1
+              size: 8g
+              mount_point: '/opt/test1'
+              fs_label: 'test1'
