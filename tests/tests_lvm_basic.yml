@@ -1,5 +1,5 @@
 ---
-- hosts: localhost
+- hosts: all
   become: true
   vars:
     use_partitions: true
