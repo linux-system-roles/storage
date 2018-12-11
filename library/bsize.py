@@ -1,4 +1,9 @@
 #!/usr/bin/python
+# Copyright (c) 2017 Ansible Project
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
 
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
@@ -12,7 +17,7 @@ module: bsize
 
 short_description: Module for basic manipulation with byte sizes
 
-version_added: "2.5"
+version_added: "2.8"
 
 description:
     - "Module accepts byte size strings with the units and produces strings in
@@ -21,15 +26,14 @@ description:
 options:
     size:
         description:
-            - String containing number and byte units
+            - "String containing number and byte units"
         required: true
 
 author:
-    - Jan Pokorny (japokorn@redhat.com)
+    - "Jan Pokorny (@japokorn)"
 '''
 
 EXAMPLES = '''
-# Obtain sizes in format for various tools
 - name: Get 10 KiB size
   bsize:
     size: 10 KiB

@@ -1,4 +1,9 @@
 #!/usr/bin/python
+# Copyright (c) 2017 Ansible Project
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
 
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
@@ -9,18 +14,27 @@ ANSIBLE_METADATA = {
 DOCUMENTATION = '''
 ---
 module: resolve_blockdev
+
 short_description: Resolve block device specification to device node path.
+
 version_added: "2.5"
+
 description:
     - "This module accepts various forms of block device identifiers and
-       resolves them to the correct block device node path."
+      resolves them to the correct block device node path."
+
 options:
     spec:
         description:
-            - String describing a block device
+            - "Block device description"
+        type: str
         required: true
+
+requirements:
+    - "blkid"
+
 author:
-    - David Lehman (dlehman@redhat.com)
+    - David Lehman (@dlehman)
 '''
 
 EXAMPLES = '''
@@ -56,9 +70,9 @@ SEARCH_DIRS = ['/dev', DEV_MAPPER, DEV_MD] + glob.glob("/dev/disk/by-*")
 MD_KERNEL_DEV = re.compile(r'/dev/md\d+(p\d+)?$')
 
 
-def resolve_blockdev(spec, run_cmd):
+def resolve_blockdev(spec, run_cmd, blkid_bin):
     if "=" in spec:
-        device = run_cmd("blkid -t %s -o device" % spec)[1].strip()
+        device = run_cmd([blkid_bin, "-t", spec, "-o", "device"])[1].strip()
     elif not spec.startswith('/'):
         for devdir in SEARCH_DIRS:
             device = "%s/%s" % (devdir, spec)
@@ -76,13 +90,14 @@ def resolve_blockdev(spec, run_cmd):
 
 
 def _get_dm_name_from_kernel_dev(kdev):
-    return open("%s/%s/dm/name" % (SYS_CLASS_BLOCK, os.path.basename(kdev))).read().strip()
+    return open("%s/%s/dm/name" % (SYS_CLASS_BLOCK,
+                                   os.path.basename(kdev))).read().strip()
 
 
 def _get_md_name_from_kernel_dev(kdev):
     minor = os.minor(os.stat(kdev).st_rdev)
     return next(name for name in os.listdir(DEV_MD)
-                    if os.minor(os.stat("%/%s" % (DEV_MD, name).st_rdev) == minor))
+                if os.minor(os.stat("%/%s" % (DEV_MD, name).st_rdev) == minor))
 
 
 def canonical_device(device):
@@ -107,13 +122,18 @@ def run_module():
         supports_check_mode=True
     )
 
+    blkid_bin = module.get_bin_path('blkid', True)
+
     try:
-        result['device'] = resolve_blockdev(module.params['spec'], run_cmd=module.run_command)
+        result['device'] = resolve_blockdev(module.params['spec'],
+                                            module.run_command,
+                                            blkid_bin)
     except Exception:
         pass
 
     if not result['device'] or not os.path.exists(result['device']):
-        module.fail_json(msg="The {} device spec could not be resolved".format(module.params['spec']))
+        module.fail_json(msg="The {} device spec could not be "
+                             "resolved".format(module.params['spec']))
 
     module.exit_json(**result)
 
