@@ -1,4 +1,7 @@
 ---
+- name: get a list of rpm packages installed on host machine
+  package_facts:
+    manager: "auto"
 
 - name: manage pools
   include_tasks: pool-{{ storage_backend }}.yml

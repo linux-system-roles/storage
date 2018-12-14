@@ -3,7 +3,6 @@
 storage_backend: "default"
 pool_layers: ["pool-partitions", "vg"]  # md, luks, vdo under vg
 volume_layers: ["partition", "lv", "fs", "mount"]  # luks under fs
-
 use_partitions: false
 disklabel_type: gpt
 
