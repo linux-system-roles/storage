@@ -1,11 +1,7 @@
 ---
-- name: define an empty list of pools to be used in testing
-  set_fact:
-    _storage_pools_list: []
-
-- name: define an empty list of volumes to be used in testing
-  set_fact:
-    _storage_volumes_list: []
+- name: get a list of rpm packages installed on host machine
+  package_facts:
+    manager: "auto"
 
 - name: manage pools
   include_tasks: pool-{{ storage_backend }}.yml
@@ -20,6 +16,3 @@
   loop_control:
     loop_var: raw_volume
   when: storage_volumes is defined and storage_volumes
-
-- name: include the appropriate backend tasks
-  include_tasks: "main-{{ storage_backend }}.yml"
