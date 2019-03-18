@@ -1,6 +1,7 @@
 ---
 - hosts: all
   become: true
+  tags: ['never', 'expfail']
   vars:
     mount_location: '/opt/test'
     volume_size: '5g'
