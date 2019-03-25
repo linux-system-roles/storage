@@ -44,4 +44,8 @@
 
 - name: tell systemd to refresh its view of /etc/fstab
   command: systemctl daemon-reload
-  when: mount_info is defined and mount_info.changed
+  when:
+    - mount_info is defined
+    - mount_info.changed
+    - (ansible_distribution == 'CentOS' and ansible_distribution_major_version != '6') or
+      (ansible_distribution == 'RedHat' and ansible_distribution_major_version != '6')

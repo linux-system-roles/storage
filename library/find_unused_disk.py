@@ -19,6 +19,11 @@ options:
     description: Sets the maximum number of unused disks to return.
     default: 10
     type: int
+
+    option-name: min_size
+    description: Specifies the minimum disk size to return an unused disk.
+    default: 0
+    type: str
 '''
 
 EXAMPLES = '''
@@ -27,7 +32,9 @@ EXAMPLES = '''
   tasks:
     - name: run module
       find_unused_disk:
+        min_size: '10g'
       register: testout
+
     - name: dump test output
       debug:
         msg: '{{ testout }}'
@@ -57,6 +64,7 @@ import os
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils import facts
+from ansible.module_utils.size import Size
 
 
 def no_signature(run_command, disk_path):
@@ -83,7 +91,8 @@ def can_open(disk_path):
 def run_module():
     """Create the module"""
     module_args = dict(
-        max_return=dict(type='int', required=False, default=10)
+        max_return=dict(type='int', required=False, default=10),
+        min_size=dict(type='str', required=False, default=0)
     )
 
     result = dict(
@@ -98,17 +107,27 @@ def run_module():
 
     ansible_facts = facts.ansible_facts(module)
     run_command = module.run_command
+
     for disk in ansible_facts['devices'].keys():
         # If partition table exists but contains no partitions -> no partitions.
         no_partitions = not bool(ansible_facts['devices'][disk]['partitions'])
 
+        ansible_disk_size = ansible_facts['devices'][disk]['size'].lower().replace('gb', 'g').replace('mb', 'm')
+        disk_size = Size(ansible_disk_size)
+        min_disk_size = Size(module.params['min_size'])
+
         if no_partitions and no_signature(run_command, '/dev/' + disk) and no_holders(disk) and can_open('/dev/' + disk):
-            result['disks'].append(disk)
+            if min_disk_size.bytes <= disk_size.bytes:
+                result['disks'].append(disk)
+
             if len(result['disks']) >= module.params['max_return']:
                 break
 
     if not result['disks']:
         result['disks'] = "Unable to find unused disk"
+    else:
+        result['disks'].sort()
+
     module.exit_json(**result)
 
 

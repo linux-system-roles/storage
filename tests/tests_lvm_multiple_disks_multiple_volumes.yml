@@ -1,0 +1,40 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location1: '/opt/test1'
+    mount_location2: '/opt/test2'
+    volume_group_size: '5g'
+    volume_size: '4g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+
+    - block:
+        - debug:
+            msg: "There needs to be two unused disks in the system to run this playbook."
+        - name: End playbook if there isn't two disks available
+          meta: end_play
+      when: unused_disks|length < 2
+
+    - name: Create a logical volume spanning two physical volumes that changes its mount location
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+            - name: phi
+              disks: ["{{ unused_disks[0] }}", "{{ unused_disks[1] }}"]
+              volumes:
+                - name: test1
+                  size: "{{ volume_size }}"
+                  mount_point: "{{ mount_location1 }}"
+                - name: test2
+                  size: "{{ volume_size }}"
+                  mount_point: "{{ mount_location2 }}"
+
+    - include_tasks: verify-role-results.yml

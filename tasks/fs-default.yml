@@ -9,6 +9,11 @@
       state: present
   - set_fact:
       xfsprogs_installed: true
+  rescue:
+    - debug:
+        msg:
+          - "Failed to install the xfsprogs package. Check if the Scalable File System add-on is enabled."
+          - "See: https://access.redhat.com/discussions/2051373"
   when: "volume.fs_type == 'xfs' and ['xfsprogs'] is not subset(ansible_facts.packages.keys()) \
          and xfsprogs_installed is undefined and not ansible_check_mode \
          and ((pool is defined and pool.state in 'present') or volume.state in 'present')"
@@ -44,6 +49,12 @@
     state: unmounted
   when: volume._wipe and volume._orig_mount_point
   changed_when: false
+
+- name: Check if we can use the force parameter in wipefs
+  set_fact:
+      volume: "{{ volume|combine({'fs_destroy_options': '-a'}) }}"
+  when: (ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6') or
+        (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6')
 
 - name: Remove file system as needed
   command: wipefs {{ volume.fs_destroy_options }} {{ volume._device }}

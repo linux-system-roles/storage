@@ -1,0 +1,5 @@
+standard-inventory-qcow2:
+  qemu:
+    drive:
+      - size: 10737418240
+      - size: 10737418240

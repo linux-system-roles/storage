@@ -1,0 +1,40 @@
+---
+- hosts: all
+  become: true
+  tags: ['never', 'expfail']
+  vars:
+    mount_location_before: '/opt/test1'
+    mount_location_after: '/opt/test2'
+    volume_size: '5g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+
+    - name: Create a disk device mounted at "{{ mount_location_before }}"
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location_before }}"
+            disks: "{{ unused_disks[0] }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change the disk device mount location to "{{ mount_location_after }}"
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location_after }}"
+            disks: "{{ unused_disks[0] }}"
+
+    - include_tasks: verify-role-results.yml
