@@ -42,12 +42,25 @@
          and ['util-linux'] is not subset(ansible_facts.packages.keys()) and
          util_linux_installed is undefined and not ansible_check_mode"
 
-- name: unmount fs if we're going to reformat
+- name: Check if we are trying to format the same fs-type as the current device fs-type
+  set_fact:
+    same_fs_flag: True
+  when: volume.fs_type == volume._orig_fs_type
+
+- name: Unmount fs if we're going to reformat
   mount:
     src: "{{ volume._device }}"
     path: "{{ volume._orig_mount_point }}"
     state: unmounted
   when: volume._wipe and volume._orig_mount_point
+  changed_when: false
+
+- name: Remove /etc/fstab entry if we are passing the same fs-type
+  mount:
+    src: "{{ volume._device }}"
+    path: "{{ volume._orig_mount_point }}"
+    state: absent
+  when: same_fs_flag is defined
   changed_when: false
 
 - name: Check if we can use the force parameter in wipefs
