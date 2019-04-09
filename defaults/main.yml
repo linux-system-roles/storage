@@ -1,6 +1,6 @@
 ---
 # defaults file for template
-storage_backend: "default"
+storage_backend: "blivet"
 pool_layers: ["pool-partitions", "vg"]  # md, luks, vdo under vg
 volume_layers: ["partition", "lv", "fs", "mount"]  # luks under fs
 use_partitions: false
