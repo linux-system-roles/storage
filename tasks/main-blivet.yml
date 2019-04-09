@@ -50,6 +50,14 @@
 #    name: python2-blivet
 #    state: installed
 
+- name: set the list of pools for test verification
+  set_fact:
+    _storage_pools_list: "{{ pools }}"
+
+- name: set the list of volumes for test verification
+  set_fact:
+    _storage_volumes_list: "{{ volumes }}"
+
 - debug:
     var: pools
 
