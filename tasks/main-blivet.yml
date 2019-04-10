@@ -4,6 +4,11 @@
     manager: "auto"
   when: false
 
+- name: make sure blivet is available
+  package:
+    name: python3-blivet
+    state: present
+
 ##
 ## This is all to fill in missing defaults in the list of pools (and their volumes).
 ##
