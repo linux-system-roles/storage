@@ -156,6 +156,7 @@ def manage_pool(b, pool):
     if device is None and pool['state'] != 'absent':
         disks = look_up_disks(b, pool['disks'])
         for disk in disks:
+            print(disk)
             b.devicetree.recursive_remove(disk)
             b.format_device(disk, get_format("lvmpv", device=disk.path))
 
@@ -237,6 +238,8 @@ def run_module():
 
     for pool in module.params['pools']:
         added_mounts.extend(manage_pool(b, pool))
+
+    print(b.devicetree.actions.find())
 
     for volume in module.params['volumes']:
         added_mounts.extend(manage_volume(b, volume))
