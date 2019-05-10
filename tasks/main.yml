@@ -7,19 +7,5 @@
   set_fact:
     _storage_volumes_list: []
 
-- name: manage pools
-  include_tasks: pool-{{ storage_backend }}.yml
-  loop: "{{ storage_pools }}"
-  loop_control:
-    loop_var: raw_pool
-  when: storage_pools is defined and storage_pools
-
-- name: manage volumes
-  include_tasks: volume-{{ storage_backend }}.yml
-  loop: "{{ storage_volumes }}"
-  loop_control:
-    loop_var: raw_volume
-  when: storage_volumes is defined and storage_volumes
-
 - name: include the appropriate backend tasks
   include_tasks: "main-{{ storage_backend }}.yml"
