@@ -13,26 +13,34 @@
 ## This is all to fill in missing defaults in the list of pools (and their volumes).
 ##
 - set_fact:
+    pools: []
+    volumes: []
+
+- set_fact:
     pools: "{{ pools|default([]) }} + [ {{ pool_defaults|combine(pool) }} ]"
   loop: "{{ storage_pools|default([]) }}"
   loop_control:
       loop_var: pool
+  when: storage_pools is defined
 
 - set_fact:
     vols: "{{ vols|default([]) }} + [{{item.1}}]"
     vol_defaults: "{{ vol_defaults|default([]) }} + [{{ volume_defaults }}]"
     vol_pools: "{{ vol_pools|default([]) }} + ['{{ item.0.name }}']"
   loop: "{{ pools|subelements('volumes') }}"
+  when: storage_pools is defined
 
 - set_fact:
     all_vols: "{{ all_vols|default([]) }} + [ {{ item.1|combine(item.0, {'pool': vol_pools[idx]}) }} ]"
   loop: "{{ vols|zip(vol_defaults)|list }}"
   loop_control:
     index_var: idx
+  when: storage_pools is defined
 
 - set_fact:
     vols_by_pool: "{{ vols_by_pool|default({})|combine({item.name: all_vols|selectattr('pool', 'equalto', item.name)|list}) }}"
   loop: "{{ pools }}"
+  when: storage_pools is defined
 
 - set_fact:
     pools: "{{ pools[:idx] }} + [ {{ pool|combine({'volumes': vols_by_pool[pool.name]}) }} ]  +  {{ pools[idx+1:] }}"
@@ -40,12 +48,14 @@
   loop_control:
     loop_var: pool
     index_var: idx
+  when: storage_pools is defined
 
 - set_fact:
     volumes: "{{ volumes|default([]) }} + [ {{ volume_defaults|combine(volume) }} ]"
   loop: "{{ storage_volumes|default([]) }}"
   loop_control:
       loop_var: volume
+  when: storage_volumes is defined
 
 ##
 ## End of absurdly long process to inject defaults into user-specified pools and volumes lists.
