@@ -2,18 +2,16 @@
 - name: Ensure all lvm volumes were correctly managed in /etc/fstab and ansible_mounts.
   assert:
     that:
-      - "{{ ansible_mounts|selectattr('device', 'equalto', current_volume.name)|list|length==1
+      - "{{ ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|list|length==1
             if current_volume.state is defined and current_volume.state in 'present' else
-            ansible_mounts|selectattr('device', 'equalto', current_volume.name)|list|length==0
+            ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|list|length==0
          }}"
-
-      - "{{ (ansible_mounts|selectattr('device', 'equalto', current_volume.name)|map(attribute='mount')
-            == current_volume.mount_point) if current_volume.state is defined and current_volume.state in 'present'
+      - "{{ (ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|map(attribute='mount')|first
+            == current_volume.mount_point) if current_volume.state is defined and current_volume.state == 'present'
             else true
         }}"
-        
       - "{{ current_volume.mount_point not in fstab_buffer.stdout if
-            (current_volume.state is defined and current_volume.state in 'absent')
+            (current_volume.state is defined and current_volume.state == 'absent')
             else current_volume.mount_point in fstab_buffer.stdout }}"
     msg: "The volume {{ current_volume.name }} was incorrectly managed in /etc/fstab."
   loop: "{{ current_pool.volumes }}"
