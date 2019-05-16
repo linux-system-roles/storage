@@ -109,6 +109,7 @@ def manage_volume(b, volume):
 
     fmt = get_format(volume['fs_type'], device=device.path)
     if device.format.type != fmt.type:
+        device.format.teardown()
         b.format_device(device, fmt)
 
     if volume['mount_point']:
@@ -156,7 +157,6 @@ def manage_pool(b, pool):
     if device is None and pool['state'] != 'absent':
         disks = look_up_disks(b, pool['disks'])
         for disk in disks:
-            print(disk)
             b.devicetree.recursive_remove(disk)
             b.format_device(disk, get_format("lvmpv", device=disk.path))
 
@@ -218,6 +218,9 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
 
+    if not module.params['exclusive'] and not module.params['pools'] and not module.params['volumes']:
+        module.exit_json(**result)
+
     b = Blivet()
     b.reset()
     actions = list()
@@ -239,8 +242,6 @@ def run_module():
     for pool in module.params['pools']:
         added_mounts.extend(manage_pool(b, pool))
 
-    print(b.devicetree.actions.find())
-
     for volume in module.params['volumes']:
         added_mounts.extend(manage_volume(b, volume))
 
@@ -254,8 +255,8 @@ def run_module():
                 mount = initial_mounts.get(action.device.name)
                 if mount is not None:
                     result['removed_mounts'].append(mount)
-        result['mounts'] = added_mounts
-        result['leaves'] = [d.path for d in b.devicetree.leaves]
+    result['mounts'] = added_mounts
+    result['leaves'] = [d.path for d in b.devicetree.leaves]
 
     # success - return result
     module.exit_json(**result)
