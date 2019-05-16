@@ -15,6 +15,10 @@
 - set_fact:
     pools: []
     volumes: []
+    all_vols: []
+    vols: []
+    vols_by_pool: []
+    vol_pools: []
 
 - set_fact:
     pools: "{{ pools|default([]) }} + [ {{ pool_defaults|combine(pool) }} ]"
