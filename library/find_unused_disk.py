@@ -61,11 +61,13 @@ disk_name:
 
 
 import os
+import re
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils import facts
 from ansible.module_utils.size import Size
 
+
+SYS_CLASS_BLOCK = "/sys/class/block/"
 
 def no_signature(run_command, disk_path):
     """Return true if no known signatures exist on the disk."""
@@ -73,9 +75,9 @@ def no_signature(run_command, disk_path):
     return not 'UUID' in signatures[1]
 
 
-def no_holders(disk):
+def no_holders(disk_path):
     """Return true if the disk has no holders."""
-    holders = os.listdir('/sys/class/block/' + disk + '/holders/')
+    holders = os.listdir(SYS_CLASS_BLOCK + get_sys_name(disk_path) + '/holders/')
     return len(holders) == 0
 
 
@@ -86,6 +88,44 @@ def can_open(disk_path):
         return True
     except OSError:
         return False
+
+
+def get_sys_name(disk_path):
+    if not os.path.islink(disk_path):
+        return os.path.basename(disk_path)
+
+    node_dir = '/'.join(disk_path.split('/')[-1])
+    return os.path.normpath(node_dir + '/' + os.readlink(disk_path))
+
+
+def get_partitions(disk_path):
+    sys_name = get_sys_name(disk_path)
+    partitions = list()
+    for filename in os.listdir(SYS_CLASS_BLOCK + sys_name):
+        if re.match(sys_name + 'p?\d+$', filename):
+            partitions.append(filename)
+
+    return partitions
+
+
+def get_disks(run_command):
+    buf = run_command(["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE"])[1]
+    disks = dict()
+    for line in buf.splitlines():
+        if not line:
+            continue
+
+        m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)"', line)
+        if m is None:
+            print(line)
+            continue
+
+        if m.group('type') != "disk":
+            continue
+
+        disks[m.group('path')] = {"type": m.group('type'), "size": m.group('size'), "fstype": m.group('fstype')}
+
+    return disks
 
 
 def run_module():
@@ -105,23 +145,27 @@ def run_module():
         supports_check_mode=True
     )
 
-    ansible_facts = facts.ansible_facts(module)
     run_command = module.run_command
 
-    for disk in ansible_facts['devices'].keys():
-        # If partition table exists but contains no partitions -> no partitions.
-        no_partitions = not bool(ansible_facts['devices'][disk]['partitions'])
+    for path, attrs in get_disks(run_command).items():
+        if attrs["fstype"]:
+            continue
 
-        ansible_disk_size = ansible_facts['devices'][disk]['size'].lower().replace('gb', 'g').replace('mb', 'm')
-        disk_size = Size(ansible_disk_size)
-        min_disk_size = Size(module.params['min_size'])
+        if Size(attrs["size"]).bytes < Size(module.params['min_size']).bytes:
+            continue
 
-        if no_partitions and no_signature(run_command, '/dev/' + disk) and no_holders(disk) and can_open('/dev/' + disk):
-            if min_disk_size.bytes <= disk_size.bytes:
-                result['disks'].append(disk)
+        if get_partitions(path):
+            continue
 
-            if len(result['disks']) >= module.params['max_return']:
-                break
+        if not no_holders(get_sys_name(path)):
+            continue
+
+        if not can_open(path):
+            continue
+
+        result['disks'].append(os.path.basename(path))
+        if len(result['disks']) >= module.params['max_return']:
+            break
 
     if not result['disks']:
         result['disks'] = "Unable to find unused disk"
