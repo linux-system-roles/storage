@@ -122,3 +122,12 @@
 - name: tell systemd to refresh its view of /etc/fstab
   command: systemctl daemon-reload
   when: blivet_output['removed_mounts'] or blivet_output['mounts']
+
+#
+# Update facts since we may have changed system state.
+#
+# Should this be in a handler instead?
+#
+- name: Update facts
+  setup:
+  when: not ansible_check_mode
