@@ -14,6 +14,7 @@
     - include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
+        max_return: 1
 
     - name: Create an LVM partition with the default file system type
       include_role:
@@ -21,7 +22,7 @@
       vars:
         storage_pools:
           - name: bar
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
             volumes:
               - name: test1
                 size: "{{ volume_size }}"
@@ -35,7 +36,7 @@
       vars:
         storage_pools:
           - name: bar
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
             volumes:
               - name: test1
                 size: "{{ volume_size }}"

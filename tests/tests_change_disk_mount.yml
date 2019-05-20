@@ -14,6 +14,7 @@
     - include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
+        max_return: 1
 
     - name: Create a disk device mounted at "{{ mount_location_before }}"
       include_role:
@@ -23,7 +24,7 @@
           - name: test1
             type: disk
             mount_point: "{{ mount_location_before }}"
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -35,6 +36,6 @@
           - name: test1
             type: disk
             mount_point: "{{ mount_location_after }}"
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
 
     - include_tasks: verify-role-results.yml

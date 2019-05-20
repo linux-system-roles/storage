@@ -15,6 +15,7 @@
     - include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
+        max_return: 1
 
     - name: Create two LVM logical volumes under volume group 'foo'
       include_role:
@@ -22,7 +23,7 @@
       vars:
         storage_pools:
           - name: foo
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
             volumes:
               - name: test1
                 size: "{{ volume1_size }}"
@@ -39,7 +40,7 @@
       vars:
         storage_pools:
           - name: foo
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
             state: "absent"
             volumes:
               - name: test1

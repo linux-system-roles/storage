@@ -9,6 +9,8 @@
         name: storage
 
     - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 1
 
     - name: Create a disk device mounted on "{{ mount_location }}"
       include_role:
@@ -17,7 +19,7 @@
         storage_volumes:
           - name: test1
             type: disk
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
@@ -29,7 +31,7 @@
         storage_volumes:
           - name: test1
             type: disk
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
             state: absent
 

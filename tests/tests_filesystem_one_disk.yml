@@ -9,6 +9,8 @@
         name: storage
 
     - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 1
 
     - name: Initialize a disk device with the default fs type
       include_role:
@@ -18,6 +20,6 @@
           - name: test1
             type: disk
             mount_point: "{{ mount_location }}"
-            disks: "{{ unused_disks[0] }}"
+            disks: "{{ unused_disks }}"
 
     - include_tasks: verify-role-results.yml

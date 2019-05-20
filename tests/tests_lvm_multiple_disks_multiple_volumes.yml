@@ -14,6 +14,7 @@
     - include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
+        max_return: 2
 
     - block:
         - debug:
@@ -28,7 +29,7 @@
       vars:
         storage_pools:
             - name: phi
-              disks: ["{{ unused_disks[0] }}", "{{ unused_disks[1] }}"]
+              disks: "{{ unused_disks }}"
               volumes:
                 - name: test1
                   size: "{{ volume_size }}"
