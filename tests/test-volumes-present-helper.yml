@@ -1,19 +1,47 @@
 ---
+- set_fact:
+    mount_entries: []
+
+- name: gather mounts related to each volume in the pool
+  set_fact:
+    mount_entries: "{{ mount_entries }} + [ {{ ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|list }} ]"
+  loop: "{{ current_pool.volumes }}"
+  loop_control:
+    loop_var: current_volume
+
 - name: Ensure all lvm volumes were correctly managed in /etc/fstab and ansible_mounts.
   assert:
     that:
-      - "{{ ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|list|length==1
+      - "{{ mount_entries[idx]|length==1
             if current_volume.state is defined and current_volume.state in 'present' else
-            ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|list|length==0
+            mount_entries[idx]|list|length==0
          }}"
-      - "{{ (ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|map(attribute='mount')|first
-            == current_volume.mount_point) if current_volume.state is defined and current_volume.state == 'present'
+    msg: "The volume {{ current_volume.name }} is not mounted according to the requested state."
+  loop: "{{ current_pool.volumes }}"
+  loop_control:
+    loop_var: current_volume
+    index_var: idx
+
+- name: Ensure all lvm volumes were correctly managed in /etc/fstab and ansible_mounts.
+  assert:
+    that:
+      - "{{ (mount_entries[idx]|length==1 and mount_entries[idx]|map(attribute='mount')|first) == current_volume.mount_point
+            if current_volume.state is defined and current_volume.state == 'present'
             else true
         }}"
+    msg: "The volume {{ current_volume.name }} is mounted at the wrong mount point."
+  loop: "{{ current_pool.volumes }}"
+  loop_control:
+    loop_var: current_volume
+    index_var: idx
+
+- name: Ensure all lvm volumes were correctly managed in /etc/fstab.
+  assert:
+    that:
       - "{{ current_volume.mount_point not in fstab_buffer.stdout if
             (current_volume.state is defined and current_volume.state == 'absent')
             else current_volume.mount_point in fstab_buffer.stdout }}"
-    msg: "The volume {{ current_volume.name }} was incorrectly managed in /etc/fstab."
+    msg: "The volume {{ current_volume.name }} has incorrect mount point in /etc/fstab."
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
