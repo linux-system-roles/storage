@@ -109,7 +109,8 @@ def manage_volume(b, volume):
 
     fmt = get_format(volume['fs_type'], device=device.path)
     if device.format.type != fmt.type:
-        device.format.teardown()
+        if device.format.status:
+            device.format.teardown()
         b.format_device(device, fmt)
 
     if volume['mount_point']:
