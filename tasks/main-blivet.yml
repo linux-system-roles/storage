@@ -102,11 +102,11 @@
 #
 - name: remove obsolete mounts
   mount:
-    path: "{{ mount_point }}"
+    path: "{{ mount_info['path'] }}"
     state: "absent"
   loop: "{{ blivet_output.removed_mounts }}"
   loop_control:
-    loop_var: mount_point
+    loop_var: mount_info
 
 - name: add new mounts
   mount:

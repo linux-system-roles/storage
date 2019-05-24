@@ -263,13 +263,13 @@ def run_module():
             if action.is_destroy and action.is_format and action.format.type is not None:
                 mount = initial_mounts.get(action.device.name)
                 if mount is not None:
-                    result['removed_mounts'].append(mount)
+                    result['removed_mounts'].append({"path": mount, "device": action.device.path})
 
     # handle mount point changes w/o any changes to the block device or its formatting
     for added_mount in added_mounts:
         initial_mount = initial_mounts.get(added_mount['src'].split('/')[-1])
         if initial_mount:
-            result['removed_mounts'].append(initial_mount)
+            result['removed_mounts'].append({"path": initial_mount, "device": b.devicetree.resolve_device(added_mount['src']).path})
 
     result['mounts'] = added_mounts
     result['leaves'] = [d.path for d in b.devicetree.leaves]
