@@ -2,6 +2,7 @@
 - name: Find unused disks in the system
   find_unused_disk:
     min_size: "{{ min_size | default(omit) }}"
+    max_return: "{{ max_return|default(omit) }}"
   register: unused_disks_return
 
 - set_fact:
