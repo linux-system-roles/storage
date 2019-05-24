@@ -68,6 +68,7 @@ removed_mounts:
 
 from blivet import Blivet
 from blivet.callbacks import callbacks
+from blivet.flags import flags as blivet_flags
 from blivet.formats import get_format
 from blivet.size import Size
 from blivet.util import set_up_logging
@@ -75,6 +76,7 @@ from blivet.util import set_up_logging
 from ansible.module_utils.basic import AnsibleModule
 #from ansible.module_utils.size import Size
 
+blivet_flags.debug = True
 set_up_logging()
 
 def manage_volume(b, volume):
