@@ -11,17 +11,63 @@
     loop_var: current_pool
   when: _storage_pools_list is defined and _storage_pools_list | length > 0
 
+- resolve_blockdev:
+    spec: "{{ dev_id }}"
+  loop: "{{ blivet_output.mounts|map(attribute='src')|list }}"
+  loop_control:
+    loop_var: dev_id
+  register: resolve_blivet_mount_devs
+
+- resolve_blockdev:
+    spec: "{{ dev_id }}"
+  loop: "{{ ansible_mounts|map(attribute='device')|list }}"
+  loop_control:
+    loop_var: dev_id
+  register: resolve_ansible_mount_devs
+
+- set_fact:
+    blivet_mount_devs: "{{ resolve_blivet_mount_devs.results|map(attribute='device')|list }}"
+    ansible_mount_devs: "{{ resolve_ansible_mount_devs.results|map(attribute='device')|list }}"
+    removed_volumes: []
+
+- set_fact:
+    removed_volumes: "{{ removed_volumes|default([]) }} + [ {{ current_volume|combine({'_device': blivet_output.removed_mounts|selectattr('path', 'equalto', current_volume.mount_point)|list|first if blivet_output.removed_mounts|selectattr('path', 'equalto', current_volume.mount_point)|list else '' }) }} ]"
+  loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'absent')|list }}"
+  loop_control:
+    loop_var: current_volume
+
 - block:
-  - name: Verify the volumes listed in current_volumes were correctly managed
+  - name: Verify the volumes with no pool were correctly managed
     assert:
       that:
-        - "{{ current_volume.mount_point in fstab_buffer.stdout if current_volume.state in 'present' \
+        - "{{ current_volume.mount_point in fstab_buffer.stdout if current_volume.state == 'present' \
               else current_volume.mount_point not in fstab_buffer.stdout }}"
-        - "{{ ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list|length==1 \
-              if current_volume.state in 'present' else  \
-              ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list|length==0 }}"
-      msg: "The storage volume {{ current_volume.name }} was incorrectly managed."
+      msg: "The /etc/fstab entry for storage volume {{ current_volume.name }} was incorrectly managed."
     loop: "{{ _storage_volumes_list }}"
+    loop_control:
+      loop_var: current_volume
+  when: _storage_volumes_list is defined and _storage_volumes_list | length > 0
+
+- block:
+  - name: Verify the present volumes with no pool were correctly managed
+    assert:
+      that:
+        - "{{ ansible_mount_devs|select('equalto', blivet_mount_devs[idx])|list|length==1 }}"
+      msg: "The file system mount for storage volume {{ current_volume.name }} was incorrectly managed."
+    loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'present')|list }}"
+    loop_control:
+      loop_var: current_volume
+      index_var: idx
+  when: _storage_volumes_list is defined and _storage_volumes_list | length > 0
+
+# Any volume whose state is absent should not have any entries in ansible_mounts.
+- block:
+  - name: Verify the absent volumes with no pool are not in ansible_mounts
+    assert:
+      that:
+        - "{{ ansible_mount_devs|select('equalto', current_volume['_device'])|list|length==0 }}"
+      msg: "The file system mount for storage volume {{ current_volume.name }} was incorrectly managed."
+    loop: "{{ removed_volumes }}"
     loop_control:
       loop_var: current_volume
   when: _storage_volumes_list is defined and _storage_volumes_list | length > 0
