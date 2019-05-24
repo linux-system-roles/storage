@@ -249,7 +249,12 @@ def run_module():
     for volume in module.params['volumes']:
         added_mounts.extend(manage_volume(b, volume))
 
-    if b.devicetree.actions.find():
+    scheduled = b.devicetree.actions.find()
+    for action in scheduled:
+        if action.is_destroy and action.is_format:
+            action.format.teardown()
+
+    if scheduled:
         callbacks.action_executed.add(record_action)
         b.devicetree.actions.process()
         result['changed'] = True
