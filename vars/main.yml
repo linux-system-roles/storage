@@ -1,2 +1,1 @@
----
-# vars file for template
+blivet_package: "{{ 'python-blivet3' if ansible_distribution in ['RedHat', 'CentOS'] and ansible_distribution_version is version('7.0', '<') else 'python3-blivet' }}"
