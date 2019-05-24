@@ -91,14 +91,16 @@ def manage_volume(b, volume):
 
         device = b.devicetree.get_device_by_name(name)
 
+    fmt = get_format(volume['fs_type'])
+
     if device is None and volume['state'] != 'absent':
         if volume['type'] == 'lvm':
             parent = b.devicetree.get_device_by_name(volume['pool'])
             size = Size(volume['size'])
             try:
-                device = b.new_lv(name=volume['name'], parents=[parent], size=size)
+                device = b.new_lv(name=volume['name'], parents=[parent], size=size, fmt=fmt)
             except Exception as e:
-                raise RuntimeError("failed to create lv '%s': %s (%s)" % (volume['name'], str(e), str(b.devicetree)))
+                raise RuntimeError("failed to create lv '%s': %s" % (volume['name'], str(e)))
             b.create_device(device)
     else:
         if volume['state'] == 'absent':
@@ -109,7 +111,6 @@ def manage_volume(b, volume):
     if device is None:
         raise RuntimeError("failed to look up or create device '%s'" % volume['name'])
 
-    fmt = get_format(volume['fs_type'], device=device.path)
     if device.format.type != fmt.type:
         if device.format.status:
             device.format.teardown()
