@@ -78,9 +78,11 @@ from ansible.module_utils.basic import AnsibleModule
 
 blivet_flags.debug = True
 set_up_logging()
+import logging
+log = logging.getLogger("blivet.ansible")
 
 def manage_volume(b, volume):
-    mounts = list()
+    ## try looking up an existing device
     if volume['type'] == 'disk':
         device = b.devicetree.resolve_device(volume['disks'][0])
     else:
@@ -91,8 +93,9 @@ def manage_volume(b, volume):
 
         device = b.devicetree.get_device_by_name(name)
 
-    fmt = get_format(volume['fs_type'])
+    fmt = get_format(volume['fs_type'], mountpoint=volume.get('mount_point'))
 
+    ## schedule creation or destruction of the volume as needed
     if device is None and volume['state'] != 'absent':
         if volume['type'] == 'lvm':
             parent = b.devicetree.get_device_by_name(volume['pool'])
@@ -106,28 +109,24 @@ def manage_volume(b, volume):
         if volume['state'] == 'absent':
             if device is not None:
                 b.devicetree.recursive_remove(device)
-            return mounts
 
     if device is None:
         raise RuntimeError("failed to look up or create device '%s'" % volume['name'])
 
+    ## schedule reformatting of the volume as needed
     if device.format.type != fmt.type:
         if device.format.status:
             device.format.teardown()
         b.format_device(device, fmt)
 
     if volume['mount_point']:
-        mounts.append({'src': device.fstab_spec,
-                       'path': volume['mount_point'],
-                       'fstype': volume['fs_type'],
-                       'opts': volume['mount_options'],
-                       'dump': volume['mount_check'],
-                       'passno': volume['mount_passno'],
-                       'state': 'mounted'})
+        volume['_device'] = device.path
+        volume['_mount_id'] = device.fstab_spec
 
+    ## schedule resize of the volume as needed
     size = Size(volume['size'])
-    if device.exists and size and device.size != size:
-        if True or device.format.resizable:
+    if device.exists and size and device.resizable and device.size != size:
+        if device.format.resizable:
             device.format.update_size_info()
 
         try:
@@ -135,9 +134,9 @@ def manage_volume(b, volume):
         except ValueError as e:
             raise RuntimeError("device '%s' is not resizable (%s -> %s): %s" % (device.name, device.size, size, str(e)))
 
-    return mounts
 
 def look_up_disks(b, specs):
+    """ return a list of blivet devices matching the given device ids """
     disks = list()
     for spec in specs:
         device = b.devicetree.resolve_device(spec)
@@ -147,6 +146,7 @@ def look_up_disks(b, specs):
     return disks
 
 def remove_leaves(b, device):
+    """ schedule destroy actions for leaf devices recursively """
     if device.is_disk:
         return
 
@@ -156,8 +156,10 @@ def remove_leaves(b, device):
             remove_leaves(p)
 
 def manage_pool(b, pool):
-    mounts = list()
+    ## try to look up an existing pool device
     device = b.devicetree.get_device_by_name(pool['name'])
+
+    ## schedule create or destroy actions as needed
     if device is None and pool['state'] != 'absent':
         disks = look_up_disks(b, pool['disks'])
         for disk in disks:
@@ -173,15 +175,14 @@ def manage_pool(b, pool):
                 for p in device.parents:
                     remove_leaves(b, p)
 
-            return mounts
+            return
 
         # adjust pvs
         pass
 
+    ## manage the pool's volumes
     for volume in pool['volumes']:
-        mounts.extend(manage_volume(b, volume))
-
-    return mounts
+        manage_volume(b, volume)
 
 
 def get_fstab_mounts(b):
@@ -215,7 +216,6 @@ def run_module():
         changed=False,
         actions=list(),
         leaves=list(),
-        removed_mounts=list(),
         mounts=list()
     )
 
@@ -229,7 +229,6 @@ def run_module():
     b.reset()
     actions = list()
     initial_mounts = get_fstab_mounts(b)
-    added_mounts = list()
     def record_action(action):
         if action.is_format and action.format.type is None:
             return
@@ -244,10 +243,10 @@ def run_module():
         return action_desc.format(act=action.type_desc_str, fmt=action.format.type, dev=action.device.path)
 
     for pool in module.params['pools']:
-        added_mounts.extend(manage_pool(b, pool))
+        manage_pool(b, pool)
 
     for volume in module.params['volumes']:
-        added_mounts.extend(manage_volume(b, volume))
+        manage_volume(b, volume)
 
     scheduled = b.devicetree.actions.find()
     for action in scheduled:
@@ -255,23 +254,38 @@ def run_module():
             action.format.teardown()
 
     if scheduled:
+        ## execute the scheduled actions, committing changes to disk
         callbacks.action_executed.add(record_action)
         b.devicetree.actions.process()
         result['changed'] = True
         result['actions'] = [action_string(a) for a in actions]
+
+        ## build a list of mounts to remove
         for action in actions:
             if action.is_destroy and action.is_format and action.format.type is not None:
                 mount = initial_mounts.get(action.device.name)
                 if mount is not None:
-                    result['removed_mounts'].append({"path": mount, "device": action.device.path})
+                    result['mounts'].append({"path": mount, "device": action.device.path, 'state': 'absent'})
 
-    # handle mount point changes w/o any changes to the block device or its formatting
-    for added_mount in added_mounts:
-        initial_mount = initial_mounts.get(added_mount['src'].split('/')[-1])
-        if initial_mount:
-            result['removed_mounts'].append({"path": initial_mount, "device": b.devicetree.resolve_device(added_mount['src']).path})
+    mount_vols = list()
+    for pool in module.params['pools']:
+        for volume in pool['volumes']:
+            if pool['state'] == 'present' and volume['state'] != 'absent' and volume['mount_point']:
+                mount_vols.append(volume.copy())
 
-    result['mounts'] = added_mounts
+    for volume in module.params['volumes']:
+        if volume['state'] == 'present' and volume['mount_point']:
+            mount_vols.append(volume)
+
+    for volume in mount_vols:
+        result['mounts'].append({'src': volume['_device'],
+                                 'path': volume['mount_point'],
+                                 'fstype': volume['fs_type'],
+                                 'opts': volume['mount_options'],
+                                 'dump': volume['mount_check'],
+                                 'passno': volume['mount_passno'],
+                                 'state': 'mounted'})
+
     result['leaves'] = [d.path for d in b.devicetree.leaves]
 
     # success - return result

@@ -31,7 +31,7 @@
     removed_volumes: []
 
 - set_fact:
-    removed_volumes: "{{ removed_volumes|default([]) }} + [ {{ current_volume|combine({'_device': blivet_output.removed_mounts|selectattr('path', 'equalto', current_volume.mount_point)|list|first if blivet_output.removed_mounts|selectattr('path', 'equalto', current_volume.mount_point)|list else '' }) }} ]"
+    removed_volumes: "{{ removed_volumes|default([]) }} + [ {{ current_volume|combine({'_device': blivet_output.mounts|selectattr('state', 'equalto', 'absent')|selectattr('path', 'equalto', current_volume.mount_point)|list|first if blivet_output.mounts|selectattr('state', 'equalto', 'absent')|selectattr('path', 'equalto', current_volume.mount_point)|list else '' }) }} ]"
   loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'absent')|list }}"
   loop_control:
     loop_var: current_volume

@@ -100,20 +100,12 @@
 #  changed options? (just add w/ new settings?)
 # add new mounts
 #
-- name: remove obsolete mounts
+- name: manage mounts
   mount:
+    src: "{{ mount_info['src'] if mount_info['state'] == 'mounted' else omit }}"
     path: "{{ mount_info['path'] }}"
-    state: "absent"
-  loop: "{{ blivet_output.removed_mounts }}"
-  loop_control:
-    loop_var: mount_info
-
-- name: add new mounts
-  mount:
-    src: "{{ mount_info['src'] }}"
-    path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] }}"
-    opts: "{{ mount_info['opts'] }}"
+    fstype: "{{ mount_info['fstype'] if mount_info['state'] == 'mounted' else omit }}"
+    opts: "{{ mount_info['opts'] if mount_info['state'] == 'mounted' else omit }}"
     state: "{{ mount_info['state'] }}"
   loop: "{{ blivet_output.mounts }}"
   loop_control:
@@ -121,7 +113,7 @@
 
 - name: tell systemd to refresh its view of /etc/fstab
   command: systemctl daemon-reload
-  when: blivet_output['removed_mounts'] or blivet_output['mounts']
+  when: blivet_output['mounts']
 
 #
 # Update facts since we may have changed system state.
