@@ -260,7 +260,7 @@ def run_module():
     if scheduled:
         ## execute the scheduled actions, committing changes to disk
         callbacks.action_executed.add(record_action)
-        b.devicetree.actions.process(devices=b.devicetree.devices)
+        b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         result['changed'] = True
         result['actions'] = [action_string(a) for a in actions]
 
