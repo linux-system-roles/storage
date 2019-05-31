@@ -1,8 +1,6 @@
 ---
 # defaults file for template
 storage_backend: "blivet"
-pool_layers: ["pool-partitions", "vg"]  # md, luks, vdo under vg
-volume_layers: ["partition", "lv", "fs", "mount"]  # luks under fs
 use_partitions: false
 disklabel_type: gpt
 
@@ -26,29 +24,3 @@ volume_defaults:
   mount_check: 0
   mount_passno: 0
   mount_device_identifier: "uuid"  # uuid|label|path
-
-volume_internal:
-  _device: ""
-  _preexist: false
-  _orig_fs_type: ""
-  _orig_mount_point: ""
-
-  _remove: false
-  _create: false
-
-  _wipe: false
-
-  _mount: false
-
-pool_internal:
-  _preexist: false
-  _orig_members: []
-  _remove: false
-  _create: false
-
-part_defaults:
-  disk: null
-  number: 1
-  state: present
-  disklabel: "{{ disklabel_type }}"
-  name: null

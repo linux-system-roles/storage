@@ -1,8 +1,0 @@
----
-- name: manage pool partitions
-  include_tasks: pool-partition-{{ storage_backend }}.yml
-  loop: "{{ pool.disks }}"
-  loop_control:
-    loop_var: disk
-    index_var: disk_idx
-  when: use_partitions
