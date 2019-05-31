@@ -108,6 +108,8 @@ def manage_volume(b, volume):
     else:
         if volume['state'] == 'absent':
             if device is not None:
+                volume['_device'] = device.path
+                volume['_mount_id'] = device.fstab_spec
                 b.devicetree.recursive_remove(device)
 
     if device is None:
@@ -119,10 +121,6 @@ def manage_volume(b, volume):
             device.format.teardown()
         b.format_device(device, fmt)
 
-    if volume['mount_point']:
-        volume['_device'] = device.path
-        volume['_mount_id'] = device.fstab_spec
-
     ## schedule resize of the volume as needed
     size = Size(volume['size'])
     if device.exists and size and device.resizable and device.size != size:
@@ -133,6 +131,10 @@ def manage_volume(b, volume):
             b.resize_device(device, size)
         except ValueError as e:
             raise RuntimeError("device '%s' is not resizable (%s -> %s): %s" % (device.name, device.size, size, str(e)))
+
+    if '_device' not in volume:  # we added the path and fstab id earlier if the volume is being removed
+        volume['_device'] = device.path
+        volume['_mount_id'] = device.fstab_spec
 
 
 def look_up_disks(b, specs):
@@ -216,7 +218,9 @@ def run_module():
         changed=False,
         actions=list(),
         leaves=list(),
-        mounts=list()
+        mounts=list(),
+        pools=list(),
+        volumes=list(),
     )
 
     module = AnsibleModule(argument_spec=module_args,
@@ -265,17 +269,29 @@ def run_module():
             if action.is_destroy and action.is_format and action.format.type is not None:
                 mount = initial_mounts.get(action.device.name)
                 if mount is not None:
-                    result['mounts'].append({"path": mount, "device": action.device.path, 'state': 'absent'})
+                    result['mounts'].append({"path": mount, 'state': 'absent'})
 
     mount_vols = list()
     for pool in module.params['pools']:
         for volume in pool['volumes']:
-            if pool['state'] == 'present' and volume['state'] != 'absent' and volume['mount_point']:
-                mount_vols.append(volume.copy())
+            if pool['state'] == 'present' and volume['state'] == 'present':
+                mount = initial_mounts.get(volume['_device'].split('/')[-1])
+                if volume['mount_point']:
+                    mount_vols.append(volume.copy())
+
+                # handle removal of existing mounts of this volume
+                if mount and mount != volume['mount_point']:
+                    result['mounts'].append({"path": mount, 'state': 'absent'})
 
     for volume in module.params['volumes']:
-        if volume['state'] == 'present' and volume['mount_point']:
-            mount_vols.append(volume)
+        if volume['state'] == 'present':
+            mount = initial_mounts.get(volume['_device'].split('/')[-1])
+            if volume['mount_point']:
+                mount_vols.append(volume)
+
+            # handle removal of existing mounts of this volume
+            if mount and mount != volume['mount_point']:
+                result['mounts'].append({"path": mount, 'state': 'absent'})
 
     for volume in mount_vols:
         result['mounts'].append({'src': volume['_device'],
@@ -287,6 +303,8 @@ def run_module():
                                  'state': 'mounted'})
 
     result['leaves'] = [d.path for d in b.devicetree.leaves]
+    result['pools'] = module.params['pools']
+    result['volumes'] = module.params['volumes']
 
     # success - return result
     module.exit_json(**result)

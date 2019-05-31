@@ -13,28 +13,15 @@
 
 - resolve_blockdev:
     spec: "{{ dev_id }}"
-  loop: "{{ blivet_output.mounts|map(attribute='src')|list }}"
-  loop_control:
-    loop_var: dev_id
-  register: resolve_blivet_mount_devs
-
-- resolve_blockdev:
-    spec: "{{ dev_id }}"
   loop: "{{ ansible_mounts|map(attribute='device')|list }}"
   loop_control:
     loop_var: dev_id
   register: resolve_ansible_mount_devs
 
 - set_fact:
-    blivet_mount_devs: "{{ resolve_blivet_mount_devs.results|map(attribute='device')|list }}"
     ansible_mount_devs: "{{ resolve_ansible_mount_devs.results|map(attribute='device')|list }}"
-    removed_volumes: []
-
-- set_fact:
-    removed_volumes: "{{ removed_volumes|default([]) }} + [ {{ current_volume|combine({'_device': blivet_output.mounts|selectattr('state', 'equalto', 'absent')|selectattr('path', 'equalto', current_volume.mount_point)|list|first if blivet_output.mounts|selectattr('state', 'equalto', 'absent')|selectattr('path', 'equalto', current_volume.mount_point)|list else '' }) }} ]"
-  loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'absent')|list }}"
-  loop_control:
-    loop_var: current_volume
+    present_volumes: "{{ blivet_output.volumes|selectattr('state', 'equalto', 'present')|list }}"
+    absent_volumes: "{{ blivet_output.volumes|selectattr('state', 'equalto', 'absent')|list }}"
 
 - block:
   - name: Verify the volumes with no pool were correctly managed
@@ -52,7 +39,8 @@
   - name: Verify the present volumes with no pool were correctly managed
     assert:
       that:
-        - "{{ ansible_mount_devs|select('equalto', blivet_mount_devs[idx])|list|length==1 }}"
+        - "{{ current_volume['name'] == present_volumes[idx]['name'] }}"
+        - "{{ ansible_mount_devs|select('equalto', present_volumes[idx]['_device'])|list|length==1 }}"
       msg: "The file system mount for storage volume {{ current_volume.name }} was incorrectly managed."
     loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'present')|list }}"
     loop_control:
@@ -65,9 +53,11 @@
   - name: Verify the absent volumes with no pool are not in ansible_mounts
     assert:
       that:
-        - "{{ ansible_mount_devs|select('equalto', current_volume['_device'])|list|length==0 }}"
+        - "{{ current_volume['name'] == absent_volumes[idx]['name'] }}"
+        - "{{ ansible_mount_devs|select('equalto', absent_volumes[idx]['_device'])|list|length==0 }}"
       msg: "The file system mount for storage volume {{ current_volume.name }} was incorrectly managed."
-    loop: "{{ removed_volumes }}"
+    loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'absent')|list }}"
     loop_control:
       loop_var: current_volume
+      index_var: idx
   when: _storage_volumes_list is defined and _storage_volumes_list | length > 0
