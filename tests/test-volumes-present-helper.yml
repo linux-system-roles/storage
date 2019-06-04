@@ -4,7 +4,7 @@
 
 - name: gather mounts related to each volume in the pool
   set_fact:
-    mount_entries: "{{ mount_entries }} + [ {{ ansible_mounts|selectattr('device', 'match', '.*/' + current_pool.name + '-' + current_volume.name)|list }} ]"
+    mount_entries: "{{ mount_entries }} + [ {{ ansible_mounts|selectattr('device', 'match', current_volume['_device'])|list }} ]"
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
@@ -13,7 +13,7 @@
   assert:
     that:
       - "{{ mount_entries[idx]|length==1
-            if current_volume.state is defined and current_volume.state in 'present' else
+            if current_volume.state is defined and current_volume.state == 'present' else
             mount_entries[idx]|list|length==0
          }}"
     msg: "The volume {{ current_volume.name }} is not mounted according to the requested state."
