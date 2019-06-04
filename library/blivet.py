@@ -108,9 +108,11 @@ def manage_volume(b, volume):
     else:
         if volume['state'] == 'absent':
             if device is not None:
+                # save device identifiers for use by the role
                 volume['_device'] = device.path
                 volume['_mount_id'] = device.fstab_spec
                 b.devicetree.recursive_remove(device)
+                return
 
     if device is None:
         raise RuntimeError("failed to look up or create device '%s'" % volume['name'])
@@ -133,6 +135,7 @@ def manage_volume(b, volume):
             raise RuntimeError("device '%s' is not resizable (%s -> %s): %s" % (device.name, device.size, size, str(e)))
 
     if '_device' not in volume:  # we added the path and fstab id earlier if the volume is being removed
+        # save device identifiers for use by the role
         volume['_device'] = device.path
         volume['_mount_id'] = device.fstab_spec
 
@@ -254,7 +257,7 @@ def run_module():
 
     scheduled = b.devicetree.actions.find()
     for action in scheduled:
-        if action.is_destroy and action.is_format:
+        if action.is_destroy and action.is_format and action.format.exists:
             action.format.teardown()
 
     if scheduled:
