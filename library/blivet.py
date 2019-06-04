@@ -93,7 +93,8 @@ def manage_volume(b, volume):
 
         device = b.devicetree.get_device_by_name(name)
 
-    fmt = get_format(volume['fs_type'], mountpoint=volume.get('mount_point'))
+    fmt = get_format(volume['fs_type'], mountpoint=volume.get('mount_point'),
+                     label=volume['fs_label'], options=volume['fs_create_options'])
 
     ## schedule creation or destruction of the volume as needed
     if device is None and volume['state'] != 'absent':
