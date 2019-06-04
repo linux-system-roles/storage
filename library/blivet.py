@@ -214,8 +214,7 @@ def run_module():
     # available arguments/parameters that a user can pass
     module_args = dict(
         pools=dict(type='list'),
-        volumes=dict(type='list'),
-        exclusive=dict(type='bool', default=False))
+        volumes=dict(type='list'))
 
     # seed the result dict in the object
     result = dict(
@@ -230,7 +229,7 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
 
-    if not module.params['exclusive'] and not module.params['pools'] and not module.params['volumes']:
+    if not module.params['pools'] and not module.params['volumes']:
         module.exit_json(**result)
 
     b = Blivet()
