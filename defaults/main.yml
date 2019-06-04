@@ -1,7 +1,7 @@
 ---
 # defaults file for template
 storage_backend: "blivet"
-use_partitions: false
+use_partitions: null
 disklabel_type: gpt
 
 pool_defaults:

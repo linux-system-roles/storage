@@ -79,6 +79,8 @@
   blivet:
     pools: "{{ pools }}"
     volumes: "{{ volumes }}"
+    use_partitions: "{{ use_partitions }}"
+    disklabel_type: "{{ disklabel_type }}"
   register: blivet_output
 
 - debug:

@@ -69,7 +69,8 @@ removed_mounts:
 from blivet import Blivet
 from blivet.callbacks import callbacks
 from blivet.flags import flags as blivet_flags
-from blivet.formats import get_format
+from blivet.formats import get_format, get_device_format_class
+from blivet.partitioning import do_partitioning
 from blivet.size import Size
 from blivet.util import set_up_logging
 
@@ -80,6 +81,14 @@ blivet_flags.debug = True
 set_up_logging()
 import logging
 log = logging.getLogger("blivet.ansible")
+
+
+use_partitions = None  # create partitions on pool backing device disks?
+
+
+def set_disklabel_type(disklabel_type):
+    disklabel_class = get_device_format_class("disklabel")
+    disklabel_class.set_default_label_type(disklabel_type)
 
 def manage_volume(b, volume):
     ## try looking up an existing device
@@ -106,6 +115,14 @@ def manage_volume(b, volume):
             except Exception as e:
                 raise RuntimeError("failed to create lv '%s': %s" % (volume['name'], str(e)))
             b.create_device(device)
+        elif volume['type'] == 'partition':
+            parent = b.devicetree.get_device_by_name(volume['pool'])
+            label = get_format("disklabel", device=parent.path)
+            b.format_device(parent, label)
+            size = Size("256 MiB")
+            device = b.new_partition(parents=[parent], size=size, grow=True, fmt=fmt)
+            b.create_device(device)
+            do_partitioning(b)
     else:
         if volume['state'] == 'absent':
             if device is not None:
@@ -162,18 +179,50 @@ def remove_leaves(b, device):
             remove_leaves(p)
 
 def manage_pool(b, pool):
+    global use_partitions
+
     ## try to look up an existing pool device
     device = b.devicetree.get_device_by_name(pool['name'])
+    disks = look_up_disks(b, pool['disks'])
+
+    pool_exists = False
+    if pool['type'] == 'disk':
+        device = disks[0]
+        if device.partitioned:
+            empty_partition_count = 0 if device.format.magic_partition_number == 0 else 1
+            if len(device.format.partitions) == empty_partition_count:
+                pool_exists = True
+    else:
+        pool_exists = device is not None
 
     ## schedule create or destroy actions as needed
-    if device is None and pool['state'] != 'absent':
-        disks = look_up_disks(b, pool['disks'])
-        for disk in disks:
-            b.devicetree.recursive_remove(disk)
-            b.format_device(disk, get_format("lvmpv", device=disk.path))
+    if not pool_exists and pool['state'] != 'absent':
+        if pool['type'] == 'lvm':
+            members = list()
+            for disk in disks:
+                b.devicetree.recursive_remove(disk)
+                if use_partitions:
+                    label = get_format("disklabel", device=disk.path)
+                    b.format_device(disk, label)
+                    member = b.new_partition(parents=[disk], size=Size("256MiB"), grow=True)
+                    b.create_device(member)
+                else:
+                    member = disk
 
-        pool_device = b.new_vg(name=pool['name'], parents=disks)
-        b.create_device(pool_device)
+                b.format_device(member, get_format("lvmpv"))
+                members.append(member)
+
+            if use_partitions:
+                do_partitioning(b)
+
+            pool_device = b.new_vg(name=pool['name'], parents=members)
+            b.create_device(pool_device)
+        elif pool['type'] == 'disk':
+            disk = device
+            if not disk.partitioned:
+                b.devicetree.recursive_remove(disk)
+                label = get_format("disklabel", device=disk.path)
+                b.format_device(disk, label)
     else:
         if pool['state'] == 'absent':
             if device is not None:
@@ -214,7 +263,9 @@ def run_module():
     # available arguments/parameters that a user can pass
     module_args = dict(
         pools=dict(type='list'),
-        volumes=dict(type='list'))
+        volumes=dict(type='list'),
+        disklabel_type=dict(type='str', required=False, default=None),
+        use_partitions=dict(type='bool', required=False, default=True))
 
     # seed the result dict in the object
     result = dict(
@@ -231,6 +282,13 @@ def run_module():
 
     if not module.params['pools'] and not module.params['volumes']:
         module.exit_json(**result)
+
+    if module.params['disklabel_type']:
+        set_disklabel_type(module.params['disklabel_type'])
+
+    global use_partitions
+    use_partitions = module.params['use_partitions']
+    log.debug("use_partitions = %s", use_partitions)
 
     b = Blivet()
     b.reset()

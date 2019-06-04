@@ -45,3 +45,27 @@
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
+
+- name: Ensure partitions were used for volumes if specified.
+  assert:
+    that:
+      - "{{ current_volume._device[-1].isdigit() if current_volume.type == 'partition' else True }}"
+    msg: "Volume is not a partition as specified."
+  loop: "{{ current_pool.volumes }}"
+  loop_control:
+    loop_var: current_volume
+
+- name: Get a list of the current LVM pool's PVs
+  command: "pvs -o pv_name -S vg_name={{ current_pool.name }} --noheadings"
+  register: pool_pvs_output
+  when: current_pool.type == 'lvm' and false
+
+- name: Ensure partitions were used for pool backing devices if specified.
+  assert:
+    that:
+      - "{{ pv[-1].isdigit() }}"
+    msg: "PVs are not partitions as specified."
+  loop: "{{ pool_pvs_output.stdout_lines|map('trim')|list }}"
+  loop_control:
+    loop_var: pv
+  when: current_pool.type == 'lvm' and false
