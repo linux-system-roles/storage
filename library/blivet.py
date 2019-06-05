@@ -116,7 +116,7 @@ def manage_volume(b, volume):
                 raise RuntimeError("failed to create lv '%s': %s" % (volume['name'], str(e)))
             b.create_device(device)
         elif volume['type'] == 'partition':
-            parent = b.devicetree.get_device_by_name(volume['pool'])
+            parent = b.devicetree.resolve_device(volume['pool'])
             label = get_format("disklabel", device=parent.path)
             b.format_device(parent, label)
             size = Size("256 MiB")
