@@ -188,10 +188,7 @@ def manage_pool(b, pool):
     pool_exists = False
     if pool['type'] == 'disk':
         device = disks[0]
-        if device.partitioned:
-            empty_partition_count = 0 if device.format.magic_partition_number == 0 else 1
-            if len(device.format.partitions) == empty_partition_count:
-                pool_exists = True
+        pool_exists = device.partitioned
     else:
         pool_exists = device is not None
 
@@ -200,7 +197,9 @@ def manage_pool(b, pool):
         if pool['type'] == 'lvm':
             members = list()
             for disk in disks:
-                b.devicetree.recursive_remove(disk)
+                if not disk.isleaf:
+                    b.devicetree.recursive_remove(disk)
+
                 if use_partitions:
                     label = get_format("disklabel", device=disk.path)
                     b.format_device(disk, label)
@@ -219,20 +218,21 @@ def manage_pool(b, pool):
             b.create_device(pool_device)
         elif pool['type'] == 'disk':
             disk = device
-            if not disk.partitioned:
+            if not disk.isleaf:
                 b.devicetree.recursive_remove(disk)
-                label = get_format("disklabel", device=disk.path)
-                b.format_device(disk, label)
+            label = get_format("disklabel", device=disk.path)
+            b.format_device(disk, label)
     else:
         if pool['state'] == 'absent':
             if device is not None:
                 b.devicetree.recursive_remove(device)
+                # remove pool backing devices
                 for p in device.parents:
                     remove_leaves(b, p)
 
             return
 
-        # adjust pvs
+        # adjusting pvs means destroying and recreating the vg
         pass
 
     ## manage the pool's volumes
