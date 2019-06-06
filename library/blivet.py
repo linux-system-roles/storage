@@ -96,16 +96,20 @@ class BlivetVolume:
 
     @property
     def ultimately_present(self):
+        """ Should this volume be present when we are finished? """
         return (self._volume['state'] == 'present' and
                 (self._blivet_pool is None or self._blivet_pool.ultimately_present))
 
     def _type_check(self):  # pylint: disable=no-self-use
+        """ Is self._device of the correct type? """
         return True
 
     def _get_device_id(self):
+        """ Return an identifier by which to try looking the volume up. """
         return self._volume['name']
 
     def _look_up_device(self):
+        """ Try to look up this volume in blivet's device tree. """
         device = self._blivet.devicetree.resolve_device(self._get_device_id())
         if device is None:
             return
@@ -118,15 +122,18 @@ class BlivetVolume:
             return  # TODO: see if we can create this device w/ the specified name
 
     def _get_format(self):
+        """ Return a blivet.formats.DeviceFormat instance for this volume. """
         return get_format(self._volume['fs_type'],
                           mountpoint=self._volume.get('mount_point'),
                           label=self._volume['fs_label'],
                           options=self._volume['fs_create_options'])
 
     def _create(self):
+        """ Schedule actions as needed to ensure the volume exists. """
         pass
 
     def _destroy(self):
+        """ Schedule actions as needed to ensure the volume does not exist. """
         if self._device is None:
             return
 
@@ -138,6 +145,7 @@ class BlivetVolume:
         self._blivet.devicetree.recursive_remove(self._device)
 
     def _resize(self):
+        """ Schedule actions as needed to ensure the device has the desired size. """
         size = Size(self._volume['size'])
         if size and self._device.resizable and self._device.size != size:
             if self._device.format.resizable:
@@ -150,6 +158,7 @@ class BlivetVolume:
                                    % (self._device.name, self._device.size, size, str(e)))
 
     def _reformat(self):
+        """ Schedule actions as needed to ensure the volume is formatted as specified. """
         fmt = self._get_format()
         if self._device.format.type == fmt.type:
             return
@@ -159,6 +168,7 @@ class BlivetVolume:
         self._blivet.format_device(self._device, fmt)
 
     def manage(self):
+        """ Schedule actions to configure this volume according to the yaml input. """
         # look up the device
         self._look_up_device()
 
@@ -247,6 +257,7 @@ _BLIVET_VOLUME_TYPES = {
 
 
 def _get_blivet_volume(blivet_obj, volume, bpool=None):
+    """ Return a BlivetVolume instance appropriate for the volume dict. """
     volume_type = volume.get('type', bpool._pool['type'] if bpool else None)
     if volume_type not in _BLIVET_VOLUME_TYPES:
         raise RuntimeError("Volume '%s' has unknown type '%s'" % (volume['name'], volume_type))
@@ -264,12 +275,15 @@ class BlivetPool:
 
     @property
     def ultimately_present(self):
+        """ Should this pool be present when we are finished? """
         return self._pool['state'] == 'present'
 
     def _create(self):
+        """ Schedule actions as needed to ensure the pool exists. """
         pass
 
     def _destroy(self):
+        """ Schedule actions as needed to ensure the pool does not exist. """
         if self._device is None:
             return
 
@@ -294,6 +308,7 @@ class BlivetPool:
         return True
 
     def _look_up_disks(self):
+        """ Look up the pool's disks in blivet's device tree. """
         disks = list()
         for spec in self._pool['disks']:
             device = self._blivet.devicetree.resolve_device(spec)
@@ -303,6 +318,7 @@ class BlivetPool:
         self._disks = disks
 
     def _look_up_device(self):
+        """ Look up the pool in blivet's device tree. """
         device = self._blivet.devicetree.resolve_device(self._pool['name'])
         if device is None:
             return
@@ -315,6 +331,7 @@ class BlivetPool:
             return  # TODO: see if we can create this device w/ the specified name
 
     def _create_members(self):
+        """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
         for disk in self._disks:
             if not disk.isleaf:
@@ -337,16 +354,19 @@ class BlivetPool:
         return members
 
     def _get_volumes(self):
+        """ Set up BlivetVolume instances for this pool's volumes. """
         for volume in self._pool['volumes']:
             bvolume = _get_blivet_volume(self._blivet, volume, self)
             self._blivet_volumes.append(bvolume)
 
     def _manage_volumes(self):
+        """ Schedule actions as needed to configure this pool's volumes. """
         self._get_volumes()
         for bvolume in self._blivet_volumes:
             bvolume.manage()
 
     def manage(self):
+        """ Schedule actions to configure this pool according to the yaml input. """
         # look up the device
         self._look_up_disks()
         self._look_up_device()
@@ -398,6 +418,7 @@ _BLIVET_POOL_TYPES = {
 
 
 def _get_blivet_pool(blivet_obj, pool):
+    """ Return an appropriate BlivetPool instance for the pool dict. """
     if pool['type'] not in _BLIVET_POOL_TYPES:
         raise RuntimeError("Pool '%s' has unknown type '%s'" % (pool['name'], pool['type']))
 
@@ -405,6 +426,7 @@ def _get_blivet_pool(blivet_obj, pool):
 
 
 def manage_volume(b, volume):
+    """ Schedule actions as needed to manage a single standalone volume. """
     bvolume = _get_blivet_volume(b, volume)
     bvolume.manage()
     volume['_device'] = bvolume._volume.get('_device', '')
@@ -412,6 +434,7 @@ def manage_volume(b, volume):
 
 
 def manage_pool(b, pool):
+    """ Schedule actions as needed to manage a single pool and its volumes. """
     bpool = _get_blivet_pool(b, pool)
     bpool.manage()
     for (volume, bvolume) in zip(pool['volumes'], bpool._blivet_volumes):
@@ -420,6 +443,7 @@ def manage_pool(b, pool):
 
 
 def get_fstab_mounts(b):
+    """ Return a dict w/ device name keys and fstab mount point values. """
     mounts = {}
     for line in open('/etc/fstab').readlines():
         if line.lstrip().startswith("#"):
