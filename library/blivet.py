@@ -438,7 +438,7 @@ def get_fstab_mounts(b):
     return mounts
 
 
-def get_mount_info(blivet_obj, pools, volumes, actions):
+def get_mount_info(pools, volumes, actions, initial_mounts):
     """ Return a list of argument dicts to pass to the mount module to manage mounts.
 
         Removed mounts go directly into the mount_info list, which is the return value,
@@ -446,7 +446,6 @@ def get_mount_info(blivet_obj, pools, volumes, actions):
         at the end to ensure that removals happen first.
     """
     mount_info = list()
-    initial_mounts = get_fstab_mounts(blivet_obj)
 
     # account for mounts removed by removing or reformatting volumes
     if actions:
@@ -526,6 +525,7 @@ def run_module():
     b = Blivet()
     b.reset()
     actions = list()
+    initial_mounts = get_fstab_mounts(b)
 
     def record_action(action):
         if action.is_format and action.format.type is None:
@@ -556,7 +556,7 @@ def run_module():
         result['changed'] = True
         result['actions'] = [action_dict(a) for a in actions]
 
-    result['mounts'] = get_mount_info(b, module.params['pools'], module.params['volumes'], actions)
+    result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, initial_mounts)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']
