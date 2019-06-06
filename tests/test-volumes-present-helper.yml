@@ -4,7 +4,7 @@
 
 - name: gather mounts related to each volume in the pool
   set_fact:
-    mount_entries: "{{ mount_entries }} + [ {{ ansible_mounts|selectattr('device', 'match', current_volume['_device'])|list }} ]"
+    mount_entries: "{{ mount_entries }} + [ {{ ansible_mounts|selectattr('device', 'equalto', current_volume['_device'])|list }} ]"
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
@@ -49,11 +49,12 @@
 - name: Ensure partitions were used for volumes if specified.
   assert:
     that:
-      - "{{ current_volume._device[-1].isdigit() if current_volume.type == 'partition' else True }}"
+      - "{{ current_volume._device[-1].isdigit() if current_volume.type == 'partition' and current_volume.state == 'present' else True }}"
     msg: "Volume is not a partition as specified."
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
+  when: current_pool.state == "present"
 
 - name: Get a list of the current LVM pool's PVs
   command: "pvs -o pv_name -S vg_name={{ current_pool.name }} --noheadings"
