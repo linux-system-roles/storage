@@ -9,20 +9,20 @@
   loop_control:
     loop_var: current_volume
 
-- name: Ensure all lvm volumes were correctly managed in /etc/fstab and ansible_mounts.
+- name: Ensure all volumes were correctly managed in /etc/fstab and ansible_mounts.
   assert:
     that:
       - "{{ mount_entries[idx]|length==1
             if current_volume.state is defined and current_volume.state == 'present' else
             mount_entries[idx]|list|length==0
          }}"
-    msg: "The volume {{ current_volume.name }} is not mounted according to the requested state."
+    msg: "The volume {{ current_volume.name }} is not mounted according to the requested state: {{ current_volume.state }} / {{ mount_entries[idx]|list }}"
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
     index_var: idx
 
-- name: Ensure all lvm volumes were correctly managed in /etc/fstab and ansible_mounts.
+- name: Ensure all volumes were correctly managed in /etc/fstab and ansible_mounts.
   assert:
     that:
       - "{{ (mount_entries[idx]|length==1 and mount_entries[idx]|map(attribute='mount')|first) == current_volume.mount_point
@@ -35,7 +35,7 @@
     loop_var: current_volume
     index_var: idx
 
-- name: Ensure all lvm volumes were correctly managed in /etc/fstab.
+- name: Ensure all volumes were correctly managed in /etc/fstab.
   assert:
     that:
       - "{{ current_volume.mount_point not in fstab_buffer.stdout if
