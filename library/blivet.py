@@ -533,14 +533,10 @@ def run_module():
 
         actions.append(action)
 
-    def action_string(action):
-        action_desc = '{act}'
-        if action.is_format:
-            action_desc += ' {fmt} on'
-        action_desc += ' {dev}'
-        return action_desc.format(act=action.type_desc_str,
-                                  fmt=action.format.type,
-                                  dev=action.device.path)
+    def action_dict(action):
+        return dict(action=action.type_desc_str,
+                    fs_type=action.format.type if action.is_format else None,
+                    device=action.device.path)
 
     for pool in module.params['pools']:
         manage_pool(b, pool)
@@ -558,7 +554,7 @@ def run_module():
         callbacks.action_executed.add(record_action)
         b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         result['changed'] = True
-        result['actions'] = [action_string(a) for a in actions]
+        result['actions'] = [action_dict(a) for a in actions]
 
     result['mounts'] = get_mount_info(b, module.params['pools'], module.params['volumes'], actions)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
