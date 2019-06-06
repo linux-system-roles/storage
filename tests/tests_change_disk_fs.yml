@@ -39,3 +39,16 @@
             disks: "{{ unused_disks }}"
 
     - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml

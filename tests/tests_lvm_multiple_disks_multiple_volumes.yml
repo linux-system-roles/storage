@@ -39,3 +39,15 @@
                   mount_point: "{{ mount_location2 }}"
 
     - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+            - name: phi
+              disks: "{{ unused_disks }}"
+              volumes: []
+              state: absent
+
+    - include_tasks: verify-role-results.yml

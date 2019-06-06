@@ -77,3 +77,13 @@
                   state: absent
 
     - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              state: absent
+              volumes: []
