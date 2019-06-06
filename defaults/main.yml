@@ -16,7 +16,6 @@ volume_defaults:
   fs_type: "xfs"
   fs_label: ""
   fs_create_options: ""
-  fs_destroy_options: "-af"
   fs_overwrite_existing: true
 
   mount_point: ""
