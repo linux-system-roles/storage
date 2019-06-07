@@ -2,8 +2,8 @@
 - name: Make sure all volumes in pool.volumes are absent
   assert:
     that:
-      - current_volume.mount_point not in fstab_buffer.stdout
-      - "{{ ansible_mounts|selectattr('device', 'equalto', current_volume.name)|list|length == 0 }}"
+      - "{{ current_volume.mount_point not in fstab_buffer.stdout if current_volume.mount_point else True }}"
+      - "{{ ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list|length == 0 }}"
     msg: "The pool volume {{ current_volume.name }} was incorrectly managed."
   loop: "{{ current_pool.volumes }}"
   loop_control:
