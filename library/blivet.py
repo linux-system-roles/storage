@@ -383,6 +383,7 @@ class BlivetPool:
 
         # schedule destroy if appropriate, including member type change
         if not self.ultimately_present:  # TODO: member type changes
+            self._manage_volumes()
             self._destroy()
             return
 
