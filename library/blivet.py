@@ -15,7 +15,8 @@ short_description: Module for management of linux block device stacks
 version_added: "2.5"
 
 description:
-    - "Module ___"
+    - "Module configures storage pools and volumes to match the state specified
+       in input parameters. It does not do any management of /etc/fstab entries."
 
 options:
     pools:
@@ -24,6 +25,12 @@ options:
     volumes:
         description:
             - list of dicts describing volumes
+    use_partitions:
+        description:
+            - boolean indicating whether to create partitions on disks for pool backing devices
+    disklabel_type:
+        description:
+            - disklabel type string (eg: 'gpt') to use, overriding the built-in logic in blivet
 
 author:
     - David Lehman (dlehman@redhat.com)
@@ -53,17 +60,20 @@ EXAMPLES = '''
 
 RETURN = '''
 actions:
-    description: list of strings describing actions taken
-    type: list of str
+    description: list of dicts describing actions taken
+    type: list of dict
 leaves:
     description: list of paths to leaf devices
     type: list of str
 mounts:
     description: list of dicts describing mounts to set up
     type: list of dict
-removed_mounts:
-    description: list of mount points of removed mounts
-    type: list of str
+pools:
+    description: list of dicts describing the pools w/ device path for each volume
+    type: list of dict
+volumes:
+    description: list of dicts describing the volumes w/ device path for each
+    type: list of dict
 '''
 
 from blivet import Blivet
