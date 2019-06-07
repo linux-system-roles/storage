@@ -35,6 +35,7 @@
           - name:  "{{ unused_disks[0] }}"
             type: disk
             disks: "{{ unused_disks }}"
+            state: absent
             volumes:
               - name: "{{ unused_disks[0] }}1"
                 type: partition
