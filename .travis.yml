@@ -1,0 +1,12 @@
+---
+language: python
+services:
+  - docker
+install:
+  - pip install molecule docker
+script:
+  - molecule --version
+  - ansible --version
+  - molecule lint
+  - molecule syntax
+  - molecule test
