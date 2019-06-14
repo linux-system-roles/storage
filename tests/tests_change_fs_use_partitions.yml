@@ -2,7 +2,7 @@
 - hosts: all
   become: true
   vars:
-    use_partitions: true
+    storage_use_partitions: true
     mount_location: '/opt/test1'
     volume_size: '5g'
     fs_type_after: "{{ 'ext3' if (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') else 'ext4' }}"

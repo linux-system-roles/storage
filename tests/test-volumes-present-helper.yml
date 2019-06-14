@@ -1,10 +1,10 @@
 ---
 - set_fact:
-    mount_entries: []
+    _storage_mount_entries: []
 
 - name: gather mounts related to each volume in the pool
   set_fact:
-    mount_entries: "{{ mount_entries }} + [ {{ ansible_mounts|selectattr('device', 'equalto', current_volume['_device'])|list }} ]"
+    _storage_mount_entries: "{{ _storage_mount_entries }} + [ {{ ansible_mounts|selectattr('device', 'equalto', current_volume['_device'])|list }} ]"
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
@@ -12,11 +12,11 @@
 - name: Ensure all volumes were correctly managed in /etc/fstab and ansible_mounts.
   assert:
     that:
-      - "{{ mount_entries[idx]|length==1
+      - "{{ _storage_mount_entries[idx]|length==1
             if current_volume.state is defined and current_volume.state == 'present' and current_volume.mount_point and current_volume.mount_point.startswith('/') else
-            mount_entries[idx]|list|length==0
+            _storage_mount_entries[idx]|list|length==0
          }}"
-    msg: "The volume {{ current_volume.name }} is not mounted according to the requested state: {{ current_volume.state }} / {{ mount_entries[idx]|list }}"
+    msg: "The volume {{ current_volume.name }} is not mounted according to the requested state: {{ current_volume.state }} / {{ _storage_mount_entries[idx]|list }}"
   loop: "{{ current_pool.volumes }}"
   loop_control:
     loop_var: current_volume
@@ -25,7 +25,7 @@
 - name: Ensure all volumes were correctly managed in /etc/fstab and ansible_mounts.
   assert:
     that:
-      - "{{ (mount_entries[idx]|length==1 and mount_entries[idx]|map(attribute='mount')|first) == current_volume.mount_point
+      - "{{ (_storage_mount_entries[idx]|length==1 and _storage_mount_entries[idx]|map(attribute='mount')|first) == current_volume.mount_point
             if current_volume.state is defined and current_volume.state == 'present' and
                current_volume.mount_point and current_volume.mount_point.startswith('/')
             else true

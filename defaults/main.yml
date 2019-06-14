@@ -1,14 +1,14 @@
 ---
 # defaults file for template
 storage_backend: "blivet"
-use_partitions: null
-disklabel_type: null  # leave unset to allow the role to select an appropriate label type
+storage_use_partitions: null
+storage_disklabel_type: null  # leave unset to allow the role to select an appropriate label type
 
-pool_defaults:
+storage_pool_defaults:
   state: "present"
   type: lvm
 
-volume_defaults:
+storage_volume_defaults:
   state: "present"
   type: lvm
   size: 0

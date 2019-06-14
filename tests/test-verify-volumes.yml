@@ -19,9 +19,9 @@
   register: resolve_ansible_mount_devs
 
 - set_fact:
-    ansible_mount_devs: "{{ resolve_ansible_mount_devs.results|map(attribute='device')|list }}"
-    present_volumes: "{{ blivet_output.volumes|selectattr('state', 'equalto', 'present')|list }}"
-    absent_volumes: "{{ blivet_output.volumes|selectattr('state', 'equalto', 'absent')|list }}"
+    _storage_ansible_mount_devs: "{{ resolve_ansible_mount_devs.results|map(attribute='device')|list }}"
+    _storage_present_volumes: "{{ blivet_output.volumes|selectattr('state', 'equalto', 'present')|list }}"
+    _storage_absent_volumes: "{{ blivet_output.volumes|selectattr('state', 'equalto', 'absent')|list }}"
 
 - block:
   - name: Verify the volumes with no pool were correctly managed
@@ -39,8 +39,8 @@
   - name: Verify the present volumes with no pool were correctly managed
     assert:
       that:
-        - "{{ current_volume['name'] == present_volumes[idx]['name'] }}"
-        - "{{ ansible_mount_devs|select('equalto', present_volumes[idx]['_device'])|list|length==1 }}"
+        - "{{ current_volume['name'] == _storage_present_volumes[idx]['name'] }}"
+        - "{{ _storage_ansible_mount_devs|select('equalto', _storage_present_volumes[idx]['_device'])|list|length==1 }}"
       msg: "The file system mount for storage volume {{ current_volume.name }} was incorrectly managed."
     loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'present')|list }}"
     loop_control:
@@ -53,8 +53,8 @@
   - name: Verify the absent volumes with no pool are not in ansible_mounts
     assert:
       that:
-        - "{{ current_volume['name'] == absent_volumes[idx]['name'] }}"
-        - "{{ ansible_mount_devs|select('equalto', absent_volumes[idx]['_device'])|list|length==0 }}"
+        - "{{ current_volume['name'] == _storage_absent_volumes[idx]['name'] }}"
+        - "{{ _storage_ansible_mount_devs|select('equalto', _storage_absent_volumes[idx]['_device'])|list|length==0 }}"
       msg: "The file system mount for storage volume {{ current_volume.name }} was incorrectly managed."
     loop: "{{ _storage_volumes_list|selectattr('state', 'equalto', 'absent')|list }}"
     loop_control:
