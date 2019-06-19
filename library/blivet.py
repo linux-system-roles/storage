@@ -76,23 +76,32 @@ volumes:
     type: list of dict
 '''
 
-from blivet import Blivet
-from blivet.callbacks import callbacks
-from blivet.flags import flags as blivet_flags
-from blivet.formats import get_format
-from blivet.partitioning import do_partitioning
-from blivet.size import Size
-from blivet.util import set_up_logging
+import logging
+
+try:
+    from blivet3 import Blivet
+    from blivet3.callbacks import callbacks
+    from blivet3.flags import flags as blivet_flags
+    from blivet3.formats import get_format
+    from blivet3.partitioning import do_partitioning
+    from blivet3.size import Size
+    from blivet3.util import set_up_logging
+    BLIVET_PACKAGE = 'blivet3'
+except ImportError:
+    from blivet import Blivet
+    from blivet.callbacks import callbacks
+    from blivet.flags import flags as blivet_flags
+    from blivet.formats import get_format
+    from blivet.partitioning import do_partitioning
+    from blivet.size import Size
+    from blivet.util import set_up_logging
+    BLIVET_PACKAGE = 'blivet'
 
 from ansible.module_utils.basic import AnsibleModule
-#from ansible.module_utils.size import Size
 
 blivet_flags.debug = True
 set_up_logging()
-import logging
-log = logging.getLogger("blivet.ansible")
-
-
+log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
 use_partitions = None  # create partitions on pool backing device disks?
 disklabel_type = None  # user-specified disklabel type
 
