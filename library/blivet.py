@@ -349,6 +349,9 @@ class BlivetPool:
             self._device = None
             return  # TODO: see if we can create this device w/ the specified name
 
+    def _get_format(self):
+        raise NotImplementedError()
+
     def _create_members(self):
         """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
@@ -364,7 +367,7 @@ class BlivetPool:
             else:
                 member = disk
 
-            self._blivet.format_device(member, get_format("lvmpv"))
+            self._blivet.format_device(member, self._get_format())
             members.append(member)
 
         if use_partitions:
@@ -420,6 +423,10 @@ class BlivetPartitionPool(BlivetPool):
 class BlivetLVMPool(BlivetPool):
     def _type_check(self):
         return self._device.type == "lvmvg"
+
+    def _get_format(self):
+        fmt = get_format("lvmpv")
+        return fmt
 
     def _create(self):
         if self._device:
