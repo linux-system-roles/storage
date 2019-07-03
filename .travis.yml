@@ -5,6 +5,7 @@ services:
 install:
   - pip install molecule docker
 script:
+  - tox
   - molecule --version
   - ansible --version
   - molecule lint
