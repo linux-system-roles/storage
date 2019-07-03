@@ -34,6 +34,26 @@
 
     - include_tasks: verify-role-results.yml
 
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  size: "{{ volume_size }}"
+                  mount_point: '/opt/test1'
+                - name: test2
+                  size: "{{ volume_size }}"
+                  mount_point: '/opt/test2'
+                - name: test3
+                  size: "{{ volume_size }}"
+                  mount_point: '/opt/test3'
+
+    - include_tasks: verify-role-results.yml
+
     - name: Remove two of the LVs
       include_role:
         name: storage

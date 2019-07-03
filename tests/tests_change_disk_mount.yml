@@ -39,6 +39,18 @@
 
     - include_tasks: verify-role-results.yml
 
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location_after }}"
+            disks: "{{ unused_disks }}"
+
+    - include_tasks: verify-role-results.yml
+
     - name: Clean up
       include_role:
         name: storage
