@@ -1,6 +1,3 @@
-- set_fact:
-    storage_tests_list: ['verify-volumes']
-
 - name: Print out pool information
   debug:
     var: _storage_pools_list
@@ -11,8 +8,36 @@
     var: _storage_volumes_list
   when: _storage_volumes_list | length > 0
 
-- name: Ensure the specified devices in the role were correctly configured in the user's system
-  include_tasks: "test-{{ test }}.yml"
-  loop: "{{ storage_tests_list }}"
+#
+# Verify pools and the volumes they contain.
+#
+- name: Verify the volumes listed in storage_pools were correctly managed
+  include_tasks: "test-verify-pool.yml"
+  loop: "{{ _storage_pools_list }}"
   loop_control:
-    loop_var: test
+    loop_var: current_pool
+  when: _storage_pools_list is defined and _storage_pools_list | length > 0
+
+- name: Clean up variable namespace
+  set_fact:
+    current_pool: null
+
+#
+# Verify standalone volumes.
+#
+- name: Verify the volumes with no pool were correctly managed
+  include_tasks: "test-verify-volume.yml"
+  loop: "{{ _storage_volumes_list }}"
+  loop_control:
+    loop_var: current_volume
+  when: _storage_volumes_list is defined and _storage_volumes_list | length > 0
+
+#
+# Clean up.
+#
+- name: Clean up variable namespace
+  set_fact:
+    storage_test_fstab: null
+    storage_test_blkinfo: null
+    current_pool: null
+    current_volume: null

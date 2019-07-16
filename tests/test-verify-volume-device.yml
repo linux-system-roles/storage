@@ -1,0 +1,31 @@
+---
+# name/path
+- name: See whether the device node is present
+  stat:
+    path: "{{ current_volume._device }}"
+    follow: yes
+  register: storage_test_dev
+
+- name: Verify the presence/absence of the device node
+  assert:
+    that: "{{ storage_test_dev.stat.exists and storage_test_dev.stat.isblk
+              if (current_volume.state == 'present' and current_pool.state|default('present') == 'present') or current_volume.type == 'disk'
+              else
+              not storage_test_dev.stat.exists }}"
+    msg: "Incorrect device node presence for volume {{ current_volume.name }}"
+
+- name: Make sure we got info about this volume
+  assert:
+    that: "{{ current_volume._device in storage_test_blkinfo.info }}"
+    msg: "Failed to gather info about volume '{{ current_volume.name }}'"
+  when: current_volume.state == 'present'
+
+- name: Verify the volume's device type
+  assert:
+    that: "{{ storage_test_blkinfo.info[current_volume._device].type == current_volume.type }}"
+  when: current_volume.state == 'present'
+
+# disks
+#   partition: ??
+#   lvm: n/a
+#   disk: identity

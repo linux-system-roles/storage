@@ -1,0 +1,22 @@
+---
+#
+# Verify the pool configuration.
+#
+- set_fact:
+    _storage_pool_tests: ['name', 'type', 'size', 'members'] # members: disks, types
+  # future:
+  #   members:
+  #     encryption
+  #     raid
+  #     compression
+  #     deduplication
+
+#
+# Verify the pool's volumes are configured correctly.
+#
+- name: Verify the volumes in this pool were correctly managed
+  include_tasks: "test-verify-volume.yml"
+  loop: "{{ current_pool.volumes }}"
+  loop_control:
+    loop_var: current_volume
+  when: current_pool is defined and current_pool.volumes | length > 0

@@ -1,0 +1,28 @@
+---
+- name: Read the /etc/fstab file for volume existence
+  command: cat /etc/fstab
+  register: storage_test_fstab
+  changed_when: false
+  when: storage_test_fstab is not defined or not storage_test_fstab
+
+- name: Set some variables for fstab checking
+  set_fact:
+    #storage_test_fstab_id_matches: "{{ storage_test_fstab.stdout_lines|map('regex_search', '^' + current_volume._mount_id)|select('string')|list }}"
+    storage_test_fstab_device_path_matches: "{{ storage_test_fstab.stdout_lines|map('regex_search', '^' + current_volume._device)|select('string')|list }}"
+    storage_test_fstab_mount_point_matches: "{{ storage_test_fstab.stdout_lines|map('regex_search', ' +' + current_volume.mount_point + ' +')|select('string')|list }}"
+    storage_test_fstab_mount_point_expected_matches: "{{ 1 if (current_volume.state == 'present' and current_volume.mount_point) else 0 }}"
+
+# device id
+- name: Verify that the device identifier appears in /etc/fstab
+  assert:
+    that: "{{ storage_test_fstab_device_path_matches|length > 0 }}"
+    msg: "Expected device identifier not found in /etc/fstab."
+  when: current_volume.state == 'present'
+
+# mount point
+- name: Verify the fstab mount point
+  assert:
+    that: "{{ storage_test_fstab_mount_point_matches|length == storage_test_fstab_mount_point_expected_matches|int }}"
+    msg: "Expected number ({{ storage_test_fstab_mount_point_expected_matches }}) of entries with volume '{{ current_volume.name }}' mount point not found in /etc/fstab."
+
+# todo: options
