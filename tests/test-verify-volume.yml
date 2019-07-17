@@ -8,11 +8,6 @@
   #     compression
   #     deduplication
 
-- name: Collect info about the volumes.
-  blockdev_info:
-  register: storage_test_blkinfo
-  when: storage_test_blkinfo is not defined or not storage_test_blkinfo
-
 - name:
   include_tasks: "test-verify-volume-{{ storage_test_volume_subset }}.yml"
   loop: "{{ _storage_volume_tests }}"

@@ -1,10 +1,4 @@
 ---
-- name: Read the /etc/fstab file for volume existence
-  command: cat /etc/fstab
-  register: storage_test_fstab
-  changed_when: false
-  when: storage_test_fstab is not defined or not storage_test_fstab
-
 - name: Set some variables for fstab checking
   set_fact:
     #storage_test_fstab_id_matches: "{{ storage_test_fstab.stdout_lines|map('regex_search', '^' + current_volume._mount_id)|select('string')|list }}"

@@ -9,6 +9,19 @@
   when: _storage_volumes_list | length > 0
 
 #
+# Collect some information about the current state of the system.
+#
+- name: Collect info about the volumes.
+  blockdev_info:
+  changed_when: false
+  register: storage_test_blkinfo
+
+- name: Read the /etc/fstab file for volume existence
+  command: cat /etc/fstab
+  register: storage_test_fstab
+  changed_when: false
+
+#
 # Verify pools and the volumes they contain.
 #
 - name: Verify the volumes listed in storage_pools were correctly managed
