@@ -36,6 +36,8 @@ import shlex
 from ansible.module_utils.basic import AnsibleModule
 
 
+LSBLK_DEVICE_TYPES = {"part": "partition"}
+
 def get_block_info(run_cmd):
     buf = run_cmd(["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE", "-p", "-P", "-a"])[1]
     info = dict()
@@ -48,7 +50,7 @@ def get_block_info(run_cmd):
                 print(pair)
                 raise
             if key:
-                dev[key.lower()] = value
+                dev[key.lower()] = LSBLK_DEVICE_TYPES.get(value, value)
         if dev:
             info[dev['name']] = dev
 
