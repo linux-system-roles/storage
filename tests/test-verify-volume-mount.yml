@@ -1,9 +1,9 @@
 ---
 - name: Set some facts
   set_fact:
-    storage_test_mount_device_matches: "{{ ansible_mounts|selectattr('device', 'equalto', current_volume._device)|list }}"
-    storage_test_mount_point_matches: "{{ ansible_mounts|selectattr('mount', 'equalto', current_volume.mount_point)|list }}"
-    storage_test_mount_expected_match_count: "{{ 1 if _storage_test_volume_present and current_volume.mount_point else 0 }}"
+    storage_test_mount_device_matches: "{{ ansible_mounts|selectattr('device', 'equalto', storage_test_volume._device)|list }}"
+    storage_test_mount_point_matches: "{{ ansible_mounts|selectattr('mount', 'equalto', storage_test_volume.mount_point)|list }}"
+    storage_test_mount_expected_match_count: "{{ 1 if _storage_test_volume_present and storage_test_volume.mount_point else 0 }}"
 
 #
 # Verify mount presence.
@@ -11,8 +11,8 @@
 - name: Verify the current mount state by device
   assert:
     that: "{{ storage_test_mount_device_matches|length == storage_test_mount_expected_match_count|int }}"
-    msg: "Found unexpected mount state for volume '{{ current_volume.name }}' device"
-  when: _storage_test_volume_present and current_volume.mount_point
+    msg: "Found unexpected mount state for volume '{{ storage_test_volume.name }}' device"
+  when: _storage_test_volume_present and storage_test_volume.mount_point
 
 #
 # Verify mount directory.
@@ -20,15 +20,15 @@
 - name: Verify the current mount state by mount point
   assert:
     that: "{{ storage_test_mount_point_matches|length == storage_test_mount_expected_match_count|int }}"
-    msg: "Found unexpected mount state for volume '{{ current_volume.name }}' mount point"
+    msg: "Found unexpected mount state for volume '{{ storage_test_volume.name }}' mount point"
 
 #
 # Verify mount fs type.
 #
 - name: Verify the mount fs type
   assert:
-    that: "{{ storage_test_mount_point_matches[0].fstype == current_volume.fs_type }}"
-    msg: "Found unexpected mount state for volume '{{ current_volume.name }} fs type"
+    that: "{{ storage_test_mount_point_matches[0].fstype == storage_test_volume.fs_type }}"
+    msg: "Found unexpected mount state for volume '{{ storage_test_volume.name }} fs type"
   when: storage_test_mount_expected_match_count|int == 1
 
 #

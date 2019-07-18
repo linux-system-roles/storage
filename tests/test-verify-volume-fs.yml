@@ -2,11 +2,11 @@
 # type
 - name: Verify fs type
   assert:
-    that: "{{ storage_test_blkinfo.info[current_volume._device].fstype == current_volume.fs_type }}"
-  when: current_volume.fs_type and _storage_test_volume_present
+    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].fstype == storage_test_volume.fs_type }}"
+  when: storage_test_volume.fs_type and _storage_test_volume_present
 
 # label
 - name: Verify fs label
   assert:
-    that: "{{ storage_test_blkinfo.info[current_volume._device].label == current_volume.fs_label }}"
+    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].label == storage_test_volume.fs_label }}"
   when: _storage_test_volume_present
