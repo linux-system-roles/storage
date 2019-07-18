@@ -20,3 +20,10 @@
     msg: "Expected number ({{ storage_test_fstab_expected_matches }}) of entries with volume '{{ storage_test_volume.name }}' mount point not found in /etc/fstab."
 
 # todo: options
+
+- name: Clean up variables
+  set_fact:
+    #storage_test_fstab_id_matches: null
+    storage_test_fstab_device_path_matches: null
+    storage_test_fstab_mount_point_matches: null
+    storage_test_fstab_expected_matches: null

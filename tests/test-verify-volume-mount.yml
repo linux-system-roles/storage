@@ -34,3 +34,9 @@
 #
 # Verify mount options.
 #
+
+- name: Unset facts
+  set_fact:
+    storage_test_mount_device_matches: null
+    storage_test_mount_point_matches: null
+    storage_test_mount_expected_match_count: null

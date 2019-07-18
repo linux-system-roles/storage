@@ -14,3 +14,7 @@
   loop: "{{ _storage_volume_tests }}"
   loop_control:
     loop_var: storage_test_volume_subset
+
+- name: Clean up facts
+  set_fact:
+    _storage_test_volume_present: null

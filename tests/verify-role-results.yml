@@ -13,8 +13,8 @@
 #
 - name: Collect info about the volumes.
   blockdev_info:
-  changed_when: false
   register: storage_test_blkinfo
+  changed_when: false
 
 - name: Read the /etc/fstab file for volume existence
   command: cat /etc/fstab
