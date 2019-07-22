@@ -1,0 +1,86 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location1: '/opt/test1'
+    volume_group_size: '10g'
+    volume1_size: '5g'
+    invalid_disks:
+      - '/non/existent/disk'
+    invalid_size: 'xyz GiB'
+    too_large_size: '500 GiB'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+        max_return: 1
+
+    - name: Test for correct handling of invalid disk specifications.
+      block:
+        - name: Try to create LVM with an invalid disk specification.
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ invalid_disks }}"
+                volumes:
+                  - name: test1
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('unable to resolve.+disk')|length>0 and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ non-existent pool disk"
+      ignore_errors: yes
+
+    - name: Test for correct handling of invalid size specification.
+      block:
+        - name: Try to create LVM with an invalid size specification.
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    size: "{{ invalid_size }}"
+                    mount_point: "{{ mount_location1 }}"
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('invalid size.+for volume') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ invalid volume size"
+      ignore_errors: yes
+
+    - name: Test for correct handling of too-large volume size.
+      block:
+        - name: Try to create LVM with a too-large volume size.
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    size: "{{ too_large_size }}"
+                    mount_point: "{{ mount_location1 }}"
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('size.+exceeds.+space in pool') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ too-large volume size"
+      ignore_errors: yes

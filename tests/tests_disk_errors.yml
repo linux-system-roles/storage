@@ -1,0 +1,24 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test1'
+
+  tasks:
+    - name: Verify that the play fails with the expected error message
+      block:
+        - name: Create a disk volume mounted at "{{ mount_location }}"
+          include_role:
+            name: storage
+          vars:
+            storage_volumes:
+              - name: test1
+                type: disk
+                disks: "['/dev/surelyidonotexist']"
+                mount_point: "{{ mount_location }}"
+
+        - name: Check the error output
+          assert:
+            that: "{{ blivet_output.failed }}"
+            msg: "Expected error message not found for missing disk"
+      ignore_errors: yes
