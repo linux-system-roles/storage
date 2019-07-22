@@ -79,7 +79,7 @@
     volume: "{{ volume|combine({'_wipe': volume._preexist and (not volume.fs_type or (volume._orig_fs_type and volume.fs_type != volume._orig_fs_type))}) }}"
 
 - set_fact:
-    volume: "{{ volume|combine({'_remove': volume.state == 'absent' or (pool is not defined or (pool.state is defined and pool.state == 'absent'))}) }}"
+    volume: "{{ volume|combine({'_remove': volume.state == 'absent' or (pool is defined and pool.state is defined and pool.state == 'absent')}) }}"
 
 - set_fact:
     volume: "{{ volume|combine({'_create': volume.state == 'present' and (pool is not defined or (pool.state is not defined or pool.state == 'present'))}) }}"
