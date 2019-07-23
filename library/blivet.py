@@ -685,14 +685,10 @@ def run_module():
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         except Exception:
-            if actions:
-                result['changed'] = True
-                result['actions'] = [action_dict(a) for a in actions]
-
             module.fail_json(msg="Failed to commit changes to disk", **result)
-
-        result['changed'] = True
-        result['actions'] = [action_dict(a) for a in actions]
+        finally:
+            result['changed'] = True
+            result['actions'] = [action_dict(a) for a in actions]
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, initial_mounts)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
