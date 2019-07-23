@@ -84,3 +84,47 @@
                       not blivet_output.changed }}"
             msg: "Unexpected behavior w/ too-large volume size"
       ignore_errors: yes
+
+    - name: Test for correct handling of non-list disk specification.
+      block:
+        - name: Try to create LVM pool with disks specified as non-list.
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks[0] }}"
+                volumes:
+                  - name: test1
+                    size: "{{ too_large_size }}"
+                    mount_point: "{{ mount_location1 }}"
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('disk.+list') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ disks not in list form"
+      ignore_errors: yes
+
+    - name: Test for correct handling of missing disk specification.
+      block:
+        - name: Try to create LVM pool with no disks specified.
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: []
+                volumes:
+                  - name: test1
+                    size: "{{ too_large_size }}"
+                    mount_point: "{{ mount_location1 }}"
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('no disks.+pool') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ no disks specified"
+      ignore_errors: yes
