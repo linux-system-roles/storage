@@ -221,7 +221,7 @@ class BlivetVolume:
 
         # at this point we should have a blivet.devices.StorageDevice instance
         if self._device is None:
-            raise RuntimeError("failed to look up or create device '%s'" % self._volume['name'])
+            raise BlivetAnsibleError("failed to look up or create device '%s'" % self._volume['name'])
 
         # schedule reformat if appropriate
         if self._device.exists:
@@ -329,7 +329,7 @@ def _get_blivet_volume(blivet_obj, volume, bpool=None):
     """ Return a BlivetVolume instance appropriate for the volume dict. """
     volume_type = volume.get('type', bpool._pool['type'] if bpool else None)
     if volume_type not in _BLIVET_VOLUME_TYPES:
-        raise RuntimeError("Volume '%s' has unknown type '%s'" % (volume['name'], volume_type))
+        raise BlivetAnsibleError("Volume '%s' has unknown type '%s'" % (volume['name'], volume_type))
 
     return _BLIVET_VOLUME_TYPES[volume_type](blivet_obj, volume, bpool=bpool)
 
@@ -520,7 +520,7 @@ _BLIVET_POOL_TYPES = {
 def _get_blivet_pool(blivet_obj, pool):
     """ Return an appropriate BlivetPool instance for the pool dict. """
     if pool['type'] not in _BLIVET_POOL_TYPES:
-        raise RuntimeError("Pool '%s' has unknown type '%s'" % (pool['name'], pool['type']))
+        raise BlivetAnsibleError("Pool '%s' has unknown type '%s'" % (pool['name'], pool['type']))
 
     return _BLIVET_POOL_TYPES[pool['type']](blivet_obj, pool)
 
