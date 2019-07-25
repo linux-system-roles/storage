@@ -542,70 +542,95 @@ def manage_pool(b, pool):
         volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
-def get_fstab_mounts(b):
-    """ Return a dict w/ device name keys and fstab mount point values. """
-    mounts = {}
-    for line in open('/etc/fstab').readlines():
-        if line.lstrip().startswith("#"):
-            continue
+class FSTab:
+    def __init__(self, blivet_obj):
+        self._blivet = blivet_obj
+        self._entries = list()
+        self.parse()
 
-        fields = line.split()
-        if len(fields) < 6:
-            continue
+    def lookup(self, key, value):
+        return next((e for e in self._entries if e.get(key) == value), None)
 
-        device_id = fields[0]
-        mount_point = fields[1]
-        device = b.devicetree.resolve_device(device_id)
-        if device is not None:
-            mounts[device.name] = mount_point
+    def reset(self):
+        self._entries = list()
 
-    return mounts
+    def parse(self):
+        if self._entries:
+            self.reset()
+
+        for line in open('/etc/fstab').readlines():
+            if line.lstrip().startswith("#"):
+                continue
+
+            fields = line.split()
+            if len(fields) < 6:
+                continue
+
+            device = self._blivet.devicetree.resolve_device(fields[0])
+            self._entries.append(dict(device_id=fields[0],
+                                      device_path=getattr(device, 'path', None),
+                                      fs_type=fields[2],
+                                      mount_point=fields[1],
+                                      mount_options=fields[3]))
 
 
-def get_mount_info(pools, volumes, actions, initial_mounts):
+def get_mount_info(pools, volumes, actions, fstab):
     """ Return a list of argument dicts to pass to the mount module to manage mounts.
+
+        The overall approach is to remove existing mounts associated with file systems
+        we are removing and those with changed mount points, re-adding them with the
+        new mount point later.
 
         Removed mounts go directly into the mount_info list, which is the return value,
         while added/active mounts to a list that gets appended to the mount_info list
         at the end to ensure that removals happen first.
     """
     mount_info = list()
+    mount_vols = list()
 
     # account for mounts removed by removing or reformatting volumes
     if actions:
         for action in actions:
             if action.is_destroy and action.is_format and action.format.type is not None:
-                mount = initial_mounts.get(action.device.name)
+                mount = fstab.lookup('device_path', action.device.path)
                 if mount is not None:
-                    mount_info.append({"path": mount, 'state': 'absent'})
+                    mount_info.append({"path": mount['mount_point'], 'state': 'absent'})
 
-    mount_vols = list()
+    def handle_new_mount(volume, fstab):
+        replace = None
+        mounted = False
+
+        mount = fstab.lookup('device_path', volume['_device'])
+        if volume['mount_point']:
+            mounted = True
+
+        # handle removal of existing mounts of this volume
+        if mount and mount['mount_point'] != volume['mount_point']:
+            replace = mount['mount_point']
+
+        return mounted, replace
 
     # account for mounts that we set up or are replacing in pools
     for pool in pools:
         for volume in pool['volumes']:
             if pool['state'] == 'present' and volume['state'] == 'present':
-                mount = initial_mounts.get(volume['_device'].split('/')[-1])
-                if volume['mount_point']:
-                    mount_vols.append(volume.copy())
-
-                # handle removal of existing mounts of this volume
-                if mount and mount != volume['mount_point']:
-                    mount_info.append({"path": mount, 'state': 'absent'})
+                mounted, replace = handle_new_mount(volume, fstab)
+                if replace:
+                    mount_info.append({"path": replace, 'state': 'absent'})
+                if mounted:
+                    mount_vols.append(volume)
 
     # account for mounts that we set up or are replacing in standalone volumes
     for volume in volumes:
         if volume['state'] == 'present':
-            mount = initial_mounts.get(volume['_device'].split('/')[-1])
-            if volume['mount_point']:
+            mounted, replace = handle_new_mount(volume, fstab)
+            if replace:
+                mount_info.append({"path": replace, 'state': 'absent'})
+            if mounted:
                 mount_vols.append(volume)
 
-            # handle removal of existing mounts of this volume
-            if mount and mount != volume['mount_point']:
-                mount_info.append({"path": mount, 'state': 'absent'})
-
     for volume in mount_vols:
-        mount_info.append({'src': volume['_device'],
+        mount_info.append({'src': volume['_mount_id'],
                            'path': volume['mount_point'],
                            'fstype': volume['fs_type'],
                            'opts': volume['mount_options'],
@@ -648,8 +673,8 @@ def run_module():
 
     b = Blivet()
     b.reset()
+    fstab = FSTab(b)
     actions = list()
-    initial_mounts = get_fstab_mounts(b)
 
     def record_action(action):
         if action.is_format and action.format.type is None:
@@ -690,7 +715,7 @@ def run_module():
             result['changed'] = True
             result['actions'] = [action_dict(a) for a in actions]
 
-    result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, initial_mounts)
+    result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']
