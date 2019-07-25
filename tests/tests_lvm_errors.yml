@@ -128,3 +128,24 @@
                       not blivet_output.changed }}"
             msg: "Unexpected behavior w/ no disks specified"
       ignore_errors: yes
+
+    - name: Test for correct handling of LVM volume not defined within a pool.
+      block:
+        - name: Try to create LVM volume from outside of any pool.
+          include_role:
+            name: storage
+          vars:
+            storage_volumes:
+              - name: test1
+                type: lvm
+                disks: []
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('failed to find pool .+ for volume') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ LVM volume defined outside of any pool"
+      ignore_errors: yes
