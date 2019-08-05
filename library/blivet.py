@@ -77,6 +77,9 @@ volumes:
 '''
 
 import logging
+import traceback
+
+BLIVET_PACKAGE = None
 
 try:
     from blivet3 import Blivet
@@ -88,20 +91,25 @@ try:
     from blivet3.util import set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
-    from blivet import Blivet
-    from blivet.callbacks import callbacks
-    from blivet.flags import flags as blivet_flags
-    from blivet.formats import get_format
-    from blivet.partitioning import do_partitioning
-    from blivet.size import Size
-    from blivet.util import set_up_logging
-    BLIVET_PACKAGE = 'blivet'
+    try:
+        from blivet import Blivet
+        from blivet.callbacks import callbacks
+        from blivet.flags import flags as blivet_flags
+        from blivet.formats import get_format
+        from blivet.partitioning import do_partitioning
+        from blivet.size import Size
+        from blivet.util import set_up_logging
+        BLIVET_PACKAGE = 'blivet'
+    except ImportError:
+        LIB_IMP_ERR = traceback.format_exc()
 
-from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 
-blivet_flags.debug = True
-set_up_logging()
-log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
+if BLIVET_PACKAGE:
+    blivet_flags.debug = True
+    set_up_logging()
+    log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
+
 use_partitions = None  # create partitions on pool backing device disks?
 disklabel_type = None  # user-specified disklabel type
 
@@ -663,6 +671,9 @@ def run_module():
 
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
+    if not BLIVET_PACKAGE:
+        module.fail_json(msg=missing_required_lib("blivet"),
+                         exception=LIB_IMP_ERR)
 
     if not module.params['pools'] and not module.params['volumes']:
         module.exit_json(**result)
