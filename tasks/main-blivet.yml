@@ -30,12 +30,12 @@
     _storage_pools: "{{ _storage_pools|default([]) }} + [ {{ storage_pool_defaults|combine(pool) }} ]"
   loop: "{{ storage_pools|default([]) }}"
   loop_control:
-      loop_var: pool
+    loop_var: pool
   when: storage_pools is defined
 
 - name: Apply defaults to pools and volumes [2/6]
   set_fact:
-    _storage_vols_no_defaults: "{{ _storage_vols_no_defaults|default([]) }} + [{{item.1}}]"
+    _storage_vols_no_defaults: "{{ _storage_vols_no_defaults|default([]) }} + [{{ item.1 }}]"
     _storage_vol_defaults: "{{ _storage_vol_defaults|default([]) }} + [{{ storage_volume_defaults }}]"
     _storage_vol_pools: "{{ _storage_vol_pools|default([]) }} + ['{{ item.0.name }}']"
   loop: "{{ _storage_pools|subelements('volumes') }}"
@@ -51,13 +51,16 @@
 
 - name: Apply defaults to pools and volumes [4/6]
   set_fact:
-    _storage_vols_no_defaults_by_pool: "{{ _storage_vols_no_defaults_by_pool|default({})|combine({item.name: _storage_vols_w_defaults|selectattr('pool', 'equalto', item.name)|list}) }}"
+    _storage_vols_no_defaults_by_pool: "{{ _storage_vols_no_defaults_by_pool|default({})|
+                                        combine({item.name: _storage_vols_w_defaults|selectattr('pool', 'equalto', item.name)|list}) }}"
   loop: "{{ _storage_pools }}"
   when: storage_pools is defined
 
 - name: Apply defaults to pools and volumes [5/6]
   set_fact:
-    _storage_pools: "{{ _storage_pools[:idx] }} + [ {{ pool|combine({'volumes': _storage_vols_no_defaults_by_pool[pool.name]}) }} ]  +  {{ _storage_pools[idx+1:] }}"
+    _storage_pools: "{{ _storage_pools[:idx] }} +
+                     [ {{ pool|combine({'volumes': _storage_vols_no_defaults_by_pool[pool.name]}) }} ] +
+                     {{ _storage_pools[idx+1:] }}"
   loop: "{{ _storage_pools }}"
   loop_control:
     loop_var: pool
@@ -69,7 +72,7 @@
     _storage_volumes: "{{ _storage_volumes|default([]) }} + [ {{ storage_volume_defaults|combine(volume) }} ]"
   loop: "{{ storage_volumes|default([]) }}"
   loop_control:
-      loop_var: volume
+    loop_var: volume
   when: storage_volumes is defined
 
 ##
@@ -121,7 +124,8 @@
     loop_var: mount_info
 
 - name: tell systemd to refresh its view of /etc/fstab
-  command: systemctl daemon-reload
+  systemd:
+    daemon_reload: yes
   when: blivet_output['mounts']
 
 #

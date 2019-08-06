@@ -6,7 +6,7 @@ galaxy_info:
   license: MIT
   min_ansible_version: 2.5
   platforms:
-  - name: Fedora
-    versions: [ 28, 29 ]
-  - name: EL
-    versions: [ 6, 7 ]
+    - name: Fedora
+      versions: [ 28, 29 ]
+    - name: EL
+      versions: [ 6, 7 ]
