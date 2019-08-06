@@ -1,8 +1,0 @@
-blivet_packages: {"RedHat-7": "python-blivet3",
-                  "RedHat-8": "python3-blivet",
-                  "Fedora": "python3-blivet",
-                  "CentOS-7": "python3-blivet",
-                  "CentOS-8": "python3-blivet"}
-
-blivet_dist: "{{ ansible_distribution if ansible_distribution == 'Fedora' else ansible_distribution + '-' + ansible_distribution_major_version }}"
-blivet_package: "{{ blivet_packages[blivet_dist] }}"
