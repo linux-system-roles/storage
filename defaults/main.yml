@@ -1,6 +1,6 @@
 ---
 # defaults file for template
-storage_backend: "blivet"
+storage_provider: "blivet"
 storage_use_partitions: null
 storage_disklabel_type: null  # leave unset to allow the role to select an appropriate label type
 

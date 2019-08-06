@@ -14,5 +14,5 @@
   set_fact:
     _storage_volumes_list: []
 
-- name: include the appropriate backend tasks
-  include_tasks: "main-{{ storage_backend }}.yml"
+- name: include the appropriate provider tasks
+  include_tasks: "main-{{ storage_provider }}.yml"
