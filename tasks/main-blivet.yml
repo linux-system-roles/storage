@@ -6,7 +6,7 @@
 
 - name: make sure blivet is available
   package:
-    name: "{{ blivet_package }}"
+    name: "{{ blivet_package_list }}"
     state: present
 
 ##
