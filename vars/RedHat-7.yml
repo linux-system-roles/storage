@@ -1,1 +1,5 @@
-blivet_package_list: python-blivet3
+blivet_package_list:
+  - python-blivet3
+  - libblockdev-dm
+  - libblockdev-lvm
+  - libblockdev-part
