@@ -646,6 +646,7 @@ def run_module():
     module_args = dict(
         pools=dict(type='list'),
         volumes=dict(type='list'),
+        packages_only=dict(type='bool', required=False, default=False),
         disklabel_type=dict(type='str', required=False, default=None),
         use_partitions=dict(type='bool', required=False, default=True))
 
@@ -657,6 +658,7 @@ def run_module():
         mounts=list(),
         pools=list(),
         volumes=list(),
+        packages=list(),
     )
 
     module = AnsibleModule(argument_spec=module_args,
@@ -700,6 +702,11 @@ def run_module():
             module.fail_json(msg=str(e), **result)
 
     scheduled = b.devicetree.actions.find()
+    result['packages'] = b.packages[:]
+
+    if module.params['packages_only']:
+        module.exit_json(**result)
+
     for action in scheduled:
         if action.is_destroy and action.is_format and action.format.exists:
             action.format.teardown()
