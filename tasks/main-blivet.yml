@@ -92,11 +92,8 @@
 
 - name: make sure required packages are installed
   package:
-    name: "{{ pkg_name }}"
+    name: "{{ package_info.packages }}"
     state: present
-  loop: "{{ package_info.packages }}"
-  loop_control:
-    loop_var: pkg_name
 
 - name: manage the pools and volumes to match the specified state
   blivet:
