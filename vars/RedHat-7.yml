@@ -1,4 +1,5 @@
 blivet_package_list:
+  - python-enum34
   - python-blivet3
   - libblockdev-dm
   - libblockdev-lvm
