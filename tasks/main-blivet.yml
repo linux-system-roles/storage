@@ -88,6 +88,7 @@
     volumes: "{{ _storage_volumes }}"
     use_partitions: "{{ storage_use_partitions }}"
     disklabel_type: "{{ storage_disklabel_type }}"
+    packages_only: true
   register: package_info
 
 - name: make sure required packages are installed
