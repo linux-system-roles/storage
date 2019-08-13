@@ -25,7 +25,8 @@ This specifies the type of pool to manage.
 Valid values for `type`: `lvm`.
 
 ##### `disks`
-This specifies the set of disks to use as backing storage for the pool.
+A list which specifies the set of disks to use as backing storage for the pool
+(a `/dev/` or `/dev/mapper/` prefix is prepended if the name is not an absolute path).
 
 ##### `volumes`
 This is a list of volumes that belong to the current pool. It follows the
@@ -82,18 +83,20 @@ Example Playbook
   roles:
     - name: storage
       storage_pools:
-        - name: "{{ app_name }}"
-          disks: "{{ app_data_wwns }}"
+        - name: app
+          disks:
+            - /dev/sdb
+            - /dev/sdc
           volumes:
             - name: shared
               size: "100 GiB"
-              mount_point: "{{ app_root}}/shared"
+              mount_point: "/mnt/app/shared"
               #fs_type: xfs
               state: present
             - name: users
               size: "400g"
               fs_type: ext4
-              mount_point: "{{ app_root }}/users"
+              mount_point: "/mnt/app/users"
       storage_volumes:
         - name: images
           type: disk
