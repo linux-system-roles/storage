@@ -51,10 +51,10 @@ must contain only a single item.
 
 ##### `size`
 The `size` specifies the size of the file system. The format for this is intended to
-be human-readable, eg: "10g", "50 GiB".
+be human-readable, e.g.: "10g", "50 GiB".
 
 ##### `fs_type`
-This indicates the desired file system type to use, eg: "xfs", "ext4", "swap".
+This indicates the desired file system type to use, e.g.: "xfs", "ext4", "swap".
 The default is determined according to the OS and release
 (currently `xfs` for all the supported systems).
 
@@ -68,7 +68,7 @@ The `fs_create_options` specifies custom arguments to `mkfs` as a string.
 The `mount_point` specifies the directory on which the file system will be mounted.
 
 ##### `mount_options`
-The `mount_options` specifies custom mount options as a string, eg: 'ro'.
+The `mount_options` specifies custom mount options as a string, e.g.: 'ro'.
 
 
 Example Playbook
