@@ -49,8 +49,7 @@ This is relevant for volumes of type `disk` or `partition`.
 
 ##### `size`
 The `size` specifies the size of the file system. The format for this is intended to
-be human-readable, eg: "10g", "50 GiB", or "100%" (use all available space on the
-specified disks).
+be human-readable, eg: "10g", "50 GiB".
 
 ##### `fs_type`
 This indicates the desired file system type to use, eg: "xfs"(the default), "ext4", "swap".
