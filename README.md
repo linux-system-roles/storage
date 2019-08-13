@@ -45,7 +45,8 @@ Valid values for `type`: `lvm`(the default) or `disk`.
 
 ##### `disks`
 This specifies the set of disks to use as backing storage for the file system.
-This is relevant for volumes of type `disk` or `partition`.
+This is currently only relevant for volumes of type `disk`, where the list
+must contain only a single item.
 
 ##### `size`
 The `size` specifies the size of the file system. The format for this is intended to
