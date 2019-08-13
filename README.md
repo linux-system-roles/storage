@@ -41,7 +41,8 @@ This specifies the name of the volume.
 
 ##### `type`
 This specifies the type of volume on which the file system will reside.
-Valid values for `type`: `lvm`(the default) or `disk`.
+Valid values for `type`: `lvm` or `disk`.
+The default is determined according to the OS and release (currently `lvm`).
 
 ##### `disks`
 This specifies the set of disks to use as backing storage for the file system.
@@ -53,7 +54,9 @@ The `size` specifies the size of the file system. The format for this is intende
 be human-readable, eg: "10g", "50 GiB".
 
 ##### `fs_type`
-This indicates the desired file system type to use, eg: "xfs"(the default), "ext4", "swap".
+This indicates the desired file system type to use, eg: "xfs", "ext4", "swap".
+The default is determined according to the OS and release
+(currently `xfs` for all the supported systems).
 
 ##### `fs_label`
 The `fs_label` is a string to be used for a file system label.
