@@ -25,8 +25,10 @@ This specifies the type of pool to manage.
 Valid values for `type`: `lvm`.
 
 ##### `disks`
-A list which specifies the set of disks to use as backing storage for the pool
-(a `/dev/` or `/dev/mapper/` prefix is prepended if the name is not an absolute path).
+A list which specifies the set of disks to use as backing storage for the pool.
+Supported identifiers include: device node (like `/dev/sda` or `/dev/mapper/mpathb`),
+device node basename (like `sda` or `mpathb`), /dev/disk/ symlink
+(like `/dev/disk/by-id/wwn-0x5000c5005bc37f3f`).
 
 ##### `volumes`
 This is a list of volumes that belong to the current pool. It follows the
@@ -85,8 +87,8 @@ Example Playbook
       storage_pools:
         - name: app
           disks:
-            - /dev/sdb
-            - /dev/sdc
+            - sdb
+            - sdc
           volumes:
             - name: shared
               size: "100 GiB"
