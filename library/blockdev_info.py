@@ -72,7 +72,6 @@ def run_module():
     try:
         result['info'] = get_block_info(module.run_command)
     except Exception:
-        raise
         module.fail_json(msg="Failed to collect block device info.")
 
     module.exit_json(**result)
