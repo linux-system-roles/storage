@@ -78,8 +78,11 @@ volumes:
 
 import logging
 import traceback
+import inspect
 
 BLIVET_PACKAGE = None
+LIB_IMP_ERR3 = ""
+LIB_IMP_ERR = ""
 
 try:
     from blivet3 import Blivet
@@ -91,6 +94,7 @@ try:
     from blivet3.util import set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
+    LIB_IMP_ERR3 = traceback.format_exc()
     try:
         from blivet import Blivet
         from blivet.callbacks import callbacks
@@ -103,7 +107,7 @@ except ImportError:
     except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
 
-from ansible.module_utils.basic import AnsibleModule, missing_required_lib
+from ansible.module_utils.basic import AnsibleModule
 
 if BLIVET_PACKAGE:
     blivet_flags.debug = True
@@ -672,8 +676,12 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
     if not BLIVET_PACKAGE:
-        module.fail_json(msg=missing_required_lib("blivet"),
-                         exception=LIB_IMP_ERR)
+        module.fail_json(msg="Failed to import the blivet or blivet3 Python modules",
+                         exception=inspect.cleandoc("""
+                         blivet3 exception:
+                         {}
+                         blivet exception:
+                         {}""").format(LIB_IMP_ERR3, LIB_IMP_ERR))
 
     if not module.params['pools'] and not module.params['volumes']:
         module.exit_json(**result)
