@@ -31,6 +31,10 @@ options:
     disklabel_type:
         description:
             - disklabel type string (eg: 'gpt') to use, overriding the built-in logic in blivet
+    safe_mode:
+        description:
+            - boolean indicating that we should fail rather than implicitly/automatically
+              removing devices or formatting
 
 author:
     - David Lehman (dlehman@redhat.com)
@@ -116,6 +120,7 @@ if BLIVET_PACKAGE:
 
 use_partitions = None  # create partitions on pool backing device disks?
 disklabel_type = None  # user-specified disklabel type
+safe_mode = None       # do not remove any existing devices or formatting
 
 
 class BlivetAnsibleError(Exception):
@@ -163,7 +168,6 @@ class BlivetVolume(object):
                          label=self._volume['fs_label'],
                          options=self._volume['fs_create_options'])
         if not fmt.supported or not fmt.formattable:
-            # FAIL: fs type tools are not available
             raise BlivetAnsibleError("required tools for file system '%s' are missing" % self._volume['fs_type'])
 
         return fmt
@@ -189,7 +193,6 @@ class BlivetVolume(object):
         try:
             size = Size(self._volume['size'])
         except Exception:
-            # FAIL: invalid size specification
             raise BlivetAnsibleError("invalid size specification for volume '%s': '%s'" % (self._volume['name'], self._volume['size']))
 
         if size and self._device.resizable and self._device.size != size:
@@ -197,13 +200,11 @@ class BlivetVolume(object):
                 self._device.format.update_size_info()
 
             if not self._device.min_size <= size <= self._device.max_size:
-                # FAIL: resize to specified size not possible
                 raise BlivetAnsibleError("volume '%s' cannot be resized to '%s'" % (self._volume['name'], size))
 
             try:
                 self._blivet.resize_device(self._device, size)
             except ValueError as e:
-                # FAIL: resize not possible
                 raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" % (self._device.name,
                                                                                               self._device.size,
                                                                                               size, str(e)))
@@ -213,6 +214,9 @@ class BlivetVolume(object):
         fmt = self._get_format()
         if self._device.format.type == fmt.type:
             return
+
+        if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name):
+            raise BlivetAnsibleError("cannot remove existing formatting on volume '%s' in safe mode" % self._volume['name'])
 
         if self._device.format.status:
             self._device.format.teardown()
@@ -255,6 +259,17 @@ class BlivetDiskVolume(BlivetVolume):
     def _type_check(self):
         return self._device.is_disk
 
+    def _look_up_device(self):
+        super(BlivetDiskVolume, self)._look_up_device()
+        if not self._get_device_id():
+            raise BlivetAnsibleError("no disks specified for volume '%s'" % self._volume['name'])
+        elif not isinstance(self._volume['disks'], list):
+            raise BlivetAnsibleError("volume disks must be specified as a list")
+
+        if self._device is None:
+            raise BlivetAnsibleError("unable to resolve disk specified for volume '%s' (%s)" % (self._volume['name'], self._volume['disks']))
+
+
 
 class BlivetPartitionVolume(BlivetVolume):
     def _type_check(self):
@@ -273,21 +288,18 @@ class BlivetPartitionVolume(BlivetVolume):
             parent = self._blivet.devicetree.resolve_device(self._volume['pool'])
 
         if parent is None:
-            # FAIL: failed to find pool
             raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool['name'], self._volume['name']))
 
         size = Size("256 MiB")
         try:
             device = self._blivet.new_partition(parents=[parent], size=size, grow=True, fmt=self._get_format())
         except Exception:
-            # FAIL: failed to instantiate volume device
             raise BlivetAnsibleError("failed set up volume '%s'" % self._volume['name'])
 
         self._blivet.create_device(device)
         try:
             do_partitioning(self._blivet)
         except Exception:
-            # FAIL: partition allocation failed: not enough space?
             raise BlivetAnsibleError("partition allocation failed for volume '%s'" % self._volume['name'])
 
         self._device = device
@@ -303,18 +315,15 @@ class BlivetLVMVolume(BlivetVolume):
 
         parent = self._blivet_pool._device
         if parent is None:
-            # FAIL: failed to find pool
             raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool['name'], self._volume['name']))
 
         try:
             size = Size(self._volume['size'])
         except Exception:
-            # FAIL: invalid size specification
             raise BlivetAnsibleError("invalid size '%s' specified for volume '%s'" % (self._volume['size'], self._volume['name']))
 
         fmt = self._get_format()
         if size > parent.free_space:
-            # FAIL: volume size greater than pool free space
             raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)" % (size,
                                                                                                                    parent.name,
                                                                                                                    parent.free_space))
@@ -323,7 +332,6 @@ class BlivetLVMVolume(BlivetVolume):
             device = self._blivet.new_lv(name=self._volume['name'],
                                          parents=[parent], size=size, fmt=fmt)
         except Exception:
-            # FAIL: failed to create volume
             raise BlivetAnsibleError("failed to set up volume '%s'" % self._volume['name'])
 
         self._blivet.create_device(device)
@@ -391,8 +399,7 @@ class BlivetPool(object):
     def _look_up_disks(self):
         """ Look up the pool's disks in blivet's device tree. """
         if not self._pool['disks']:
-            # FAIL: no disks specified for pool
-            raise BlivetAnsibleError("no disks specified for pool '%s'" % self._pool['name'])  # sure about this one?
+            raise BlivetAnsibleError("no disks specified for pool '%s'" % self._pool['name'])
         elif not isinstance(self._pool['disks'], list):
             raise BlivetAnsibleError("pool disks must be specified as a list")
 
@@ -403,7 +410,6 @@ class BlivetPool(object):
                 disks.append(device)
 
         if self._pool['disks'] and not disks:
-            # FAIL: failed to find any disks
             raise BlivetAnsibleError("unable to resolve any disks specified for pool '%s' (%s)" % (self._pool['name'], self._pool['disks']))
 
         self._disks = disks
@@ -428,8 +434,11 @@ class BlivetPool(object):
         """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
         for disk in self._disks:
-            if not disk.isleaf:
-                self._blivet.devicetree.recursive_remove(disk)
+            if not disk.isleaf or disk.format.type is not None:
+                if safe_mode:
+                    raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" % (disk.name, self._pool['name']))
+                else:
+                    self._blivet.devicetree.recursive_remove(disk)
 
             if use_partitions:
                 label = get_format("disklabel", device=disk.path)
@@ -446,7 +455,6 @@ class BlivetPool(object):
             try:
                 do_partitioning(self._blivet)
             except Exception:
-                # FAIL: problem allocating partitions for pool backing devices
                 raise BlivetAnsibleError("failed to allocation partitions for pool '%s'" % self._pool['name'])
 
         return members
@@ -490,7 +498,11 @@ class BlivetPartitionPool(BlivetPool):
     def _create(self):
         if self._device.format.type != "disklabel" or \
            self._device.format.label_type != disklabel_type:
-            self._blivet.devicetree.recursive_remove(self._device, remove_device=False)
+            if safe_mode:
+                raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' "
+                                         "(pool '%s') in safe mode" % (self._device.name, self._pool['name']))
+            else:
+                self._blivet.devicetree.recursive_remove(self._device, remove_device=False)
 
             label = get_format("disklabel", device=self._device.path, label_type=disklabel_type)
             self._blivet.format_device(self._device, label)
@@ -503,7 +515,6 @@ class BlivetLVMPool(BlivetPool):
     def _get_format(self):
         fmt = get_format("lvmpv")
         if not fmt.supported or not fmt.formattable:
-            # FAIL: lvm tools are not available
             raise BlivetAnsibleError("required tools for managing LVM are missing")
 
         return fmt
@@ -516,7 +527,6 @@ class BlivetLVMPool(BlivetPool):
         try:
             pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
         except Exception:
-            # FAIL: failed to instantiate pool device
             raise BlivetAnsibleError("failed to set up pool '%s'" % self._pool['name'])
 
         self._blivet.create_device(pool_device)
@@ -660,6 +670,7 @@ def run_module():
         volumes=dict(type='list'),
         packages_only=dict(type='bool', required=False, default=False),
         disklabel_type=dict(type='str', required=False, default=None),
+        safe_mode=dict(type='bool', required=False, default=True),
         use_partitions=dict(type='bool', required=False, default=True))
 
     # seed the result dict in the object
@@ -691,6 +702,9 @@ def run_module():
 
     global use_partitions
     use_partitions = module.params['use_partitions']
+
+    global safe_mode
+    safe_mode = module.params['safe_mode']
 
     b = Blivet()
     b.reset()

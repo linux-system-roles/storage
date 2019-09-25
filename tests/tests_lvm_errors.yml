@@ -149,3 +149,87 @@
                       not blivet_output.changed }}"
             msg: "Unexpected behavior w/ LVM volume defined outside of any pool"
       ignore_errors: yes
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Create a pool
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: testpool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: testvol1
+                    fs_type: 'ext4'
+                    size: '1g'
+
+        - name: Try to replace file system in safe mode
+          include_role:
+            name: storage
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: testpool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: testvol1
+                    fs_type: 'ext3'
+                    size: '1g'
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+        - name: Try to resize in safe mode
+          include_role:
+            name: storage
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: testpool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: testvol1
+                    fs_type: 'ext4'
+                    size: '2g'
+
+        - name: Verify the output
+          assert:
+            that: "{{ not blivet_output.failed and blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+        - name: Try to create LVM pool on disks that already belong to an existing pool
+          include_role:
+            name: storage
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                type: lvm
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('cannot remove existing formatting and/or devices on disk.*in safe mode') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+        - name: Clean up
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: testpool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+                state: absent
+
+      ignore_errors: yes
