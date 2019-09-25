@@ -33,7 +33,7 @@ options:
             - disklabel type string (eg: 'gpt') to use, overriding the built-in logic in blivet
     safe_mode:
         description:
-            - boolean indicating that existing devices and file system should never be removed
+            - boolean indicating that we should fail rather than implicitly/automatically removing devices or formatting
 
 author:
     - David Lehman (dlehman@redhat.com)
