@@ -5,6 +5,14 @@
     mount_location: '/opt/test1'
 
   tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "10g"
+        max_return: 1
+
     - name: Verify that the play fails with the expected error message
       block:
         - name: Create a disk volume mounted at "{{ mount_location }}"
@@ -21,4 +29,77 @@
           assert:
             that: "{{ blivet_output.failed }}"
             msg: "Expected error message not found for missing disk"
+      ignore_errors: yes
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Create a file system on disk
+          include_role:
+            name: storage
+          vars:
+            storage_volumes:
+              - name: test1
+                type: disk
+                fs_type: 'ext4'
+                disks: "{{ unused_disks }}"
+
+        - name: Try to replace the file system on disk in safe mode
+          include_role:
+            name: storage
+          vars:
+            storage_safe_mode: true
+            storage_volumes:
+              - name: test1
+                type: disk
+                fs_type: 'ext3'
+                disks: "{{ unused_disks }}"
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+        - name: Try to create a partition pool on the disk already containing a file system in safe_mode
+          include_role:
+            name: storage
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                type: partition
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('cannot remove existing formatting and/or devices on disk.*in safe mode') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+        - name: Create a partition pool on the disk already containing a file system w/o safe_mode
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                type: partition
+
+        - name: Verify the output
+          assert:
+            that: "{{ not blivet_output.failed }}"
+            msg: "failed to create partition pool over existing file system using default value of safe_mode"
+
+        - name: Clean up
+          include_role:
+            name: storage
+          vars:
+            storage_volumes:
+              - name: test1
+                type: disk
+                disks: "{{ unused_disks }}"
+                present: false
+
       ignore_errors: yes

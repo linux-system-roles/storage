@@ -3,6 +3,7 @@
 storage_provider: "blivet"
 storage_use_partitions: null
 storage_disklabel_type: null  # leave unset to allow the role to select an appropriate label type
+storage_safe_mode: false  # do not remove devices as needed to make space for new volumes
 
 storage_pool_defaults:
   state: "present"
