@@ -202,9 +202,7 @@
 
         - name: Verify the output
           assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('cannot resize existing volume.*in safe mode') and
-                      not blivet_output.changed }}"
+            that: "{{ not blivet_output.failed and blivet_output.changed }}"
             msg: "Unexpected behavior w/ existing data on specified disks"
 
         - name: Try to create LVM pool on disks that already belong to an existing pool
