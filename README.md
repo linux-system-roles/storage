@@ -73,6 +73,9 @@ The `mount_point` specifies the directory on which the file system will be mount
 ##### `mount_options`
 The `mount_options` specifies custom mount options as a string, e.g.: 'ro'.
 
+#### `storage_safe_mode`
+When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.
+
 
 Example Playbook
 ----------------
