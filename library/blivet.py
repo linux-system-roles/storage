@@ -706,6 +706,9 @@ def run_module():
     global use_partitions
     use_partitions = module.params['use_partitions']
 
+    global safe_mode
+    safe_mode = module.params['safe_mode']
+
     b = Blivet()
     b.reset()
     fstab = FSTab(b)
