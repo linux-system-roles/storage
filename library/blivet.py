@@ -218,7 +218,7 @@ class BlivetVolume:
         if self._device.format.type == fmt.type:
             return
 
-        if safe_mode and self._device.format.type is None and self._device.format.name != get_format(None).name:
+        if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name):
             raise BlivetAnsibleError("cannot remove existing formatting on volume '%s' in safe mode" % self._volume['name'])
 
         if self._device.format.status:
