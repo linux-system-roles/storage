@@ -80,14 +80,41 @@
                 fs_type: 'ext3'
                 disks: "{{ unused_disks }}"
 
-        - name: Verify the output
-          assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ existing data on specified disks"
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
 
-        - name: Try to create a partition pool on the disk already containing a file system in safe_mode
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    - name: Verify the output
+      assert:
+        that: "blivet_output.failed and
+               blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
+                  not blivet_output.changed"
+        msg: "Unexpected behavior w/ existing data on specified disks"
+
+    - name: stat the file
+      stat:
+        path: "{{ testfile }}"
+      register: stat_r
+
+    - name: assert file presence
+      assert:
+        that:
+          stat_r.stat.isreg is defined and stat_r.stat.isreg
+        msg: "data lost!"
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Try to create a LVM pool on the disk already containing a file system in safe_mode
           include_role:
             name: storage
           vars:
