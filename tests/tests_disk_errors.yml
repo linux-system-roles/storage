@@ -175,6 +175,7 @@
       include_role:
         name: storage
       vars:
+        storage_safe_mode: false
         storage_volumes:
           - name: test1
             type: disk
