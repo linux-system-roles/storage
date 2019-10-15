@@ -3,6 +3,7 @@
   become: true
   vars:
     mount_location: '/opt/test1'
+    testfile: "{{ mount_location }}/quux"
 
   tasks:
     - include_role:
@@ -50,19 +51,24 @@
         #     that: blivet_output.failed | bool
         #     msg: "Expected error message not found for missing disk"
 
+    - name: Create a file system on disk
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            fs_type: 'ext4'
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+
+    - name: create a file
+      file:
+        path: "{{ testfile }}"
+        state: touch
 
     - name: Test for correct handling of safe_mode
       block:
-        - name: Create a file system on disk
-          include_role:
-            name: storage
-          vars:
-            storage_volumes:
-              - name: test1
-                type: disk
-                fs_type: 'ext4'
-                disks: "{{ unused_disks }}"
-
         - name: Try to replace the file system on disk in safe mode
           include_role:
             name: storage
