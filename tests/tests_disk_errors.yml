@@ -22,7 +22,7 @@
             storage_volumes:
               - name: test1
                 type: disk
-                disks: "['/dev/surelyidonotexist']"
+                disks: ['/dev/surelyidonotexist']
                 mount_point: "{{ mount_location }}"
 
         - name: Check the error output
