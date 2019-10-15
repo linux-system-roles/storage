@@ -537,7 +537,7 @@ class BlivetLVMPool(BlivetPool):
 
 
 _BLIVET_POOL_TYPES = {
-    "disk": BlivetPartitionPool,
+    "partition": BlivetPartitionPool,
     "lvm": BlivetLVMPool
 }
 
