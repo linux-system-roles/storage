@@ -85,6 +85,15 @@
 - debug:
     var: _storage_volumes
 
+- name: load mount facts
+  setup:
+    gather_subset: '!all,!min,mounts'
+  register: __storage_mounts_before_packages
+
+# - name: show mounts before get required packages
+#   debug:
+#     var: __storage_mounts_before_packages
+
 - name: get required packages
   blivet:
     pools: "{{ _storage_pools }}"
@@ -93,6 +102,30 @@
     disklabel_type: "{{ storage_disklabel_type }}"
     packages_only: true
   register: package_info
+
+- name: load mount facts
+  setup:
+    gather_subset: '!all,!min,mounts'
+  register: __storage_mounts_after_packages
+
+- name: detect mount alteration by 'get required packages'
+  block:
+    - name: show mounts before manage the pools and volumes
+      debug:
+        var: __storage_mounts_before_packages.ansible_facts.ansible_mounts
+
+    - name: show mounts after manage the pools and volumes
+      debug:
+        var: __storage_mounts_after_packages.ansible_facts.ansible_mounts
+
+    - name: fail if mounts changed
+      fail:
+        msg: "get required packages changed mounts. Changed status is
+      {{ package_info.changed }}"
+  when:
+    - __storage_mounts_before_packages.ansible_facts.ansible_mounts |
+      count !=
+      __storage_mounts_after_packages.ansible_facts.ansible_mounts | count
 
 - name: make sure required packages are installed
   package:
