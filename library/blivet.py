@@ -519,7 +519,7 @@ class BlivetPartitionPool(BlivetPool):
             if not safe_mode:
                 self._blivet.devicetree.recursive_remove(self._device, remove_device=False)
             else:
-                raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" % (disk.name, self._pool['name']))
+                raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" % (self._device.name, self._pool['name']))
 
             label = get_format("disklabel", device=self._device.path, label_type=disklabel_type)
             self._blivet.format_device(self._device, label)
