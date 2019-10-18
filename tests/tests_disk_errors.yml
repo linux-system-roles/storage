@@ -114,7 +114,7 @@
 
     - name: Test for correct handling of safe_mode
       block:
-        - name: Try to create a LVM pool on the disk already containing a file system in safe_mode
+        - name: Try to create a partition pool on the disk already containing a file system in safe_mode
           include_role:
             name: storage
           vars:
@@ -156,7 +156,7 @@
           stat_r.stat.isreg is defined and stat_r.stat.isreg
         msg: "data lost!"
 
-    - name: Create a LVM pool on the disk already containing a file system w/o safe_mode
+    - name: Create a partition pool on the disk already containing a file system w/o safe_mode
       include_role:
         name: storage
       vars:
@@ -169,7 +169,7 @@
     - name: Verify the output
       assert:
         that: not blivet_output.failed
-        msg: "failed to create LVM pool over existing file system using default value of safe_mode"
+        msg: "failed to create partition pool over existing file system using default value of safe_mode"
 
     - name: Clean up
       include_role:
