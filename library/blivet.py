@@ -265,6 +265,19 @@ class BlivetDiskVolume(BlivetVolume):
     def _type_check(self):
         return self._device.is_disk
 
+    def _look_up_device(self):
+        super(BlivetDiskVolume, self)._look_up_device()
+        if not self._get_device_id():
+            # FAIL: no disks specified for volume
+            raise BlivetAnsibleError("no disks specified for volume '%s'" % self._volume['name'])  # sure about this one?
+        elif not isinstance(self._volume['disks'], list):
+            raise BlivetAnsibleError("volume disks must be specified as a list")
+
+        if self._device is None:
+            # FAIL: failed to find the disk
+            raise BlivetAnsibleError("unable to resolve disk specified for volume '%s' (%s)" % (self._volume['name'], self._volume['disks']))
+
+
 
 class BlivetPartitionVolume(BlivetVolume):
     def _type_check(self):
