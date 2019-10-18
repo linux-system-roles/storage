@@ -6,7 +6,7 @@
     mount_location: '/opt/test'
     volume_size: '5g'
     fs_type_after: "{{ 'ext3' if (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') else 'ext4' }}"
-
+    pat: "{{ '^([^#\\s]+)\\s+' + mount_location + '\\s.*' }}"
   tasks:
     - include_role:
         name: storage
@@ -26,6 +26,23 @@
             mount_point: "{{ mount_location }}"
             disks: "{{ unused_disks }}"
 
+    - name: Load fstab
+      command: cat /etc/fstab
+      changed_when: false
+      check_mode: no
+      register: _test_change_disk_fs_fstab1
+
+    - name: print fstab device
+      debug:
+        msg: "device is: {{ ( _test_change_disk_fs_fstab1.stdout_lines|select('search', pat)
+        | map('regex_replace', pat, '\\1') | list )[0] }}"
+
+    - name: verify that we mount by UUID
+      assert:
+        that: "{{ _test_change_disk_fs_fstab1.stdout_lines|select('search', pat)
+        | map('regex_replace', pat, '\\1') | select('match', 'UUID=')
+      | list | length > 0 }}"
+
     - include_tasks: verify-role-results.yml
 
     - name: Change the disk device file system type to "{{ fs_type_after }}"
@@ -39,6 +56,23 @@
             fs_type: "{{ fs_type_after }}"
             disks: "{{ unused_disks }}"
 
+    - name: Load fstab
+      command: cat /etc/fstab
+      changed_when: false
+      check_mode: no
+      register: _test_change_disk_fs_fstab2
+
+    - name: print fstab device
+      debug:
+        msg: "device is: {{ (_test_change_disk_fs_fstab2.stdout_lines|select('search', pat)
+        | map('regex_replace', pat, '\\1') | list)[0] }}"
+
+    - name: verify that we mount by UUID
+      assert:
+        that: "{{_test_change_disk_fs_fstab2.stdout_lines|select('search', pat)
+        | map('regex_replace', pat, '\\1') | select('match', 'UUID=')
+      | list | length > 0 }}"
+
     - include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
@@ -51,6 +85,23 @@
             mount_point: "{{ mount_location }}"
             fs_type: "{{ fs_type_after }}"
             disks: "{{ unused_disks }}"
+
+    - name: Load fstab
+      command: cat /etc/fstab
+      changed_when: false
+      check_mode: no
+      register: _test_change_disk_fs_fstab3
+
+    - name: print fstab device
+      debug:
+        msg: "device is: {{ (_test_change_disk_fs_fstab3.stdout_lines|select('search', pat)
+        | map('regex_replace', pat, '\\1') | list)[0] }}"
+
+    - name: verify that we mount by UUID
+      assert:
+        that: "{{ _test_change_disk_fs_fstab3.stdout_lines|select('search', pat)
+        | map('regex_replace', pat, '\\1') | select('match', 'UUID=' )
+      | list | length > 0 }}"
 
     - include_tasks: verify-role-results.yml
 
