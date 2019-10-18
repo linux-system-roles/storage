@@ -121,6 +121,7 @@ if BLIVET_PACKAGE:
 use_partitions = None  # create partitions on pool backing device disks?
 disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
+packages_only = None   # only set things up enough to get a list of required packages
 
 
 class BlivetAnsibleError(Exception):
@@ -211,6 +212,8 @@ class BlivetVolume(object):
 
     def _reformat(self):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
+        global packages_only
+
         fmt = self._get_format()
         if self._device.format.type == fmt.type:
             return
@@ -218,7 +221,7 @@ class BlivetVolume(object):
         if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name):
             raise BlivetAnsibleError("cannot remove existing formatting on volume '%s' in safe mode" % self._volume['name'])
 
-        if self._device.format.status:
+        if self._device.format.status and not packages_only:
             self._device.format.teardown()
         self._blivet.format_device(self._device, fmt)
 
@@ -705,6 +708,9 @@ def run_module():
 
     global safe_mode
     safe_mode = module.params['safe_mode']
+
+    global packages_only
+    packages_only = module.params['packages_only']
 
     b = Blivet()
     b.reset()
