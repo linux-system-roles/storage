@@ -258,7 +258,6 @@
           include_role:
             name: storage
           vars:
-            storage_safe_mode: true
             storage_pools:
               - name: testpool1
                 type: lvm
@@ -295,7 +294,6 @@
           include_role:
             name: storage
           vars:
-            storage_safe_mode: true
             storage_pools:
               - name: testpool1
                 type: lvm
@@ -318,7 +316,6 @@
           include_role:
             name: storage
           vars:
-            storage_safe_mode: true
             storage_pools:
               - name: foo
                 disks: "{{ unused_disks }}"
