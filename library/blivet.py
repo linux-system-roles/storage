@@ -127,7 +127,7 @@ class BlivetAnsibleError(Exception):
     pass
 
 
-class BlivetVolume:
+class BlivetVolume(object):
     def __init__(self, blivet_obj, volume, bpool=None):
         self._blivet = blivet_obj
         self._volume = volume
@@ -369,7 +369,7 @@ def _get_blivet_volume(blivet_obj, volume, bpool=None):
     return _BLIVET_VOLUME_TYPES[volume_type](blivet_obj, volume, bpool=bpool)
 
 
-class BlivetPool:
+class BlivetPool(object):
     def __init__(self, blivet_obj, pool):
         self._blivet = blivet_obj
         self._pool = pool
@@ -583,7 +583,7 @@ def manage_pool(b, pool):
         volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
-class FSTab:
+class FSTab(object):
     def __init__(self, blivet_obj):
         self._blivet = blivet_obj
         self._entries = list()
