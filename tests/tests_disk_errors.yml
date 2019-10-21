@@ -73,7 +73,6 @@
           include_role:
             name: storage
           vars:
-            storage_safe_mode: true
             storage_volumes:
               - name: test1
                 type: disk
@@ -101,6 +100,61 @@
                   not blivet_output.changed"
         msg: "Unexpected behavior w/ existing data on specified disks"
 
+    - name: Unmount file system
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            fs_type: 'ext4'
+            disks: "{{ unused_disks }}"
+            mount_point: none
+
+    - name: Test for correct handling of safe_mode with unmounted filesystem
+      block:
+        - name: Try to replace the file system on disk in safe mode
+          include_role:
+            name: storage
+          vars:
+            storage_volumes:
+              - name: test1
+                type: disk
+                fs_type: 'ext3'
+                disks: "{{ unused_disks }}"
+
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    - name: Verify the output
+      assert:
+        that: "blivet_output.failed and
+               blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
+                  not blivet_output.changed"
+        msg: "Unexpected behavior w/ existing data on specified disks"
+
+    - name: Remount file system
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            fs_type: 'ext4'
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+
     - name: stat the file
       stat:
         path: "{{ testfile }}"
@@ -118,7 +172,6 @@
           include_role:
             name: storage
           vars:
-            storage_safe_mode: true
             storage_pools:
               - name: foo
                 disks: "{{ unused_disks }}"
@@ -145,6 +198,38 @@
                    not blivet_output.changed"
             msg: "Unexpected behavior w/ existing data on specified disks"
 
+    - name: Test for correct handling of safe_mode with existing filesystem
+      block:
+        - name: Try to create LVM pool on disk that already belongs to an existing filesystem
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                type: lvm
+
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('cannot remove existing formatting and/or devices on disk.*in safe mode') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
     - name: stat the file
       stat:
         path: "{{ testfile }}"
@@ -169,15 +254,15 @@
     - name: Verify the output
       assert:
         that: not blivet_output.failed
-        msg: "failed to create partition pool over existing file system using default value of safe_mode"
+        msg: "failed to create partition pool over existing file system w/o safe_mode"
 
     - name: Clean up
       include_role:
         name: storage
       vars:
         storage_safe_mode: false
-        storage_volumes:
-          - name: test1
-            type: disk
+        storage_pools:
+          - name: foo
+            type: partition
             disks: "{{ unused_disks }}"
-            present: false
+            state: absent
