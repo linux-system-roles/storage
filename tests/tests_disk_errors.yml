@@ -73,7 +73,6 @@
           include_role:
             name: storage
           vars:
-            storage_safe_mode: true
             storage_volumes:
               - name: test1
                 type: disk
@@ -118,7 +117,6 @@
           include_role:
             name: storage
           vars:
-            storage_safe_mode: true
             storage_pools:
               - name: foo
                 disks: "{{ unused_disks }}"
@@ -169,7 +167,7 @@
     - name: Verify the output
       assert:
         that: not blivet_output.failed
-        msg: "failed to create partition pool over existing file system using default value of safe_mode"
+        msg: "failed to create partition pool over existing file system w/o safe_mode"
 
     - name: Clean up
       include_role:
