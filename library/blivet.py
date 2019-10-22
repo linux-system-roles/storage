@@ -325,6 +325,8 @@ class BlivetVolume(BlivetBase):
                 raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" % (self._device.name,
                                                                                               self._device.size,
                                                                                               size, str(e)))
+        elif size and self._device.size != size and not self._device.resizable:
+            raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" % (self._device.name, self._device.size, size))
 
     def _reformat(self):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
