@@ -167,7 +167,7 @@ class BlivetVolume(object):
         fmt = get_format(self._volume['fs_type'],
                          mountpoint=self._volume.get('mount_point'),
                          label=self._volume['fs_label'],
-                         options=self._volume['fs_create_options'])
+                         create_options=self._volume['fs_create_options'])
         if not fmt.supported or not fmt.formattable:
             raise BlivetAnsibleError("required tools for file system '%s' are missing" % self._volume['fs_type'])
 
