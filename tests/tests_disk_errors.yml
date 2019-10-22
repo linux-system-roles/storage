@@ -261,8 +261,8 @@
         name: storage
       vars:
         storage_safe_mode: false
-        storage_volumes:
-          - name: test1
-            type: disk
+        storage_pools:
+          - name: foo
+            type: partition
             disks: "{{ unused_disks }}"
-            present: false
+            state: absent
