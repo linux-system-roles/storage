@@ -223,12 +223,13 @@
           - name: foo
             type: lvm
             disks: "{{ unused_disks }}"
-            encryption: true
-            encryption_password: 'yabbadabbadoo'
             volumes:
               - name: test1
                 mount_point: "{{ mount_location_2 }}"
-                size: 4g
+
+    - assert:
+        that: blivet_output.pools[0].encryption
+        msg: "Failed to implicitly preserve encryption on existing pool."
 
     - import_tasks: verify-data-preservation.yml
       vars:
