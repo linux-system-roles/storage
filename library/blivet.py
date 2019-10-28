@@ -339,6 +339,8 @@ class BlivetVolume(BlivetBase):
 
         if self._device.format.status and (self._device.format.mountable or self._device.format.type == "swap"):
             self._device.format.teardown()
+        if not self._device.isleaf:
+            self._blivet.devicetree.recursive_remove(self._device, remove_device=False)
         self._blivet.format_device(self._device, fmt)
 
     def manage(self):
