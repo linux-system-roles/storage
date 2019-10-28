@@ -251,6 +251,9 @@ class BlivetVolume(object):
         if self._device.exists:
             self._reformat()
 
+        if self.ultimately_present and self._volume['mount_point'] and not self._device.format.mountable:
+            raise BlivetAnsibleError("volume '%s' has a mount point but no mountable file system" % self._volume['name'])
+
         # schedule resize if appropriate
         if self._device.exists and self._volume['size']:
             self._resize()
