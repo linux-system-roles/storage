@@ -1,0 +1,32 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+
+# Install package specified by user in LSR_EXTRA_PACKAGES. Executed by Travis
+# during before_install phase.
+#
+# LSR_EXTRA_PACKAGES, set by user in .travis/config.sh, is a space separated
+# list of packages to be installed on the Travis build environment (Ubuntu).
+
+set -e
+
+SCRIPTDIR=$(readlink -f $(dirname $0))
+
+# Include library.
+. ${SCRIPTDIR}/utils.sh
+
+# Add python3-selinux package (it turned out that in some circumstances, i.e
+# if selinux policy is enforcing, selinux is required by molecule even if
+# running simple test).
+if lsr_compare_pythons python -eq /usr/bin/python3; then
+  LSR_EXTRA_PACKAGES='python3-selinux'
+fi
+
+# Include config.
+. ${SCRIPTDIR}/config.sh
+
+# Install extra dependencies.
+if [[ "${LSR_EXTRA_PACKAGES}" ]]; then
+  set -x
+  sudo apt-get update
+  sudo apt-get install -y ${LSR_EXTRA_PACKAGES}
+fi
