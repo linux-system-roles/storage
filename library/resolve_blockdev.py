@@ -82,7 +82,7 @@ def _get_dm_name_from_kernel_dev(kdev):
 def _get_md_name_from_kernel_dev(kdev):
     minor = os.minor(os.stat(kdev).st_rdev)
     return next(name for name in os.listdir(DEV_MD)
-                    if os.minor(os.stat("%/%s" % (DEV_MD, name).st_rdev) == minor))
+                if os.minor(os.stat("%s/%s" % (DEV_MD, name)).st_rdev) == minor)
 
 
 def canonical_device(device):

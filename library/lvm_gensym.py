@@ -43,16 +43,10 @@ EXAMPLES = '''
 RETURN = '''
 vg_name:
     description: The default generated name for an unspecified volume group
-    type: str 
-'''
-
-RETURN = '''
-vg_name:
-    description: The default generated name for an unspecified volume group
-    type: str 
+    type: str
 
 lv_name:
-    description: The default generated name for an unspecified logical volume 
+    description: The default generated name for an unspecified logical volume
     type: str
 '''
 
