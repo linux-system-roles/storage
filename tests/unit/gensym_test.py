@@ -1,7 +1,22 @@
 #!/usr/bin/python
 """This module tests methods defined in the lvm_gensym.py module using the pytest framework"""
+import os
+import sys
 import pytest
 
+TESTS_BASEDIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(1, os.path.join(TESTS_BASEDIR, "../..", "library"))
+sys.path.insert(1, os.path.join(TESTS_BASEDIR, "../..", "module_utils"))
+
+try:
+    from unittest import mock
+except ImportError:  # py2
+    import mock
+
+sys.modules["ansible"] = mock.Mock()
+sys.modules["ansible.module_utils.basic"] = mock.Mock()
+sys.modules["ansible.module_utils"] = mock.Mock()
+sys.modules["ansible.module_utils.size"] = __import__("size")
 
 import lvm_gensym
 

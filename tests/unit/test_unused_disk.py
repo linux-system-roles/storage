@@ -1,6 +1,22 @@
-import pytest
-import find_unused_disk
 import os
+import sys
+import pytest
+
+TESTS_BASEDIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(1, os.path.join(TESTS_BASEDIR, "../..", "library"))
+sys.path.insert(1, os.path.join(TESTS_BASEDIR, "../..", "module_utils"))
+
+try:
+    from unittest import mock
+except ImportError:  # py2
+    import mock
+
+sys.modules["ansible"] = mock.Mock()
+sys.modules["ansible.module_utils.basic"] = mock.Mock()
+sys.modules["ansible.module_utils"] = mock.Mock()
+sys.modules["ansible.module_utils.size"] = __import__("size")
+
+import find_unused_disk
 
 
 blkid_data_pttype = [('/dev/sdx', '/dev/sdx: PTTYPE=\"dos\"'),
