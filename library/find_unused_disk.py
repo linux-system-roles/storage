@@ -64,6 +64,7 @@ import os
 import re
 
 from ansible.module_utils.basic import AnsibleModule
+# pylint: disable=import-error, no-name-in-module
 from ansible.module_utils.size import Size
 
 
