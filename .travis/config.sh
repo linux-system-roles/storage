@@ -39,6 +39,9 @@
 # Disable black:
 export RUN_BLACK_DISABLED=yes
 
+# Disable flake8:
+export RUN_FLAKE8_DISABLED=yes
+
 ##
 # lsr_runcoveralls_hook ARGS
 #
