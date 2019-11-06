@@ -2,7 +2,6 @@
 """This module tests methods defined in the lvm_gensym.py module using the pytest framework"""
 import os
 import sys
-# pylint: disable=import-error
 import pytest
 
 TESTS_BASEDIR = os.path.dirname(os.path.abspath(__file__))

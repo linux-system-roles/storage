@@ -1,6 +1,5 @@
 import os
 import sys
-# pylint: disable=import-error
 import pytest
 
 TESTS_BASEDIR = os.path.dirname(os.path.abspath(__file__))
