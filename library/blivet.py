@@ -127,7 +127,7 @@ class BlivetAnsibleError(Exception):
     pass
 
 
-class BlivetVolume:
+class BlivetVolume(object):
     def __init__(self, blivet_obj, volume, bpool=None):
         self._blivet = blivet_obj
         self._volume = volume
