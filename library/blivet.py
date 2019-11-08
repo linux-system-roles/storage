@@ -218,7 +218,8 @@ class BlivetVolume(object):
         if self._device.format.type == fmt.type:
             return
 
-        if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name):
+        if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name) and \
+           not packages_only:
             raise BlivetAnsibleError("cannot remove existing formatting on volume '%s' in safe mode" % self._volume['name'])
 
         if self._device.format.status and not packages_only:
@@ -438,7 +439,7 @@ class BlivetPool(object):
         members = list()
         for disk in self._disks:
             if not disk.isleaf or disk.format.type is not None:
-                if safe_mode:
+                if safe_mode and not packages_only:
                     raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" % (disk.name, self._pool['name']))
                 else:
                     self._blivet.devicetree.recursive_remove(disk)
@@ -501,7 +502,7 @@ class BlivetPartitionPool(BlivetPool):
     def _create(self):
         if self._device.format.type != "disklabel" or \
            self._device.format.label_type != disklabel_type:
-            if safe_mode:
+            if safe_mode and not packages_only:
                 raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' "
                                          "(pool '%s') in safe mode" % (self._device.name, self._pool['name']))
             else:
