@@ -72,6 +72,9 @@ leaves:
 mounts:
     description: list of dicts describing mounts to set up
     type: list of dict
+swaps:
+    description: list of dicts describing swap entries to manage in /etc/fstab
+    type: list of dict
 pools:
     description: list of dicts describing the pools w/ device path for each volume
     type: list of dict
@@ -610,6 +613,10 @@ def get_mount_info(pools, volumes, actions, fstab):
         Removed mounts go directly into the mount_info list, which is the return value,
         while added/active mounts to a list that gets appended to the mount_info list
         at the end to ensure that removals happen first.
+
+        The 'mount' module cannot be used to manage swap entries in /etc/fstab as it
+        will remove all pre-existing swaps due to matching by mount point. Swap space
+        management happens in get_swap_info, below, and in the main blivet tasks file.
     """
     mount_info = list()
     mount_vols = list()
@@ -617,7 +624,7 @@ def get_mount_info(pools, volumes, actions, fstab):
     # account for mounts removed by removing or reformatting volumes
     if actions:
         for action in actions:
-            if action.is_destroy and action.is_format and action.format.type is not None:
+            if action.is_destroy and action.is_format and action.format.type not in (None, "swap"):
                 mount = fstab.lookup('device_path', action.device.path)
                 if mount is not None:
                     mount_info.append({"path": mount['mount_point'], 'state': 'absent'})
@@ -627,11 +634,11 @@ def get_mount_info(pools, volumes, actions, fstab):
         mounted = False
 
         mount = fstab.lookup('device_path', volume['_device'])
-        if volume['mount_point']:
+        if volume['mount_point'] and volume['fs_type'] != 'swap':
             mounted = True
 
         # handle removal of existing mounts of this volume
-        if mount and mount['mount_point'] != volume['mount_point']:
+        if mount and mount['mount_point'] != volume['mount_point'] and mount['fs_type'] != 'swap':
             replace = mount['mount_point']
 
         return mounted, replace
@@ -667,6 +674,47 @@ def get_mount_info(pools, volumes, actions, fstab):
     return mount_info
 
 
+def get_swap_info(pools, volumes, actions, fstab):
+    """
+    There are three possible actions for swap:
+
+        1. we must remove an entry for a removed/reformatted swap
+        2. we must add an entry for a created/missing swap
+        3. we must adjust an existing entry for an existing swap (options, etc.)
+    """
+    swaps = list()
+
+    # account for swaps removed by removing or reformatting volumes
+    if actions:
+        for action in actions:
+            if action.is_destroy and action.is_format and action.format.type == "swap":
+                mount = fstab.lookup('device_path', action.device.path)
+                if mount is not None:
+                    swaps.append({'regex': "^{}\s+swap".format(mount['device_id']), 'state': 'absent'})
+
+    def handle_new_swap(volume, fstab):
+        mount = fstab.lookup('device_path', volume['_device'])
+        line = "{_mount_id} {fs_type} {fs_type} {mount_options} {mount_check} {mount_passno}".format(**volume)
+        swap_info = dict(state='present', line=line, regex='omit', device=volume['_device'])
+        if mount is not None:
+            swap_info['regex'] = "^{}\s+".format(mount['device_id'])
+
+        return swap_info
+
+    # volumes in pools
+    for pool in pools:
+        for volume in pool['volumes']:
+            if volume['fs_type'] == 'swap' and pool['state'] == 'present' and volume['state'] == 'present':
+                swaps.append(handle_new_swap(volume, fstab))
+
+    # standalone volumes
+    for volume in volumes:
+        if volume['fs_type'] == 'swap' and volume['state'] == 'present':
+            swaps.append(handle_new_swap(volume, fstab))
+
+    return swaps
+
+
 def run_module():
     # available arguments/parameters that a user can pass
     module_args = dict(
@@ -683,6 +731,7 @@ def run_module():
         actions=list(),
         leaves=list(),
         mounts=list(),
+        swaps=list(),
         pools=list(),
         volumes=list(),
         packages=list(),
@@ -763,6 +812,7 @@ def run_module():
             result['actions'] = [action_dict(a) for a in actions]
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
+    result['swaps'] = get_swap_info(module.params['pools'], module.params['volumes'], actions, fstab)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']

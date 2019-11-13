@@ -138,10 +138,28 @@
   loop_control:
     loop_var: mount_info
 
+- name: manage swap entries in /etc/fstab manually
+  lineinfile:
+    path: /etc/fstab
+    regex: "{{ swap_info['regex'] }}"
+    state: "{{ swap_info['state'] }}"
+    line: "{{ swap_info.get('line', 'omit') }}"
+  loop: "{{ blivet_output.swaps }}"
+  loop_control:
+      loop_var: swap_info
+
+
+- name: manage state of swaps
+  command: swapon "{{ swap_info['device'] }}"
+  when: swap_info['state'] == 'present'
+  loop: "{{ blivet_output.swaps }}"
+  loop_control:
+      loop_var: swap_info
+
 - name: tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: yes
-  when: blivet_output['mounts']
+  when: blivet_output['mounts'] or blivet_output['swaps']
 
 #
 # Update facts since we may have changed system state.

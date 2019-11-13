@@ -3,7 +3,8 @@
   set_fact:
     storage_test_fstab_id_matches: "{{ storage_test_fstab.stdout_lines|map('regex_search', '^' + storage_test_volume._mount_id + ' ')|select('string')|list }}"
     storage_test_fstab_mount_point_matches: "{{ storage_test_fstab.stdout_lines|map('regex_search', ' +' + storage_test_volume.mount_point + ' +')|select('string')|list if storage_test_volume.mount_point else [] }}"
-    storage_test_fstab_expected_matches: "{{ 1 if (_storage_test_volume_present and storage_test_volume.mount_point) else 0 }}"
+    storage_test_fstab_expected_matches: "{{ 1 if (_storage_test_volume_present and (storage_test_volume.mount_point or storage_test_volume.fs_type == 'swap')) else 0 }}"
+    storage_test_fstab_expected_mount_point_matches: "{{ 1 if (_storage_test_volume_present and storage_test_volume.mount_point) else 0 }}"
 
 # device id
 - name: Verify that the device identifier appears in /etc/fstab
@@ -15,7 +16,7 @@
 # mount point
 - name: Verify the fstab mount point
   assert:
-    that: "{{ storage_test_fstab_mount_point_matches|length == storage_test_fstab_expected_matches|int }}"
+    that: "{{ storage_test_fstab_mount_point_matches|length == storage_test_fstab_expected_mount_point_matches|int }}"
     msg: "Expected number ({{ storage_test_fstab_expected_matches }}) of entries with volume '{{ storage_test_volume.name }}' mount point not found in /etc/fstab."
 
 # todo: options
