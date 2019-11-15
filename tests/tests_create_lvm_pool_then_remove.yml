@@ -2,6 +2,7 @@
 - hosts: all
   become: true
   vars:
+    storage_safe_mode: false
     mount_location1: '/opt/test1'
     mount_location2: '/opt/test2'
     volume_group_size: '10g'

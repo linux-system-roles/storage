@@ -38,7 +38,7 @@
     _storage_vols_no_defaults: "{{ _storage_vols_no_defaults|default([]) }} + [{{ item.1 }}]"
     _storage_vol_defaults: "{{ _storage_vol_defaults|default([]) }} + [{{ storage_volume_defaults }}]"
     _storage_vol_pools: "{{ _storage_vol_pools|default([]) }} + ['{{ item.0.name }}']"
-  loop: "{{ _storage_pools|subelements('volumes') }}"
+  loop: "{{ _storage_pools|subelements('volumes', skip_missing=true) }}"
   when: storage_pools is defined
 
 - name: Apply defaults to pools and volumes [3/6]
@@ -105,6 +105,7 @@
     volumes: "{{ _storage_volumes }}"
     use_partitions: "{{ storage_use_partitions }}"
     disklabel_type: "{{ storage_disklabel_type }}"
+    safe_mode: "{{ storage_safe_mode }}"
   register: blivet_output
 
 - debug:

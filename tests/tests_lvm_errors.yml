@@ -33,13 +33,32 @@
                     size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: Verify the output
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
           assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('unable to resolve.+disk')|length>0 and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ non-existent pool disk"
-      ignore_errors: yes
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    # the following does not work properly
+    # - debug:
+    #     msg: "{{ 'failed: ' + blivet_output.failed | string +
+    #              'msg: ' + blivet_output.msg +
+    #              'changed: ' + blivet_output.changed | string }}"
+
+    # - name: Verify the output
+    #   assert:
+    #     that: "{{ blivet_output.failed and
+    #               blivet_output.msg|regex_search('unable to resolve.+disk')|length>0 and
+    #               not blivet_output.changed }}"
+    #     msg: "Unexpected behavior w/ non-existent pool disk"
 
     - name: Test for correct handling of invalid size specification.
       block:
@@ -55,13 +74,27 @@
                     size: "{{ invalid_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: Verify the output
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
           assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('invalid size.+for volume') and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ invalid volume size"
-      ignore_errors: yes
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    # the following does not work properly
+    # - name: Verify the output
+    #   assert:
+    #     that: "{{ blivet_output.failed and
+    #               blivet_output.msg|regex_search('invalid size.+for volume') and
+    #               not blivet_output.changed }}"
+    #     msg: "Unexpected behavior w/ invalid volume size"
 
     - name: Test for correct handling of too-large volume size.
       block:
@@ -77,13 +110,27 @@
                     size: "{{ too_large_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: Verify the output
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
           assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('size.+exceeds.+space in pool') and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ too-large volume size"
-      ignore_errors: yes
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    # the following does not work properly
+    # - name: Verify the output
+    #   assert:
+    #     that: "{{ blivet_output.failed and
+    #               blivet_output.msg|regex_search('size.+exceeds.+space in pool') and
+    #               not blivet_output.changed }}"
+    #     msg: "Unexpected behavior w/ too-large volume size"
 
     - name: Test for correct handling of non-list disk specification.
       block:
@@ -99,13 +146,27 @@
                     size: "{{ too_large_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: Verify the output
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
           assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('disk.+list') and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ disks not in list form"
-      ignore_errors: yes
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    # the following does not work properly
+    # - name: Verify the output
+    #   assert:
+    #     that: "{{ blivet_output.failed and
+    #               blivet_output.msg|regex_search('disk.+list') and
+    #               not blivet_output.changed }}"
+    #     msg: "Unexpected behavior w/ disks not in list form"
 
     - name: Test for correct handling of missing disk specification.
       block:
@@ -121,13 +182,27 @@
                     size: "{{ too_large_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: Verify the output
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
           assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('no disks.+pool') and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ no disks specified"
-      ignore_errors: yes
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    # the following does not work properly
+    # - name: Verify the output
+    #   assert:
+    #     that: "{{ blivet_output.failed and
+    #               blivet_output.msg|regex_search('no disks.+pool') and
+    #               not blivet_output.changed }}"
+    #     msg: "Unexpected behavior w/ no disks specified"
 
     - name: Test for correct handling of LVM volume not defined within a pool.
       block:
@@ -142,10 +217,179 @@
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
 
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    # the following does not work properly
+    # - name: Verify the output
+    #   assert:
+    #     that: "{{ blivet_output.failed and
+    #               blivet_output.msg|regex_search('failed to find pool .+ for volume') and
+    #               not blivet_output.changed }}"
+    #     msg: "Unexpected behavior w/ LVM volume defined outside of any pool"
+
+    - name: Create a pool
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: testpool1
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: testvol1
+                fs_type: 'ext4'
+                size: '1g'
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Try to replace file system in safe mode
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: testpool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: testvol1
+                    fs_type: 'ext3'
+                    size: '1g'
+
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
         - name: Verify the output
           assert:
             that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('failed to find pool .+ for volume') and
+                      blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
                       not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ LVM volume defined outside of any pool"
-      ignore_errors: yes
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+    - name: Test for correct handling of safe_mode with resize
+      block:
+        - name: Try to resize in safe mode
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: testpool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: testvol1
+                    fs_type: 'ext4'
+                    size: '2g'
+
+        - name: Verify the output
+          assert:
+            that: "{{ not blivet_output.failed and blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+      when: false
+
+    - name: Test for correct handling of safe_mode with existing pool
+      block:
+        - name: Try to create LVM pool on disks that already belong to an existing pool
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                type: lvm
+
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+        - name: Verify the output
+          assert:
+            that: "{{ blivet_output.failed and
+                      blivet_output.msg|regex_search('cannot remove existing formatting and/or devices on disk.*in safe mode') and
+                      not blivet_output.changed }}"
+            msg: "Unexpected behavior w/ existing data on specified disks"
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Try to replace a pool by a file system on disk in safe mode
+          include_role:
+            name: storage
+          vars:
+            storage_volumes:
+              - name: test1
+                type: disk
+                fs_type: 'ext3'
+                disks:
+                  - "{{ unused_disks[0] }}"
+
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    - name: Verify the output
+      assert:
+        that: "blivet_output.failed and
+               blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
+                  not blivet_output.changed"
+        msg: "Unexpected behavior w/ existing data on specified disks"
+
+    - name: Verify the output
+      assert:
+        that: "blivet_output.failed and
+               blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
+                  not blivet_output.changed"
+        msg: "Unexpected behavior w/ existing data on specified disks"
+
+    - name: Clean up
+      include_role:
+        name: storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: testpool1
+            type: lvm
+            disks: "{{ unused_disks }}"
+            state: absent

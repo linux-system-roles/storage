@@ -2,6 +2,7 @@
 - hosts: all
   become: true
   vars:
+    storage_safe_mode: false
     mount_location: '/opt/test1'
 
   tasks:
@@ -18,7 +19,7 @@
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
-            type: disk
+            type: partition
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
@@ -33,7 +34,7 @@
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
-            type: disk
+            type: partition
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
@@ -48,7 +49,7 @@
       vars:
         storage_pools:
           - name:  "{{ unused_disks[0] }}"
-            type: disk
+            type: partition
             disks: "{{ unused_disks }}"
             state: absent
             volumes:
@@ -65,7 +66,7 @@
       vars:
         storage_pools:
           - name:  "{{ unused_disks[0] }}"
-            type: disk
+            type: partition
             disks: "{{ unused_disks }}"
             state: absent
             volumes:
