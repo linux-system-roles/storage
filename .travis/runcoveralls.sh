@@ -4,8 +4,8 @@
 # Report coverage results using coveralls. The script is executed with these
 # parameters:
 #
-#   $1 - full path to environment python
-#   $2 - full path to system python
+#   $1 - path to environment python
+#   $2 - path to system python
 #
 # coveralls is executed only if $1 coincides with $2 and $1's environment is
 # stable, i.e. TRAVIS_PYTHON_VERSION is of the form [:digit:] "." [:digit:]
@@ -32,8 +32,9 @@ if [[ -z "${LSR_PUBLISH_COVERAGE}" ]]; then
   exit 0
 fi
 
-ENVPYTHON=$1
-SYSPYTHON=$2
+# Sanitize arguments (see https://github.com/tox-dev/tox/issues/1463):
+ENVPYTHON=$(readlink -f $1)
+SYSPYTHON=$(readlink -f $2)
 shift 2
 
 if lsr_compare_pythons ${ENVPYTHON} -ne ${SYSPYTHON}; then

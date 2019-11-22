@@ -1,8 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 
-# Run black (the Python formatter). The first script argument is a full path
-# to Python interpreter, the rest of arguments are passed to black.
+# Run black (the Python formatter). The first script argument is a path to
+# Python interpreter, the rest of arguments are passed to black.
 
 # Environment variables:
 #
@@ -31,7 +31,9 @@ if [[ "${RUN_BLACK_DISABLED}" ]]; then
   exit 0
 fi
 
-ENVPYTHON=$1
+# Sanitize path in case if running within tox (see
+# https://github.com/tox-dev/tox/issues/1463):
+ENVPYTHON=$(readlink -f $1)
 shift
 
 DEFAULT_INCLUDE='^[^.].*\.py$'

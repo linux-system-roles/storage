@@ -1,8 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 
-# Run flake8. The first script argument is a full path to Python interpreter,
-# the rest of arguments are passed to flake8.
+# Run flake8. The first script argument is a path to Python interpreter, the
+# rest of arguments are passed to flake8.
 
 # Environment variables:
 #
@@ -23,7 +23,9 @@ if [[ "${RUN_FLAKE8_DISABLED}" ]]; then
   exit 0
 fi
 
-ENVPYTHON=$1
+# Sanitize path in case if running within tox (see
+# https://github.com/tox-dev/tox/issues/1463):
+ENVPYTHON=$(readlink -f $1)
 shift
 
 set -x

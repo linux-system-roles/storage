@@ -1,8 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 
-# Wrapper around pytest. First argument is a full path to environment python,
-# the rest of arguments are passed to pytest.
+# Wrapper around pytest. First argument is a path to environment python, the
+# rest of arguments are passed to pytest.
 
 set -e
 
@@ -18,7 +18,9 @@ if [[ ! -d ${TOPDIR}/tests/unit ]]; then
   exit 0
 fi
 
-ENVPYTHON=$1
+# Sanitize path in case if running within tox (see
+# https://github.com/tox-dev/tox/issues/1463):
+ENVPYTHON=$(readlink -f $1)
 shift
 
 PYTEST_OPTS=()

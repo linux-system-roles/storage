@@ -5,8 +5,8 @@
 # to system python libraries, especially C bindings. The script is run with
 # these arguments:
 #
-#   $1     - full path to environment python
-#   $2     - full path to system python
+#   $1     - path to environment python
+#   $2     - path to system python
 #   $3     - command runnable in Python (should be present in $PATH)
 #   ${@:4} - arguments passed to $3
 
@@ -23,8 +23,9 @@ TOPDIR=$(readlink -f ${SCRIPTDIR}/..)
 # Run user defined hook from .travis/config.sh.
 lsr_runsyspycmd_hook "$@"
 
-ENVPYTHON=$1
-SYSPYTHON=$2
+# Sanitize arguments (see https://github.com/tox-dev/tox/issues/1463):
+ENVPYTHON=$(readlink -f $1)
+SYSPYTHON=$(readlink -f $2)
 shift 2
 
 if lsr_compare_pythons ${ENVPYTHON} -ne ${SYSPYTHON}; then
