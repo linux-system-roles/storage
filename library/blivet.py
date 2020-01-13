@@ -568,7 +568,7 @@ def manage_pool(b, pool):
         volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
-class FSTab:
+class FSTab(object):
     def __init__(self, blivet_obj):
         self._blivet = blivet_obj
         self._entries = list()
