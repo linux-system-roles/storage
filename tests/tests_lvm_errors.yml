@@ -308,8 +308,6 @@
             that: "{{ not blivet_output.failed and blivet_output.changed }}"
             msg: "Unexpected behavior w/ existing data on specified disks"
 
-      when: false
-
     - name: Test for correct handling of safe_mode with existing pool
       block:
         - name: Try to create LVM pool on disks that already belong to an existing pool
