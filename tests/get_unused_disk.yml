@@ -9,12 +9,10 @@
     unused_disks: "{{ unused_disks_return.disks }}"
   when: "'Unable to find unused disk' not in unused_disks_return.disks"
 
-- block:
-    - name: Exit playbook when there's no unused disks in the system
-      debug:
-        msg: "Unable to find unused disks. Exiting playbook."
-    - meta: end_play
-  when: unused_disks is undefined
+- name: Exit playbook when there's not enough unused disks in the system
+  fail:
+    msg: "Unable to find enough unused disks. Exiting playbook."
+  when: unused_disks is undefined or unused_disks|length < disks_needed|default(1)
 
 - name: Print unused disks
   debug:

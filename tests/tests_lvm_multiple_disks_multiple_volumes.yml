@@ -15,13 +15,7 @@
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 2
-
-    - block:
-        - debug:
-            msg: "There needs to be two unused disks in the system to run this playbook."
-        - name: End playbook if there isn't two disks available
-          meta: end_play
-      when: unused_disks|length < 2
+        disks_needed: 2
 
     - name: Create a logical volume spanning two physical volumes that changes its mount location
       include_role:
