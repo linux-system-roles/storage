@@ -51,6 +51,8 @@
 
 - name: Apply defaults to pools and volumes [4/6]
   set_fact:
+    # json_query(...) used instead of "|selectattr('pool', 'equalto', item.name)|list"
+    # as that expression wouldn't work with Jinja versions <2.8
     _storage_vols_no_defaults_by_pool: "{{ _storage_vols_no_defaults_by_pool|default({})|
                                         combine({item.name: _storage_vols_w_defaults|json_query('[?pool==`\"{}\"`]'.format(item.name))}) }}"
   loop: "{{ _storage_pools }}"
