@@ -290,10 +290,11 @@
 
     - name: Test for correct handling of safe_mode with resize
       block:
-        - name: Try to resize in safe mode
+        - name: Try to resize in unsafe mode
           include_role:
             name: storage
           vars:
+            storage_safe_mode: no
             storage_pools:
               - name: testpool1
                 type: lvm
