@@ -1,4 +1,9 @@
 passes.yml
 vault.yml
 *.retry
+/.tox
+__pycache__/
+*.pyc
+.coverage
+htmlcov-*/
 
