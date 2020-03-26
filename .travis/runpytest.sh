@@ -15,6 +15,8 @@ set -e
 ME=$(basename $0)
 SCRIPTDIR=$(readlink -f $(dirname $0))
 
+set -x
+
 . ${SCRIPTDIR}/utils.sh
 . ${SCRIPTDIR}/config.sh
 
@@ -51,5 +53,5 @@ if [[ "${USE_COV}" == "no" ]]; then
   PYTEST_OPTS=( "${PYTEST_OPTS_NOCOV[@]}" )
 fi
 
-set -x
+#set -x
 python -m pytest "${PYTEST_OPTS[@]}"
