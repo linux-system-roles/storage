@@ -48,7 +48,7 @@ RUN_FLAKE8_DISABLED=true
 # do not run pytest with python 2.6
 
 case $0 in
-    *runpytest.sh) if lsr_check_python_version $1 -lt 2.7 ; then
+    *runpytest.sh) if lsr_check_python_version python -lt 2.7 ; then
                        exit 0
                    fi ;;
 esac
