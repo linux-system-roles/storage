@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 ---
 dependency:
   name: galaxy
@@ -6,10 +7,10 @@ driver:
 lint:
   name: yamllint
   options:
-    config-file: molecule/default/yamllint.yml
+    config-file: .yamllint.yml
 platforms:
   - name: centos-7
-    image: linuxsystemroles/centos-7
+    image: docker.io/linuxsystemroles/centos-7
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true

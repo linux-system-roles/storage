@@ -1,4 +1,7 @@
+# SPDX-License-Identifier: MIT
 ---
+ignore: |
+  /.tox/
 extends: default
 rules:
   braces:
@@ -7,6 +10,5 @@ rules:
   brackets:
     max-spaces-inside: 1
     level: error
-  line-length: disable
   truthy: disable
   document-start: disable
