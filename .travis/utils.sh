@@ -148,7 +148,10 @@ function lsr_get_system_python() {
   if [[ -z "$syspython" ]]; then
     syspython=$(command -pv python2)
   fi
-  echo ${syspython:-/usr/bin/python3}
+  if [[ -z "$syspython" ]]; then
+    lsr_error Could not determine system python path
+  fi
+  echo $syspython
 }
 
 ##
@@ -156,8 +159,7 @@ function lsr_get_system_python() {
 #
 #   $1 - command or full path to venv Python interpreter (default: python)
 #   $2 - command or full path to the system Python interpreter
-#        (default: /usr/bin/python3 or /usr/bin/python or /usr/bin/python2)
-#
+#        (default: system python as determined by lsr_get_system_python())
 # Exit with 0 if virtual environment Python version matches the system Python
 # version.
 function lsr_venv_python_matches_system_python() {

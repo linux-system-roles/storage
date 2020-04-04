@@ -17,8 +17,12 @@ set -e
 ME=$(basename $0)
 SCRIPTDIR=$(readlink -f $(dirname $0))
 
-. ${SCRIPTDIR}/utils.sh
 . ${SCRIPTDIR}/config.sh
+
+if [[ "${RUN_PYLINT_SETUP_MODULE_UTILS}" ]]; then
+  . ${SCRIPTDIR}/utils.sh
+  lsr_setup_module_utils
+fi
 
 set -x
 python ${SCRIPTDIR}/custom_pylint.py "$@"

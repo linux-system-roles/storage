@@ -44,8 +44,5 @@
 #       - function lsr_runsyspycmd_hook
 RUN_BLACK_DISABLED=true
 RUN_FLAKE8_DISABLED=true
-# if your script needs to setup module_utils so that your
-# module_utils/ code can be resolved by the default
-# pythonpath resolver, an IDE, etc. then call
-lsr_setup_module_utils
-# here
+RUN_PYTEST_SETUP_MODULE_UTILS=true
+RUN_PYLINT_SETUP_MODULE_UTILS=true

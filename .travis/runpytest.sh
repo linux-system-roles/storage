@@ -23,6 +23,10 @@ if [[ ! -d ${TOPDIR}/tests/unit ]]; then
   exit 0
 fi
 
+if [[ "${RUN_PYTEST_SETUP_MODULE_UTILS}" ]]; then
+  lsr_setup_module_utils
+fi
+
 PYTEST_OPTS=()
 PYTEST_OPTS_NOCOV=()
 USE_COV=no
