@@ -8,7 +8,9 @@
     invalid_disks:
       - '/non/existent/disk'
     invalid_size: 'xyz GiB'
-    too_large_size: '500 GiB'
+    unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
+    too_large_size: '{{ (unused_disk_subfact.sectors|int + 1) *
+                        unused_disk_subfact.sectorsize|int }}'
 
   tasks:
     - include_role:
