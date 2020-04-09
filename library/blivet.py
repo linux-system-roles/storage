@@ -91,6 +91,9 @@ LIB_IMP_ERR = ""
 try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
+    from blivet3.devicelibs.raid import get_raid_level
+    from blivet3.devices import StorageDevice, MDRaidArrayDevice
+    from blivet3.errors import RaidError
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -102,6 +105,9 @@ except ImportError:
     try:
         from blivet import Blivet
         from blivet.callbacks import callbacks
+        from blivet.devicelibs.raid import get_raid_level
+        from blivet.devices import StorageDevice, MDRaidArrayDevice
+        from blivet.errors import RaidError
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -151,6 +157,8 @@ class BlivetVolume(object):
 
     def _look_up_device(self):
         """ Try to look up this volume in blivet's device tree. """
+        if self._blivet_pool and self._blivet_pool._device is None:
+            return None
         device = self._blivet.devicetree.resolve_device(self._get_device_id())
         if device is None:
             return
@@ -341,11 +349,82 @@ class BlivetLVMVolume(BlivetVolume):
         self._blivet.create_device(device)
         self._device = device
 
+class BlivetMDRaidVolume(BlivetVolume):
+    def _create(self):
+        global safe_mode
+
+        if self._device:
+            return
+
+        raid_name = self._volume['name']
+        member_names = self._volume['disks']
+        raid_level = self._volume['raid_level']
+
+        # check validity of argument values
+
+        # valid RAID level (e.g. "raid0", "raid1", "linear"...)
+        try:
+            raid_level_obj = get_raid_level(raid_level)
+        except RaidError:
+            raise BlivetAnsibleError("invalid RAID level value '%s'" % raid_level)
+
+        # valid member count
+        if raid_level_obj.min_members < len(member_names):
+            raise BlivetAnsibleError("at least %s members are required for RAID level '%s'" % (raid_level_obj.min_members, raid_level))
+
+        if safe_mode and not packages_only:
+            raise BlivetAnsibleError("cannot create new RAID '%s' in safe mode" % safe_mode)
+
+        # begin creating the devices
+        members = create_raid_members(self._blivet, member_names)
+
+        if not safe_mode and not packages_only:
+            if use_partitions:
+                try:
+                    do_partitioning(self._blivet)
+                except Exception:
+                    raise BlivetAnsibleError("failed to allocate partitions for mdraid '%s'" % raid_name)
+
+        raid_array = MDRaidArrayDevice(name=raid_name, level=raid_level, member_devices=len(members),
+                                       total_devices=(len(members)), parents=members)
+
+        if not safe_mode and not packages_only:
+            self._blivet.create_device(raid_array)
+            fmt = get_format('xfs', device=raid_array.path)
+            self._blivet.format_device(raid_array, fmt)
+
+        self._device = raid_array
+
+
+    def _destroy(self):
+        """ Schedule actions as needed to ensure the pool does not exist. """
+
+        if self._device is None:
+            return
+
+        ancestors = self._device.ancestors
+        self._blivet.devicetree.recursive_remove(self._device)
+        ancestors.remove(self._device)
+
+        leaves = [a for a in ancestors if a.isleaf]
+        while leaves:
+            for ancestor in leaves:
+                log.info("scheduling destruction of %s", ancestor.name)
+                if ancestor.is_disk:
+                    self._blivet.devicetree.recursive_remove(ancestor)
+                else:
+                    self._blivet.destroy_device(ancestor)
+
+                ancestors.remove(ancestor)
+
+            leaves = [a for a in ancestors if a.isleaf]
+
 
 _BLIVET_VOLUME_TYPES = {
     "disk": BlivetDiskVolume,
     "lvm": BlivetLVMVolume,
-    "partition": BlivetPartitionVolume
+    "partition": BlivetPartitionVolume,
+    "raid": BlivetMDRaidVolume
 }
 
 
@@ -356,6 +435,29 @@ def _get_blivet_volume(blivet_obj, volume, bpool=None):
         raise BlivetAnsibleError("Volume '%s' has unknown type '%s'" % (volume['name'], volume_type))
 
     return _BLIVET_VOLUME_TYPES[volume_type](blivet_obj, volume, bpool=bpool)
+
+
+def create_raid_members(blivet, member_names):
+    members = list()
+
+    for member_name in member_names:
+        member_disk = blivet.devicetree.resolve_device(member_name)
+        if member_disk is not None:
+            if use_partitions:
+                # create partition table
+                label = get_format("disklabel", device=member_disk.path)
+                blivet.format_device(member_disk, label)
+
+                # create new partition
+                member = blivet.new_partition(parents=[member_disk], grow=True)
+                blivet.create_device(member)
+                blivet.format_device(member, fmt=get_format("mdmember"))
+                members.append(member)
+            else:
+                blivet.format_device(member_disk, fmt=get_format("mdmember"))
+                members.append(member_disk)
+
+    return members
 
 
 class BlivetPool(object):
@@ -434,17 +536,17 @@ class BlivetPool(object):
     def _get_format(self):
         raise NotImplementedError()
 
-    def _create_members(self):
+    def _create_members(self, disks):
         """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
-        for disk in self._disks:
+        for disk in disks:
             if not disk.isleaf or disk.format.type is not None:
                 if safe_mode and not packages_only:
                     raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" % (disk.name, self._pool['name']))
                 else:
                     self._blivet.devicetree.recursive_remove(disk)
 
-            if use_partitions:
+            if use_partitions and self._pool.get('raid_level') in [None, "null", ""]:
                 label = get_format("disklabel", device=disk.path)
                 self._blivet.format_device(disk, label)
                 member = self._blivet.new_partition(parents=[disk], size=Size("256MiB"), grow=True)
@@ -455,7 +557,7 @@ class BlivetPool(object):
             self._blivet.format_device(member, self._get_format())
             members.append(member)
 
-        if use_partitions:
+        if use_partitions and self._pool.get('raid_level') in [None, "null", ""]:
             try:
                 do_partitioning(self._blivet)
             except Exception:
@@ -468,6 +570,7 @@ class BlivetPool(object):
         for volume in self._pool['volumes']:
             bvolume = _get_blivet_volume(self._blivet, volume, self)
             self._blivet_volumes.append(bvolume)
+        #raise BlivetAnsibleError("MYDEBUG '%s'" % self._blivet_volumes)
 
     def _manage_volumes(self):
         """ Schedule actions as needed to configure this pool's volumes. """
@@ -492,6 +595,7 @@ class BlivetPool(object):
         self._manage_volumes()
 
 
+
 class BlivetPartitionPool(BlivetPool):
     def _type_check(self):
         return self._device.partitionable
@@ -511,6 +615,40 @@ class BlivetPartitionPool(BlivetPool):
             label = get_format("disklabel", device=self._device.path, label_type=disklabel_type)
             self._blivet.format_device(self._device, label)
 
+class BlivetMDRaidPool(BlivetPool):
+    def create(self):
+        raid_name = "mdraid-%s" % self._pool['name']
+        member_names = self._pool['disks']
+        raid_level = self._pool['raid_level']
+
+        # check validity of argument values
+
+        # valid RAID level (e.g. "raid0", "raid1", "linear"...)
+        try:
+            raid_level_obj = get_raid_level(raid_level)
+        except RaidError:
+            raise BlivetAnsibleError("invalid RAID level value '%s'" % raid_level)
+
+        # valid member count
+        if raid_level_obj.min_members < len(member_names):
+            raise BlivetAnsibleError("at least %s members are required for RAID level '%s'" % (raid_level_obj.min_members, raid_level))
+
+        if safe_mode and not packages_only:
+            raise BlivetAnsibleError("cannot create new RAID '%s' in safe mode" % safe_mode)
+        raid_members = create_raid_members(self._blivet, member_names)
+
+        raid_array = MDRaidArrayDevice(name=raid_name, level=raid_level, member_devices=len(raid_members),
+                                    total_devices=(len(raid_members)), parents=raid_members)
+
+        if not safe_mode and not packages_only:
+            self._blivet.create_device(raid_array)
+
+            try:
+                do_partitioning(self._blivet)
+            except Exception:
+                raise BlivetAnsibleError("failed to allocation partitions for pool '%s'" % self._pool['name'])
+
+        return raid_array
 
 class BlivetLVMPool(BlivetPool):
     def _type_check(self):
@@ -527,7 +665,13 @@ class BlivetLVMPool(BlivetPool):
         if self._device:
             return
 
-        members = self._create_members()
+        if self._pool.get('raid_level') not in [None, "null", ""]:
+            mdraid = BlivetMDRaidPool(self._blivet, self._pool)
+            raid_array = mdraid.create()
+            members = self._create_members([raid_array])
+        else:
+            members = self._create_members(self._disks)
+
         try:
             pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
         except Exception:
@@ -690,6 +834,7 @@ def run_module():
 
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
+
     if not BLIVET_PACKAGE:
         module.fail_json(msg="Failed to import the blivet or blivet3 Python modules",
                          exception=inspect.cleandoc("""

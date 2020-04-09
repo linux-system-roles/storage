@@ -1,9 +1,27 @@
 ---
+
+#
+# MDRaid devices paths are returned as a symlinks. But we need their targets.
+#
+- name: (1/3) Process device path (set initial value)
+  set_fact:
+    storage_test_device_path: "{{ storage_test_volume._device }}"
+
+- name: (2/3) Process device path (get device file info)
+  stat:
+    path: "{{ storage_test_volume._device }}"
+  register: stat_output
+
+- name: (3/3) Process device path (replace device with its target if it is a symlink)
+  set_fact:
+    storage_test_device_path: "{{ stat_output.stat.lnk_source }}"
+  when: stat_output.stat.exists == true and stat_output.stat.mimetype == "inode/symlink" and storage_test_device_path not in storage_test_blkinfo.info
+
 - name: Set some facts
   set_fact:
-    # json_query(...) used instead of "|selectattr('device', 'equalto', storage_test_volume._device)|list"
+    # json_query(...) used instead of "|selectattr('device', 'equalto', storage_test_device_path)|list"
     # as that expression wouldn't work with Jinja versions <2.8
-    storage_test_mount_device_matches: "{{ ansible_mounts|json_query('[?device==`\"{}\"`]'.format(storage_test_volume._device))}}"
+    storage_test_mount_device_matches: "{{ ansible_mounts|json_query('[?device==`\"{}\"`]'.format(storage_test_device_path))}}"
     storage_test_mount_point_matches: "{{ ansible_mounts|json_query('[?mount==`\"{}\"`]'.format(storage_test_volume.mount_point))}}"
     storage_test_mount_expected_match_count: "{{ 1 if _storage_test_volume_present and storage_test_volume.mount_point else 0 }}"
 

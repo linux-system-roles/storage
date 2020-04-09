@@ -87,19 +87,20 @@
 - debug:
     var: _storage_volumes
 
-- name: get required packages
-  blivet:
-    pools: "{{ _storage_pools }}"
-    volumes: "{{ _storage_volumes }}"
-    use_partitions: "{{ storage_use_partitions }}"
-    disklabel_type: "{{ storage_disklabel_type }}"
-    packages_only: true
-  register: package_info
-
-- name: make sure required packages are installed
-  package:
-    name: "{{ package_info.packages }}"
-    state: present
+# TODO uncomment this
+#- name: get required packages
+#  blivet:
+#    pools: "{{ _storage_pools }}"
+#    volumes: "{{ _storage_volumes }}"
+#    use_partitions: "{{ storage_use_partitions }}"
+#    disklabel_type: "{{ storage_disklabel_type }}"
+#    packages_only: true
+#  register: package_info
+#
+#- name: make sure required packages are installed
+#  package:
+#    name: "{{ package_info.packages }}"
+#    state: present
 
 - name: manage the pools and volumes to match the specified state
   blivet:
