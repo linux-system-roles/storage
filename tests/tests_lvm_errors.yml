@@ -23,9 +23,9 @@
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
-    - name: Test for correct handling of invalid disk specifications.
+    - name: Test for correct handling of invalid disk specifications
       block:
-        - name: Try to create LVM with an invalid disk specification.
+        - name: Try to create LVM with an invalid disk specification
           include_role:
             name: storage
           vars:
@@ -61,9 +61,9 @@
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ non-existent pool disk"
 
-    - name: Test for correct handling of invalid size specification.
+    - name: Test for correct handling of invalid size specification
       block:
-        - name: Try to create LVM with an invalid size specification.
+        - name: Try to create LVM with an invalid size specification
           include_role:
             name: storage
           vars:
@@ -94,9 +94,9 @@
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ invalid volume size"
 
-    - name: Test for correct handling of too-large volume size.
+    - name: Test for correct handling of too-large volume size
       block:
-        - name: Try to create LVM with a too-large volume size.
+        - name: Try to create LVM with a too-large volume size
           include_role:
             name: storage
           vars:
@@ -127,9 +127,9 @@
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ too-large volume size"
 
-    - name: Test for correct handling of non-list disk specification.
+    - name: Test for correct handling of non-list disk specification
       block:
-        - name: Try to create LVM pool with disks specified as non-list.
+        - name: Try to create LVM pool with disks specified as non-list
           include_role:
             name: storage
           vars:
@@ -160,9 +160,9 @@
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ disks not in list form"
 
-    - name: Test for correct handling of missing disk specification.
+    - name: Test for correct handling of missing disk specification
       block:
-        - name: Try to create LVM pool with no disks specified.
+        - name: Try to create LVM pool with no disks specified
           include_role:
             name: storage
           vars:
@@ -193,9 +193,9 @@
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ no disks specified"
 
-    - name: Test for correct handling of LVM volume not defined within a pool.
+    - name: Test for correct handling of LVM volume not defined within a pool
       block:
-        - name: Try to create LVM volume from outside of any pool.
+        - name: Try to create LVM volume from outside of any pool
           include_role:
             name: storage
           vars:

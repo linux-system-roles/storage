@@ -37,7 +37,7 @@
 # Verify mount options.
 #
 
-- name: Unset facts
+- name: Clean up variables
   set_fact:
     storage_test_mount_device_matches: null
     storage_test_mount_point_matches: null

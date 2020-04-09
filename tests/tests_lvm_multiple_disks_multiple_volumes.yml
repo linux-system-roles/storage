@@ -58,7 +58,7 @@
         storage_pools:
           - name: phi
             disks: "{{ unused_disks }}"
-            volumes: []
             state: absent
+            volumes: []
 
     - include_tasks: verify-role-results.yml
