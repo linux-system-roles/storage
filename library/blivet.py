@@ -147,7 +147,7 @@ class BlivetVolume(object):
         if self.__class__.blivet_device_class is not None:
             packages.extend(self.__class__.blivet_device_class._packages)
 
-        fmt = get_format(self._volume.fs_type)
+        fmt = get_format(self._volume['fs_type'])
         packages.extend(fmt.packages)
         return packages
 
