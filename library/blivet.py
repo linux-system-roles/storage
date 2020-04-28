@@ -145,7 +145,7 @@ class BlivetVolume(object):
             return packages
 
         if self.__class__.blivet_device_class is not None:
-            packages.extend(self.__class__.blivet_device_class.packages
+            packages.extend(self.__class__.blivet_device_class.packages)
 
         fmt = get_format(self._volume.fs_type)
         packages.extend(fmt.packages)
@@ -394,7 +394,7 @@ class BlivetPool(object):
     def required_packages(self):
         packages = list()
         if self.ultimately_present and self.__class__.blivet_device_class is not None:
-            packages.extend(self.__class__.blivet_device_class.packages
+            packages.extend(self.__class__.blivet_device_class.packages)
 
         return packages
 
