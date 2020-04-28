@@ -91,6 +91,7 @@ LIB_IMP_ERR = ""
 try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
+    from blivet3 import devices
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -102,6 +103,7 @@ except ImportError:
     try:
         from blivet import Blivet
         from blivet.callbacks import callbacks
+        from blivet import devices
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -129,11 +131,26 @@ class BlivetAnsibleError(Exception):
 
 
 class BlivetVolume(object):
+    blivet_device_class = None
+
     def __init__(self, blivet_obj, volume, bpool=None):
         self._blivet = blivet_obj
         self._volume = volume
         self._blivet_pool = bpool
         self._device = None
+
+    @property
+    def required_packages(self):
+        packages = list()
+        if not self.ultimately_present:
+            return packages
+
+        if self.__class__.blivet_device_class is not None:
+            packages.extend(self.__class__.blivet_device_class.packages
+
+        fmt = get_format(self._volume.fs_type)
+        packages.extend(fmt.packages)
+        return packages
 
     @property
     def ultimately_present(self):
@@ -151,6 +168,9 @@ class BlivetVolume(object):
 
     def _look_up_device(self):
         """ Try to look up this volume in blivet's device tree. """
+        if self._device:
+            return
+
         device = self._blivet.devicetree.resolve_device(self._get_device_id())
         if device is None:
             return
@@ -257,6 +277,8 @@ class BlivetVolume(object):
 
 
 class BlivetDiskVolume(BlivetVolume):
+    blivet_device_class = devices.DiskDevice
+
     def _get_device_id(self):
         return self._volume['disks'][0]
 
@@ -276,6 +298,8 @@ class BlivetDiskVolume(BlivetVolume):
 
 
 class BlivetPartitionVolume(BlivetVolume):
+    blivet_device_class = devices.PartitionDevice
+
     def _type_check(self):
         return self._device.type == 'partition'
 
@@ -310,6 +334,8 @@ class BlivetPartitionVolume(BlivetVolume):
 
 
 class BlivetLVMVolume(BlivetVolume):
+    blivet_device_class = devices.LVMLogicalVolumeDevice
+
     def _get_device_id(self):
         return "%s-%s" % (self._blivet_pool._device.name, self._volume['name'])
 
@@ -359,12 +385,22 @@ def _get_blivet_volume(blivet_obj, volume, bpool=None):
 
 
 class BlivetPool(object):
+    blivet_device_class = None
+
     def __init__(self, blivet_obj, pool):
         self._blivet = blivet_obj
         self._pool = pool
         self._device = None
         self._disks = list()
         self._blivet_volumes = list()
+
+    @property
+    def required_packages(self):
+        packages = list()
+        if self.ultimately_present and self.__class__.blivet_device_class is not None:
+            packages.extend(self.__class__.blivet_device_class.packages
+
+        return packages
 
     @property
     def ultimately_present(self):
@@ -513,6 +549,8 @@ class BlivetPartitionPool(BlivetPool):
 
 
 class BlivetLVMPool(BlivetPool):
+    blivet_device_class = devices.LVMVolumeGroupDevice
+
     def _type_check(self):
         return self._device.type == "lvmvg"
 
@@ -667,6 +705,19 @@ def get_mount_info(pools, volumes, actions, fstab):
     return mount_info
 
 
+def get_required_packages(b, pools, volumes):
+    packages = list()
+    for pool in pools:
+        bpackage = _get_blivet_pool(b, pool)
+        packages.extend(bpackage.required_packages)
+
+    for volume in volumes:
+        bvolume = _get_blivet_volume(b, volume)
+        packages.extend(bvolume.required_packages)
+
+    return list(set(packages))
+
+
 def run_module():
     # available arguments/parameters that a user can pass
     module_args = dict(
@@ -718,6 +769,10 @@ def run_module():
     fstab = FSTab(b)
     actions = list()
 
+    if module.params['packages_only']:
+        result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        module.exit_json(**result)
+
     def record_action(action):
         if action.is_format and action.format.type is None:
             return
@@ -743,9 +798,6 @@ def run_module():
 
     scheduled = b.devicetree.actions.find()
     result['packages'] = b.packages[:]
-
-    if module.params['packages_only']:
-        module.exit_json(**result)
 
     for action in scheduled:
         if action.is_destroy and action.is_format and action.format.exists:
