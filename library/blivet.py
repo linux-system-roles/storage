@@ -125,7 +125,7 @@ disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
 
 
-def find_duplicates(dicts):
+def find_duplicate_names(dicts):
     """ Return a list of names that appear more than once in a list of dicts.
 
         Items can be a list of any dicts with a 'name' key; that's all we're
