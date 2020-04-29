@@ -3,8 +3,10 @@
   become: true
   vars:
     mount_location1: '/opt/test1'
+    mount_location2: '/opt/test2'
     volume_group_size: '10g'
     volume1_size: '5g'
+    volume2_size: '2g'
     invalid_disks:
       - '/non/existent/disk'
     invalid_size: 'xyz GiB'
@@ -241,6 +243,82 @@
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ LVM volume defined outside of any pool"
 
+    - name: Test for correct handling of duplicate pool names
+      block:
+        - name: Try to create two pools w/ the same name
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: pool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+              - name: pool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    - name: Verify the output of the duplicate pools test
+      assert:
+        that: "blivet_output.failed and
+               blivet_output.msg|regex_search('multiple pools with the same name') and
+               not blivet_output.changed"
+        msg: "Unexpected behavior w/ multiple pools sharing one name"
+
+    - name: Test for correct handling of duplicate volume names within a pool
+      block:
+        - name: Try to create two volumes w/ the same name
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: pool1
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: lvm
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
+                  - name: test1
+                    type: lvm
+                    size: "{{ volume2_size }}"
+                    mount_point: "{{ mount_location2 }}"
+
+        - name: UNREACH
+          fail:
+            msg: "this should be unreachable"
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_task.name != 'UNREACH'
+            msg: "Role has not failed when it should have"
+          vars:
+            # Ugh! needed to expand ansible_failed_task
+            storage_provider: blivet
+
+    - name: Verify the output of the duplicate volumes test
+      assert:
+        that: "blivet_output.failed and
+               blivet_output.msg|regex_search('multiple volumes in pool \'pool1\' with the same name') and
+               not blivet_output.changed"
+        msg: "Unexpected behavior w/ multiple volumes within a pool sharing a name"
+
     - name: Create a pool
       include_role:
         name: storage
@@ -370,13 +448,6 @@
           vars:
             # Ugh! needed to expand ansible_failed_task
             storage_provider: blivet
-
-    - name: Verify the output
-      assert:
-        that: "blivet_output.failed and
-               blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
-                  not blivet_output.changed"
-        msg: "Unexpected behavior w/ existing data on specified disks"
 
     - name: Verify the output
       assert:
