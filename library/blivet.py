@@ -125,6 +125,22 @@ disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
 
 
+def find_duplicates(dicts):
+    """ Return a list of names that appear more than once in a list of dicts.
+
+        Items can be a list of any dicts with a 'name' key; that's all we're
+        looking at. """
+    names = list()
+    duplicates = list()
+    for item in dicts:
+        if item['name'] in names:
+            duplicates.append(item['name'])
+        else:
+            names.append(item['name'])
+
+    return duplicates
+
+
 class BlivetAnsibleError(Exception):
     pass
 
@@ -780,12 +796,25 @@ def run_module():
                     fs_type=action.format.type if action.is_format else None,
                     device=action.device.path)
 
+    duplicates = find_duplicate_names(module.params['pools'])
+    if duplicates:
+        module.fail_json(msg="multiple pools with the same name: {0}".format(",".join(duplicates)),
+                         **result)
     for pool in module.params['pools']:
+        duplicates = find_duplicate_names(pool['volumes'])
+        if duplicates:
+            module.fail_json(msg="multiple volumes in pool '{0}' with the "
+                                 "same name: {1}".format(pool['name'], ",".join(duplicates)),
+                             **result)
         try:
             manage_pool(b, pool)
         except BlivetAnsibleError as e:
             module.fail_json(msg=str(e), **result)
 
+    duplicates = find_duplicate_names(module.params['volumes'])
+    if duplicates:
+        module.fail_json(msg="multiple volumes with the same name: {0}".format(",".join(duplicates)),
+                         **result)
     for volume in module.params['volumes']:
         try:
             manage_volume(b, volume)
