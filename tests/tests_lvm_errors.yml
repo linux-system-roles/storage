@@ -271,12 +271,12 @@
             # Ugh! needed to expand ansible_failed_task
             storage_provider: blivet
 
-    - name: Verify the output of the duplicate pools test
-      assert:
-        that: "blivet_output.failed and
-               blivet_output.msg|regex_search('multiple pools with the same name') and
-               not blivet_output.changed"
-        msg: "Unexpected behavior w/ multiple pools sharing one name"
+        - name: Verify the output of the duplicate pools test
+          assert:
+            that: "blivet_output.failed and
+                   'multiple pools with the same name' in blivet_output.msg and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior w/ multiple pools sharing one name"
 
     - name: Test for correct handling of duplicate volume names within a pool
       block:
@@ -312,12 +312,12 @@
             # Ugh! needed to expand ansible_failed_task
             storage_provider: blivet
 
-    - name: Verify the output of the duplicate volumes test
-      assert:
-        that: "blivet_output.failed and
-               blivet_output.msg|regex_search('multiple volumes in pool \'pool1\' with the same name') and
-               not blivet_output.changed"
-        msg: "Unexpected behavior w/ multiple volumes within a pool sharing a name"
+        - name: Verify the output of the duplicate volumes test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('multiple volumes in pool.*with the same name') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior w/ multiple volumes within a pool sharing a name"
 
     - name: Create a pool
       include_role:

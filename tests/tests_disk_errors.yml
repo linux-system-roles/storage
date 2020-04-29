@@ -79,12 +79,12 @@
             # Ugh! needed to expand ansible_failed_task
             storage_provider: blivet
 
-    - name: Verify the output of the duplicate pools test
-      assert:
-        that: "blivet_output.failed and
-               blivet_output.msg|regex_search('multiple volumes with the same name') and
-               not blivet_output.changed"
-        msg: "Unexpected behavior w/ multiple disk volumes using the same name"
+        - name: Verify the output of the duplicate volumes test
+          assert:
+            that: "blivet_output.failed and
+                   'multiple volumes with the same name:' in blivet_output.msg and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior w/ multiple disk volumes using the same name"
 
     - name: Create a file system on disk
       include_role:
