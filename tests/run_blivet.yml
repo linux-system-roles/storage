@@ -1,0 +1,7 @@
+---
+- name: test lvm and xfs package deps
+  blivet:
+    packages_only: "{{ packages_only }}"
+    pools: "{{ storage_pools|default([]) }}"
+    volumes: "{{ storage_volumes|default([]) }}"
+  register: blivet_output
