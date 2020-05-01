@@ -704,14 +704,17 @@ def get_mount_info(pools, volumes, actions, fstab):
 def get_required_packages(b, pools, volumes):
     packages = list()
     for pool in pools:
-        bpackage = _get_blivet_pool(b, pool)
-        packages.extend(bpackage.required_packages)
+        bpool = _get_blivet_pool(b, pool)
+        packages.extend(bpool.required_packages)
+        bpool._get_volumes()
+        for bvolume in bpool._blivet_volumes:
+            packages.extend(bvolume.required_packages)
 
     for volume in volumes:
         bvolume = _get_blivet_volume(b, volume)
         packages.extend(bvolume.required_packages)
 
-    return list(set(packages))
+    return sorted(list(set(packages)))
 
 
 def run_module():
