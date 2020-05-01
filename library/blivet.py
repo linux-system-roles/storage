@@ -133,7 +133,7 @@ def find_duplicate_names(dicts):
     names = list()
     duplicates = list()
     for item in dicts:
-        if item['name'] in names:
+        if item['name'] in names and item['name'] not in duplicates:
             duplicates.append(item['name'])
         else:
             names.append(item['name'])
