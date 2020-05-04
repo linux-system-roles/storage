@@ -1,0 +1,49 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    storage_use_partitions: true
+    mount_location: '/opt/test1'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 3
+
+    - name: Create a RAID0 device mounted on "{{ mount_location }}"
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: raid
+            raid_level: "raid1"
+            raid_device_count: 2
+            raid_spare_count: 1
+            raid_metadata_version: "1.0"
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: present
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the disk device created above
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: raid
+            raid_level: "raid1"
+            raid_device_count: 2
+            raid_spare_count: 1
+            raid_metadata_version: "1.0"
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml

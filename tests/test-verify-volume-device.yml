@@ -1,4 +1,25 @@
 ---
+
+#
+# MDRaid devices paths are returned as a symlinks. But sometimes we need their targets.
+#
+- name: (1/3) Process device path (set initial value)
+  set_fact:
+    storage_test_device_path: "{{ storage_test_volume._device }}"
+
+# realpath fails when given empty string; the task then returns completely different dict.
+- block:
+  - name: (2/3) Process device path (get device file info)
+    command: realpath "{{ storage_test_volume._device }}"
+    register: storage_test_realpath
+
+  - name: (3/3) Process device path (replace device with its target if it is a symlink)
+    set_fact:
+      storage_test_device_path: "{{ storage_test_realpath.stdout }}"
+    when: storage_test_device_path not in storage_test_blkinfo.info
+
+  when: storage_test_volume._device != ""
+
 # name/path
 - name: See whether the device node is present
   stat:
@@ -16,13 +37,22 @@
 
 - name: Make sure we got info about this volume
   assert:
-    that: "{{ storage_test_volume._device in storage_test_blkinfo.info }}"
+    that: "{{ storage_test_device_path in storage_test_blkinfo.info }}"
     msg: "Failed to gather info about volume '{{ storage_test_volume.name }}'"
   when: _storage_test_volume_present
 
+- name: (1/2) Process volume type (set initial value)
+  set_fact:
+      st_volume_type: "{{ storage_test_volume.type }}"
+
+- name: (2/2) Process volume type (get RAID value)
+  set_fact:
+      st_volume_type: "{{ storage_test_volume.raid_level }}"
+  when: storage_test_volume.type == "raid"
+
 - name: Verify the volume's device type
   assert:
-    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].type == storage_test_volume.type }}"
+    that: "{{ storage_test_blkinfo.info[storage_test_device_path].type == st_volume_type }}"
   when: _storage_test_volume_present
 
 # disks

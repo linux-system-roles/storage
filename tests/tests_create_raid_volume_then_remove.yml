@@ -1,0 +1,58 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    storage_use_partitions: true
+    mount_location: '/opt/test1'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 2
+
+    - name: Create a RAID0 device mounted on "{{ mount_location }}"
+      include_role:
+        name: storage
+      vars:
+        safe_mode: false
+        storage_volumes:
+          - name: test1
+            type: raid
+            raid_level: "raid0"
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: storage
+      vars:
+        safe_mode: false
+        storage_volumes:
+          - name: test1
+            type: raid
+            raid_level: "raid0"
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the disk device created above
+      include_role:
+        name: storage
+      vars:
+        safe_mode: false
+        storage_volumes:
+          - name: test1
+            type: raid
+            raid_level: "raid0"
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml

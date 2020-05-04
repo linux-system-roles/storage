@@ -1,10 +1,9 @@
 ---
 - set_fact:
-    _storage_volume_tests: ['mount', 'fstab', 'fs', 'device'] # fs: type, label  device: name, size, type, disks
+    _storage_volume_tests: ['mount', 'fstab', 'fs', 'device', 'md'] # fs: type, label  device: name, size, type, disks
   # future:
   #   device:
   #     encryption
-  #     raid
   #     compression
   #     deduplication
     _storage_test_volume_present: "{{ storage_test_volume.state == 'present' and (not storage_test_pool|default() or storage_test_pool.state == 'present') }}"

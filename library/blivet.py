@@ -92,6 +92,7 @@ try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
     from blivet3 import devices
+    from blivet3.devicelibs.mdraid import MD_CHUNK_SIZE
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -104,6 +105,7 @@ except ImportError:
         from blivet import Blivet
         from blivet.callbacks import callbacks
         from blivet import devices
+        from blivet.devicelibs.mdraid import MD_CHUNK_SIZE
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -308,7 +310,6 @@ class BlivetDiskVolume(BlivetVolume):
             raise BlivetAnsibleError("unable to resolve disk specified for volume '%s' (%s)" % (self._volume['name'], self._volume['disks']))
 
 
-
 class BlivetPartitionVolume(BlivetVolume):
     blivet_device_class = devices.PartitionDevice
 
@@ -380,10 +381,130 @@ class BlivetLVMVolume(BlivetVolume):
         self._device = device
 
 
+class BlivetMDRaidVolume(BlivetVolume):
+
+    def _process_device_numbers(self, members_count, requested_actives, requested_spares):
+
+        active_count = members_count
+        spare_count = 0
+
+        if requested_actives is not None and requested_spares is not None:
+            if (requested_actives + requested_spares != members_count or
+                    requested_actives < 0 or requested_spares < 0):
+                raise BlivetAnsibleError("failed to set up volume '%s': cannot create RAID "
+                                         "with %s members (%s active and %s spare)"
+                                         % (self._volume['name'], members_count,
+                                            requested_actives, requested_spares))
+
+        if requested_actives is not None:
+            active_count = requested_actives
+            spare_count = members_count - active_count
+
+        if requested_spares is not None:
+            spare_count = requested_spares
+            active_count = members_count - spare_count
+
+        return members_count, active_count
+
+    def _create_raid_members(self, member_names):
+        members = list()
+
+        for member_name in member_names:
+            member_disk = self._blivet.devicetree.resolve_device(member_name)
+            if member_disk is not None:
+                if use_partitions:
+                    # create partition table
+                    label = get_format("disklabel", device=member_disk.path)
+                    self._blivet.format_device(member_disk, label)
+
+                    # create new partition
+                    member = self._blivet.new_partition(parents=[member_disk], grow=True)
+                    self._blivet.create_device(member)
+                    self._blivet.format_device(member, fmt=get_format("mdmember"))
+                    members.append(member)
+                else:
+                    self._blivet.format_device(member_disk, fmt=get_format("mdmember"))
+                    members.append(member_disk)
+
+        return members
+
+    def _create(self):
+        global safe_mode
+
+        if self._device:
+            return
+
+        raid_name = self._volume["name"]
+        member_names = self._volume["disks"]
+        raid_level = self._volume["raid_level"]
+        members_count, active_count = self._process_device_numbers(len(member_names),
+                                                                   self._volume.get("raid_device_count"),
+                                                                   self._volume.get("raid_spare_count"))
+
+        chunk_size = Size(self._volume.get("raid_chunk_size", MD_CHUNK_SIZE))
+        metadata_version = self._volume.get("raid_metadata_version", "default")
+
+        # chunk size should be divisible by 4 KiB but mdadm ignores that. why?
+        if chunk_size % Size("4 KiB") != Size(0):
+            raise BlivetAnsibleError("chunk size must be multiple of 4 KiB")
+
+        if safe_mode:
+            raise BlivetAnsibleError("cannot create new RAID '%s' in safe mode" % safe_mode)
+
+        # begin creating the devices
+        members = self._create_raid_members(member_names)
+
+        if use_partitions:
+            try:
+                do_partitioning(self._blivet)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to allocate partitions for mdraid '%s': %s" % (raid_name, str(e)))
+
+        try:
+            raid_array = self._blivet.new_mdarray(name=raid_name,
+                                                  level=raid_level,
+                                                  member_devices=active_count,
+                                                  total_devices=members_count,
+                                                  parents=members,
+                                                  chunk_size=chunk_size,
+                                                  metadata_version=metadata_version,
+                                                  fmt=self._get_format())
+        except ValueError as e:
+            raise BlivetAnsibleError("cannot create RAID '%s': %s" % (raid_name, str(e)))
+
+        self._blivet.create_device(raid_array)
+
+        self._device = raid_array
+
+    def _destroy(self):
+        """ Schedule actions as needed to ensure the pool does not exist. """
+
+        if self._device is None:
+            return
+
+        ancestors = self._device.ancestors
+        self._blivet.devicetree.recursive_remove(self._device)
+        ancestors.remove(self._device)
+
+        leaves = [a for a in ancestors if a.isleaf]
+        while leaves:
+            for ancestor in leaves:
+                log.info("scheduling destruction of %s", ancestor.name)
+                if ancestor.is_disk:
+                    self._blivet.devicetree.recursive_remove(ancestor)
+                else:
+                    self._blivet.destroy_device(ancestor)
+
+                ancestors.remove(ancestor)
+
+            leaves = [a for a in ancestors if a.isleaf]
+
+
 _BLIVET_VOLUME_TYPES = {
     "disk": BlivetDiskVolume,
     "lvm": BlivetLVMVolume,
-    "partition": BlivetPartitionVolume
+    "partition": BlivetPartitionVolume,
+    "raid": BlivetMDRaidVolume
 }
 
 
@@ -897,12 +1018,12 @@ def run_module():
             action.format.teardown()
 
     if scheduled:
-        ## execute the scheduled actions, committing changes to disk
+        # execute the scheduled actions, committing changes to disk
         callbacks.action_executed.add(record_action)
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
-        except Exception:
-            module.fail_json(msg="Failed to commit changes to disk", **result)
+        except Exception as e:
+            module.fail_json(msg="Failed to commit changes to disk: %s" % str(e), **result)
         finally:
             result['changed'] = True
             result['actions'] = [action_dict(a) for a in actions]
@@ -917,6 +1038,7 @@ def run_module():
 
     # success - return result
     module.exit_json(**result)
+
 
 def main():
     run_module()

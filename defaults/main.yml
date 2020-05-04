@@ -24,3 +24,9 @@ storage_volume_defaults:
   mount_check: 0
   mount_passno: 0
   mount_device_identifier: "uuid"  # uuid|label|path
+
+  raid_level: null
+  raid_device_count: null
+  raid_spare_count: null
+  raid_chunk_size: null
+  raid_metadata_version: null
