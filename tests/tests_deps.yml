@@ -1,0 +1,64 @@
+---
+- hosts: all localhost
+  become: true
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - name: test lvm and xfs package deps
+      include_tasks: run_blivet.yml
+      vars:
+        packages_only: true
+        storage_pools:
+          - name: foo
+            type: lvm
+            state: present
+            disks: []
+            volumes:
+              - name: test1
+                type: lvm
+                fs_type: xfs
+                state: present
+                mountpoint: '/foo'
+
+    - assert:
+        that:
+          - "{{ blivet_output.packages }} == ['lvm2', 'xfsprogs']"
+          - "{{ not blivet_output.changed }}"
+        msg: "unexpected required package list: {{ blivet_output.packages }}"
+
+    - name: test disk and ext4 package deps
+      include_tasks: run_blivet.yml
+      vars:
+        packages_only: true
+        storage_volumes:
+          - name: foo
+            type: disk
+            state: present
+            disks: []
+            fs_type: ext4
+
+    - assert:
+        that:
+          - "{{ blivet_output.packages}} == ['e2fsprogs']"
+          - "{{ not blivet_output.changed }}"
+        msg: "unexpected required package list: {{ blivet_output.packages }}"
+
+    - name: test disk and swap package deps
+      include_tasks: run_blivet.yml
+      vars:
+        packages_only: true
+        storage_volumes:
+          - name: foo
+            type: disk
+            state: present
+            disks: []
+            fs_type: swap
+
+    - assert:
+        that:
+          - "{{ blivet_output.packages}} == []"
+          - "{{ not blivet_output.changed }}"
+        msg: "unexpected required package list: {{ blivet_output.packages }}"
+
