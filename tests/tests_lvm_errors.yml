@@ -37,19 +37,16 @@
                     size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
     # the following does not work properly
     # - debug:
@@ -78,19 +75,16 @@
                     size: "{{ invalid_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
     # the following does not work properly
     # - name: Verify the output
@@ -114,19 +108,16 @@
                     size: "{{ too_large_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
     # the following does not work properly
     # - name: Verify the output
@@ -150,19 +141,16 @@
                     size: "{{ too_large_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
     # the following does not work properly
     # - name: Verify the output
@@ -186,19 +174,16 @@
                     size: "{{ too_large_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
     # the following does not work properly
     # - name: Verify the output
@@ -221,19 +206,16 @@
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
     # the following does not work properly
     # - name: Verify the output
@@ -347,19 +329,16 @@
                     fs_type: 'ext3'
                     size: '1g'
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
         - name: Verify the output
           assert:
@@ -401,19 +380,16 @@
                 disks: "{{ unused_disks }}"
                 type: lvm
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
         - name: Verify the output
           assert:
@@ -435,19 +411,16 @@
                 disks:
                   - "{{ unused_disks[0] }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
     - name: Verify the output
       assert:
