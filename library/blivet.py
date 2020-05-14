@@ -753,6 +753,22 @@ def update_fstab_identifiers(b, pools, volumes):
                 device.format.setup()
 
 
+def activate_swaps(b, pools, volumes):
+    """ Activate all swaps specified as present. """
+    all_volumes = volumes[:]
+    for pool in pools:
+        if not pool['present']:
+            continue
+
+        all_volumes += pool['volumes']
+
+    for volume in all_volumes:
+        if volume['state'] == 'present':
+            device = b.devicetree.resolve_device(volume['_mount_id'])
+            if device.format.type == 'swap':
+                device.format.setup()
+
+
 def run_module():
     # available arguments/parameters that a user can pass
     module_args = dict(
@@ -860,6 +876,7 @@ def run_module():
             result['actions'] = [action_dict(a) for a in actions]
 
     update_fstab_identifiers(b, module.params['pools'], module.params['volumes'])
+    activate_swaps(b, module.params['pools'], module.params['volumes'])
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
