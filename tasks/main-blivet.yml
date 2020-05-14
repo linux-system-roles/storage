@@ -131,10 +131,10 @@
 #
 - name: manage mounts to match the specified state
   mount:
-    src: "{{ mount_info['src'] if mount_info['state'] == 'mounted' else omit }}"
+    src: "{{ mount_info['src']|default(omit) }}"
     path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] if mount_info['state'] == 'mounted' else omit }}"
-    opts: "{{ mount_info['opts'] if mount_info['state'] == 'mounted' else omit }}"
+    fstype: "{{ mount_info['fstype']|default(omit) }}"
+    opts: "{{ mount_info['opts']|default(omit) }}"
     state: "{{ mount_info['state'] }}"
   loop: "{{ blivet_output.mounts }}"
   loop_control:
