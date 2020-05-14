@@ -733,6 +733,26 @@ def get_required_packages(b, pools, volumes):
     return sorted(list(set(packages)))
 
 
+def update_fstab_identifiers(b, pools, volumes):
+    """ Update fstab device identifiers.
+
+        This is to pick up new UUIDs for newly-formatted devices.
+    """
+    all_volumes = volumes[:]
+    for pool in pools:
+        if not pool['present']:
+            continue
+
+        all_volumes += pool['volumes']
+
+    for volume in all_volumes:
+        if volume['state'] == 'present':
+            device = b.devicetree.resolve_device(volume['_mount_id'])
+            volume['_mount_id'] = device.fstab_spec
+            if device.format.type == 'swap':
+                device.format.setup()
+
+
 def run_module():
     # available arguments/parameters that a user can pass
     module_args = dict(
@@ -838,6 +858,8 @@ def run_module():
         finally:
             result['changed'] = True
             result['actions'] = [action_dict(a) for a in actions]
+
+    update_fstab_identifiers(b, module.params['pools'], module.params['volumes'])
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
