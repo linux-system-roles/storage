@@ -549,7 +549,7 @@ class BlivetPartitionPool(BlivetPool):
 
     def _create(self):
         if self._device.format.type != "disklabel" or \
-           self._device.format.label_type != disklabel_type:
+           (disklabel_type and self._device.format.label_type != disklabel_type):
             if safe_mode:
                 raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' "
                                          "(pool '%s') in safe mode" % (self._device.name, self._pool['name']))
