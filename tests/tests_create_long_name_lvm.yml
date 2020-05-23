@@ -1,0 +1,130 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test1'
+    volume_group_size: '5g'
+    volume_size: '4g'
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+        max_return: 1
+
+    - name: Test for correct handling of create 56 chars length of vg and 4 chars length of lv
+      block:
+        - name: Try to create 56 chars length of vg and 4 chars length of lv
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzab56
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+              - name: unreachable task
+                fail:
+                  msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the long name lvm creating
+          assert:
+            that: "blivet_output.failed and
+                   'failed to set up pool' in blivet_output.msg and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior when creating long name lvm creating"
+
+    - name: Test for correct handling of create 55 chars length of vg and 41 chars length of lv
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyza55
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: abcdefghijklmnopqrstuvwxyzabcdefghijklm41
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the 55 chars length of vg created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyza55
+            disks: "{{ unused_disks }}"
+            state: "absent"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Test for correct handling of create 40 chars length of vg and 55 chars length of lv
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: abcdefghijklmnopqrstuvwxyzabcdefghijkl40
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyza55
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the 40 chars length of vg created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: abcdefghijklmnopqrstuvwxyzabcdefghijkl40
+            disks: "{{ unused_disks }}"
+            state: "absent"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Test for correct handling of create 4 chars length of vg and 56 chars length of lv
+      block:
+        - name: Try to create 4 chars length of vg and 56 chars length of lv
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: test
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzab56
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+              - name: unreachable task
+                fail:
+                  msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the long name lvm creating
+          assert:
+            that: "blivet_output.failed and
+                   'failed to set up volume' in blivet_output.msg and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior when creating long name lvm creating"
