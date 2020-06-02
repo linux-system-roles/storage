@@ -68,6 +68,13 @@ from ansible.module_utils.size import Size
 
 
 SYS_CLASS_BLOCK = "/sys/class/block/"
+IGNORED_DEVICES = [re.compile(r'^/dev/nullb\d+$')]
+
+
+def is_ignored(disk_path):
+    sys_path = os.path.realpath(disk_path)
+    return any(ignore.match(sys_path) is not None for ignore in IGNORED_DEVICES)
+
 
 def no_signature(run_command, disk_path):
     """Return true if no known signatures exist on the disk."""
@@ -148,6 +155,9 @@ def run_module():
     run_command = module.run_command
 
     for path, attrs in get_disks(run_command).items():
+        if is_ignored(path):
+            continue
+
         if attrs["fstype"]:
             continue
 

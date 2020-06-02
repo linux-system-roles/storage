@@ -59,3 +59,14 @@ def test_can_open_false(monkeypatch):
         raise OSError
     monkeypatch.setattr(os, 'open', mock_return)
     assert find_unused_disk.can_open('/hello') is False
+
+
+def test_is_ignored(monkeypatch):
+    def mock_realpath(path):
+        return path
+    monkeypatch.setattr(os.path, 'realpath', mock_realpath)
+    assert find_unused_disk.is_ignored('/dev/sda') is False
+    assert find_unused_disk.is_ignored('/dev/vda') is False
+    assert find_unused_disk.is_ignored('/dev/mapper/mpatha') is False
+    assert find_unused_disk.is_ignored('/dev/md/Volume0') is False
+    assert find_unused_disk.is_ignored('/dev/nullb0') is True
