@@ -357,6 +357,9 @@ class BlivetDiskVolume(BlivetVolume):
     def _type_check(self):
         return self._device.raw_device.is_disk
 
+    def _create(self):
+        self._reformat()
+
     def _look_up_device(self):
         super(BlivetDiskVolume, self)._look_up_device()
         if not self._get_device_id():
