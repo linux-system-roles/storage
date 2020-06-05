@@ -311,7 +311,7 @@ class BlivetVolume(object):
         if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name):
             raise BlivetAnsibleError("cannot remove existing formatting on volume '%s' in safe mode" % self._volume['name'])
 
-        if self._device.format.status:
+        if self._device.format.status and (self._device.format.mountable or self._device.format.type == "swap"):
             self._device.format.teardown()
         self._blivet.format_device(self._device, fmt)
 
@@ -934,7 +934,8 @@ def run_module():
     result['packages'] = b.packages[:]
 
     for action in scheduled:
-        if action.is_destroy and action.is_format and action.format.exists:
+        if action.is_destroy and action.is_format and action.format.exists and \
+           (action.format.mountable or action.format.type == "swap"):
             action.format.teardown()
 
     if scheduled:
