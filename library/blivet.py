@@ -190,6 +190,20 @@ class BlivetVolume(object):
         if device is None:
             return
 
+        if device.format.type == 'luks':
+            # XXX If we have no key we will always re-encrypt.
+            device.format._key_file = self._volume.get('encryption_key_file')
+            device.format.passphrase = self._volume.get('encryption_passphrase')
+
+            # set up the original format as well since it'll get used for processing
+            device.original_format._key_file = self._volume.get('encryption_key_file')
+            device.original_format.passphrase = self._volume.get('encryption_passphrase')
+            if device.isleaf:
+                self._blivet.populate()
+
+            if not device.isleaf:
+                device = device.children[0]
+
         self._device = device
 
         # check that the type is correct, raising an exception if there is a name conflict
