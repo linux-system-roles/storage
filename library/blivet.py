@@ -233,10 +233,11 @@ class BlivetVolume(object):
 
         # save device identifiers for use by the role
         self._volume['_device'] = self._device.path
+        self._volume['_raw_device'] = self._device.raw_device.path
         self._volume['_mount_id'] = self._device.fstab_spec
 
         # schedule removal of this device and any descendant devices
-        self._blivet.devicetree.recursive_remove(self._device)
+        self._blivet.devicetree.recursive_remove(self._device.raw_device)
 
     def _manage_encryption(self):
         # Make sure to handle adjusting both existing stacks and future stacks.
@@ -334,15 +335,16 @@ class BlivetVolume(object):
         self._manage_encryption()
 
         # schedule reformat if appropriate
-        if self._device.exists:
+        if self._device.raw_device.exists:
             self._reformat()
 
         # schedule resize if appropriate
-        if self._device.exists and self._volume['size']:
+        if self._device.raw_device.exists and self._volume['size']:
             self._resize()
 
         # save device identifiers for use by the role
         self._volume['_device'] = self._device.path
+        self._volume['_raw_device'] = self._device.raw_device.path
         self._volume['_mount_id'] = self._device.fstab_spec
 
 
@@ -353,7 +355,7 @@ class BlivetDiskVolume(BlivetVolume):
         return self._volume['disks'][0]
 
     def _type_check(self):
-        return self._device.is_disk
+        return self._device.raw_device.is_disk
 
     def _look_up_device(self):
         super(BlivetDiskVolume, self)._look_up_device()
@@ -371,7 +373,7 @@ class BlivetPartitionVolume(BlivetVolume):
     blivet_device_class = devices.PartitionDevice
 
     def _type_check(self):
-        return self._device.type == 'partition'
+        return self._device.raw_device.type == 'partition'
 
     def _get_device_id(self):
         return self._blivet_pool._disks[0].name + '1'
@@ -664,6 +666,7 @@ def manage_volume(b, volume):
     bvolume = _get_blivet_volume(b, volume)
     bvolume.manage()
     volume['_device'] = bvolume._volume.get('_device', '')
+    volume['_raw_device'] = bvolume._volume.get('_raw_device', '')
     volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
@@ -673,6 +676,7 @@ def manage_pool(b, pool):
     bpool.manage()
     for (volume, bvolume) in zip(pool['volumes'], bpool._blivet_volumes):
         volume['_device'] = bvolume._volume.get('_device', '')
+        volume['_raw_device'] = bvolume._volume.get('_raw_device', '')
         volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
@@ -809,6 +813,14 @@ def update_fstab_identifiers(b, pools, volumes):
     for volume in all_volumes:
         if volume['state'] == 'present':
             device = b.devicetree.resolve_device(volume['_mount_id'])
+            if device is None and volume['encryption']:
+                device = b.devicetree.resolve_device(volume['_raw_device'])
+                if device is not None and not device.isleaf:
+                    device = device.children[0]
+                    volume['_device'] = device.path
+
+            if device is None:
+                raise BlivetAnsibleError("failed to look up device for volume %s (%s/%s)" % (volume['name'], volume['_device'], volume['_mount_id']))
             volume['_mount_id'] = device.fstab_spec
             if device.format.type == 'swap':
                 device.format.setup()
