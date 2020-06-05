@@ -224,6 +224,48 @@ class BlivetVolume(object):
         # schedule removal of this device and any descendant devices
         self._blivet.devicetree.recursive_remove(self._device)
 
+    def _manage_encryption(self):
+        # Make sure to handle adjusting both existing stacks and future stacks.
+        if self._device == self._device.raw_device and self._volume['encryption']:
+            # add luks
+            luks_name = "luks-%s" % self._device._name
+            if not self._device.format.exists:
+                fmt = self._device.format
+            else:
+                fmt = get_format(None)
+
+            self._blivet.format_device(self._device,
+                                       get_format("luks",
+                                                  name=luks_name,
+                                                  cipher=self._volume.get('encryption_cipher'),
+                                                  key_size=self._volume.get('encryption_key_size'),
+                                                  luks_version=self._volume.get('encryption_luks_version'),
+                                                  passphrase=self._volume.get('encryption_passphrase') or None,
+                                                  key_file=self._volume.get('encryption_key_file') or None))
+
+            if not self._device.format.has_key:
+                raise BlivetAnsibleError("encrypted volume '%s' missing key/passphrase" % self._volume['name'])
+
+            luks_device = devices.LUKSDevice(luks_name,
+                                             fmt=fmt,
+                                             parents=[self._device])
+            self._blivet.create_device(luks_device)
+            self._device = luks_device
+        elif self._device != self._device.raw_device and not self._volume['encryption']:
+            # remove luks
+            if not self._device.format.exists:
+                fmt = self._device.format
+            else:
+                fmt = get_format(None)
+
+            self._device = self._device.raw_device
+            self._blivet.destroy_device(self._device.children[0])
+            if fmt.type is not None:
+                self._blivet.format_device(self._device, fmt)
+
+        # XXX: blivet has to store cipher, key_size, luks_version for existing before we
+        #      can support re-encrypting based on changes to those parameters
+
     def _resize(self):
         """ Schedule actions as needed to ensure the device has the desired size. """
         try:
@@ -274,6 +316,8 @@ class BlivetVolume(object):
         # at this point we should have a blivet.devices.StorageDevice instance
         if self._device is None:
             raise BlivetAnsibleError("failed to look up or create device '%s'" % self._volume['name'])
+
+        self._manage_encryption()
 
         # schedule reformat if appropriate
         if self._device.exists:
