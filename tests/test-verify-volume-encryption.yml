@@ -1,0 +1,35 @@
+---
+# name/path
+- name: Stat the LUKS device, if encrypted
+  stat:
+    path: "{{ storage_test_volume._device }}"
+    follow: yes
+  register: storage_test_luks_dev
+  when: storage_test_volume.encryption
+
+- name: Verify the presence/absence of the LUKS device node
+  assert:
+    that: "{{ storage_test_luks_dev.stat.exists and storage_test_luks_dev.stat.isblk
+              if _storage_test_volume_present or storage_test_volume.type == 'disk'
+              else
+              not storage_test_luks_dev.stat.exists }}"
+    msg: "Incorrect device node presence for volume {{ storage_test_volume.name }}"
+  when: storage_test_volume.encryption
+
+- name: Verify that the raw device is the same as the device if not encrypted
+  assert:
+    that: "{{ (storage_test_volume._device != storage_test_volume._raw_device)|bool == (storage_test_volume.encryption|bool) }}"
+    msg: "Encryption not managed correctly for volume {{ storage_test_volume.name }}: {{ (storage_test_volume._device != storage_test_volume._raw_device) }}  {{ storage_test_volume.encryption|bool }}"
+  when: _storage_test_volume_present
+
+- name: Make sure we got info about the LUKS volume if encrypted
+  assert:
+    that: "{{ storage_test_volume._device in storage_test_blkinfo.info }}"
+    msg: "Failed to gather info about volume '{{ storage_test_volume.name }}'"
+  when: _storage_test_volume_present and storage_test_volume.encryption
+
+- name: Verify the LUKS volume's device type if encrypted
+  assert:
+    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].type == 'crypt' }}"
+  when: _storage_test_volume_present and storage_test_volume.encryption
+

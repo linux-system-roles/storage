@@ -24,3 +24,10 @@ storage_volume_defaults:
   mount_check: 0
   mount_passno: 0
   mount_device_identifier: "uuid"  # uuid|label|path
+
+  encryption: false
+  encryption_passphrase: null
+  encryption_key_file: null
+  encryption_cipher: null
+  encryption_key_size: null
+  encryption_luks_version: null
