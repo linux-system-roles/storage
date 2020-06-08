@@ -489,6 +489,9 @@ class BlivetPool(object):
     def _is_raid(self):
         return self._pool.get('raid_level') not in [None, "null", ""]
 
+    def _member_management_is_destructive(self):
+        return False
+
     def _create(self):
         """ Schedule actions as needed to ensure the pool exists. """
         pass
@@ -624,10 +627,12 @@ class BlivetPool(object):
         self._look_up_device()
 
         # schedule destroy if appropriate, including member type change
-        if not self.ultimately_present:  # TODO: member type changes
-            self._manage_volumes()
+        if not self.ultimately_present or self._member_management_is_destructive():
+            if not self.ultimately_present:
+                self._manage_volumes()
             self._destroy()
-            return
+            if not self.ultimately_present:
+                return
 
         # schedule create if appropriate
         self._create()
@@ -659,6 +664,17 @@ class BlivetLVMPool(BlivetPool):
 
     def _type_check(self):
         return self._device.type == "lvmvg"
+
+    def _member_management_is_destructive(self):
+        if self._device is None:
+            return False
+
+        if self._pool['encryption'] and not all(m.encrypted for m in self._device.parents):
+            return True
+        elif not self._pool['encryption'] and any(m.encrypted for m in self._device.parents):
+            return True
+
+        return False
 
     def _get_format(self):
         fmt = get_format("lvmpv")
