@@ -39,6 +39,27 @@ Accepted values are: `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `r
 This is a list of volumes that belong to the current pool. It follows the
 same pattern as the `storage_volumes` variable, explained below.
 
+##### `encryption`
+This specifies whether or not the pool will be encrypted using LUKS.
+__WARNING__: Toggling encryption for a pool is a destructive operation, meaning
+             the pool itself will be removed as part of the process of
+             adding/removing the encryption layer.
+
+##### `encryption_passphrase`
+This string specifies a passphrase used to unlock/open the LUKS volume(s).
+
+##### `encryption_key_file`
+This string specifies the full path to the key file used to unlock the LUKS volume(s).
+
+##### `encryption_cipher`
+This string specifies a non-default cipher to be used by LUKS.
+
+##### `encryption_key_size`
+This integer specifies the LUKS key size (in bytes).
+
+##### `encryption_luks_version`
+This integer specifies the LUKS version to use.
+
 
 #### `storage_volumes`
 The `storage_volumes` variable is a list of volumes to manage. Each volume has the following

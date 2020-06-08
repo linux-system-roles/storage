@@ -1,0 +1,135 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    mount_location: '/opt/test1'
+    mount_location_2: '/opt/test2'
+    volume_size: '5g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+        max_return: 1
+
+    ##
+    ## LVM Pool
+    ##
+
+    - name: Test for correct handling of new encrypted pool w/ no key
+      block:
+        - name: Create an encrypted lvm pool
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                encryption: true
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the keyless luks test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('encrypted pool.*missing key') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior w/ encrypted pool w/ no key"
+
+    - name: Create an encrypted lvm volume w/ default fs
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            encryption: true
+            encryption_passphrase: 'yabbadabbadoo'
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the encryption layer
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            encryption: false
+            encryption_passphrase: 'yabbadabbadoo'
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Add encryption to the volume
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            encryption: true
+            encryption_passphrase: 'yabbadabbadoo'
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change the mountpoint, leaving encryption in place
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            encryption: true
+            encryption_passphrase: 'yabbadabbadoo'
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location_2 }}"
+                size: 4g
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml

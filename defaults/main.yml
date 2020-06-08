@@ -9,6 +9,13 @@ storage_pool_defaults:
   state: "present"
   type: lvm
 
+  encryption: false
+  encryption_passphrase: null
+  encryption_key_file: null
+  encryption_cipher: null
+  encryption_key_size: null
+  encryption_luks_version: null
+
 storage_volume_defaults:
   state: "present"
   type: lvm

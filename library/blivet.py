@@ -667,12 +667,57 @@ class BlivetLVMPool(BlivetPool):
 
         return fmt
 
+    def manage_encryption(self, members, spec, objtype):
+        for i in enumerate(members):
+            member = members[i]
+            if self._pool['encryption'] and member.raw_device == member:
+                # add luks
+                luks_name = "luks-%s" % member._name
+                if not member.format.exists:
+                    fmt = member.format
+                else:
+                    fmt = get_format(None)
+
+                self._blivet.format_device(member,
+                                           get_format("luks",
+                                                      name=luks_name,
+                                                      cipher=spec.get('encryption_cipher'),
+                                                      key_size=spec.get('encryption_key_size'),
+                                                      luks_version=spec.get('encryption_luks_version'),
+                                                      passphrase=spec.get('encryption_passphrase') or None,
+                                                      key_file=spec.get('encryption_key_file') or None))
+
+                if not member.format.has_key:
+                    raise BlivetAnsibleError("encrypted %s '%s' missing key/passphrase"
+                                             % (objtype, self._volume['name']))
+
+                luks_device = devices.LUKSDevice(luks_name,
+                                                 fmt=fmt,
+                                                 parents=[member])
+                self._blivet.create_device(luks_device)
+                members[i] = luks_device
+            elif not self._pool['encryption'] and member.raw_device != member:
+                # remove luks
+                if not member.format.exists:
+                    fmt = member.format
+                else:
+                    fmt = get_format(None)
+
+                members[i] = self._device.raw_device
+                self._blivet.destroy_device(member)
+                if fmt.type is not None:
+                    self._blivet.format_device(members[i], fmt)
+
+        # XXX: blivet has to store cipher, key_size, luks_version for existing before we
+        #      can support re-encrypting based on changes to those parameters
+
+
     def _create(self):
         if self._device:
             return
 
         members = self._create_members()
-
+        members = self._manage_encryption(members)
         try:
             pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
         except Exception as e:
