@@ -148,14 +148,26 @@ class BlivetAnsibleError(Exception):
     pass
 
 
-class BlivetVolume(object):
+class BlivetBase(object):
     blivet_device_class = None
+    _type = None
+
+    def __init__(self, blivet_obj, spec_dict):
+        self._blivet = blivet_obj
+        self._spec_dict = spec_dict
+        self._device = None
+
+
+class BlivetVolume(BlivetBase):
+    _type = "volume"
 
     def __init__(self, blivet_obj, volume, bpool=None):
-        self._blivet = blivet_obj
-        self._volume = volume
+        super(BlivetVolume, self).__init__(blivet_obj, volume)
         self._blivet_pool = bpool
-        self._device = None
+
+    @property
+    def _volume(self):
+        return self._spec_dict
 
     @property
     def required_packages(self):
@@ -462,15 +474,17 @@ def _get_blivet_volume(blivet_obj, volume, bpool=None):
     return _BLIVET_VOLUME_TYPES[volume_type](blivet_obj, volume, bpool=bpool)
 
 
-class BlivetPool(object):
-    blivet_device_class = None
+class BlivetPool(BlivetBase):
+    _type = "pool"
 
     def __init__(self, blivet_obj, pool):
-        self._blivet = blivet_obj
-        self._pool = pool
-        self._device = None
+        super(BlivetPool, self).__init__(blivet_obj, pool)
         self._disks = list()
         self._blivet_volumes = list()
+
+    @property
+    def _pool(self):
+        return self._spec_dict
 
     @property
     def required_packages(self):
