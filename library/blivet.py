@@ -157,6 +157,51 @@ class BlivetBase(object):
         self._spec_dict = spec_dict
         self._device = None
 
+    def _manage_one_encryption(self, device):
+        ret = device
+        # Make sure to handle adjusting both existing stacks and future stacks.
+        if device == device.raw_device and self._spec_dict['encryption']:
+            # add luks
+            luks_name = "luks-%s" % device._name
+            if not device.format.exists:
+                fmt = device.format
+            else:
+                fmt = get_format(None)
+
+            self._blivet.format_device(device,
+                                       get_format("luks",
+                                                  name=luks_name,
+                                                  cipher=self._spec_dict.get('encryption_cipher'),
+                                                  key_size=self._spec_dict.get('encryption_key_size'),
+                                                  luks_version=self._spec_dict.get('encryption_luks_version'),
+                                                  passphrase=self._spec_dict.get('encryption_passphrase') or None,
+                                                  key_file=self._spec_dict.get('encryption_key_file') or None))
+
+            if not device.format.has_key:
+                raise BlivetAnsibleError("encrypted %s '%s' missing key/passphrase" % (self._type, self._spec_dict['name']))
+
+            luks_device = devices.LUKSDevice(luks_name,
+                                             fmt=fmt,
+                                             parents=[device])
+            self._blivet.create_device(luks_device)
+            ret = luks_device
+        elif device != device.raw_device and not self._spec_dict['encryption']:
+            # remove luks
+            if not device.format.exists:
+                fmt = device.format
+            else:
+                fmt = get_format(None)
+
+            ret = self._device.raw_device
+            self._blivet.destroy_device(device)
+            if fmt.type is not None:
+                self._blivet.format_device(ret, fmt)
+
+        # XXX: blivet has to store cipher, key_size, luks_version for existing before we
+        #      can support re-encrypting based on changes to those parameters
+
+        return ret
+
 
 class BlivetVolume(BlivetBase):
     _type = "volume"
@@ -255,46 +300,7 @@ class BlivetVolume(BlivetBase):
         self._blivet.devicetree.recursive_remove(self._device.raw_device)
 
     def _manage_encryption(self):
-        # Make sure to handle adjusting both existing stacks and future stacks.
-        if self._device == self._device.raw_device and self._volume['encryption']:
-            # add luks
-            luks_name = "luks-%s" % self._device._name
-            if not self._device.format.exists:
-                fmt = self._device.format
-            else:
-                fmt = get_format(None)
-
-            self._blivet.format_device(self._device,
-                                       get_format("luks",
-                                                  name=luks_name,
-                                                  cipher=self._volume.get('encryption_cipher'),
-                                                  key_size=self._volume.get('encryption_key_size'),
-                                                  luks_version=self._volume.get('encryption_luks_version'),
-                                                  passphrase=self._volume.get('encryption_passphrase') or None,
-                                                  key_file=self._volume.get('encryption_key_file') or None))
-
-            if not self._device.format.has_key:
-                raise BlivetAnsibleError("encrypted volume '%s' missing key/passphrase" % self._volume['name'])
-
-            luks_device = devices.LUKSDevice(luks_name,
-                                             fmt=fmt,
-                                             parents=[self._device])
-            self._blivet.create_device(luks_device)
-            self._device = luks_device
-        elif self._device != self._device.raw_device and not self._volume['encryption']:
-            # remove luks
-            if not self._device.format.exists:
-                fmt = self._device.format
-            else:
-                fmt = get_format(None)
-
-            self._device = self._device.raw_device
-            self._blivet.destroy_device(self._device.children[0])
-            if fmt.type is not None:
-                self._blivet.format_device(self._device, fmt)
-
-        # XXX: blivet has to store cipher, key_size, luks_version for existing before we
-        #      can support re-encrypting based on changes to those parameters
+        self._device = self._manage_one_encryption(self._device)
 
     def _resize(self):
         """ Schedule actions as needed to ensure the device has the desired size. """
@@ -697,57 +703,18 @@ class BlivetLVMPool(BlivetPool):
 
         return fmt
 
-    def manage_encryption(self, members, spec, objtype):
-        for i in enumerate(members):
-            member = members[i]
-            if self._pool['encryption'] and member.raw_device == member:
-                # add luks
-                luks_name = "luks-%s" % member._name
-                if not member.format.exists:
-                    fmt = member.format
-                else:
-                    fmt = get_format(None)
+    def _manage_encryption(self, members):
+        managed_members = list()
+        for member in members:
+            managed_members.append(self._manage_one_encryption(member))
 
-                self._blivet.format_device(member,
-                                           get_format("luks",
-                                                      name=luks_name,
-                                                      cipher=spec.get('encryption_cipher'),
-                                                      key_size=spec.get('encryption_key_size'),
-                                                      luks_version=spec.get('encryption_luks_version'),
-                                                      passphrase=spec.get('encryption_passphrase') or None,
-                                                      key_file=spec.get('encryption_key_file') or None))
-
-                if not member.format.has_key:
-                    raise BlivetAnsibleError("encrypted %s '%s' missing key/passphrase"
-                                             % (objtype, self._volume['name']))
-
-                luks_device = devices.LUKSDevice(luks_name,
-                                                 fmt=fmt,
-                                                 parents=[member])
-                self._blivet.create_device(luks_device)
-                members[i] = luks_device
-            elif not self._pool['encryption'] and member.raw_device != member:
-                # remove luks
-                if not member.format.exists:
-                    fmt = member.format
-                else:
-                    fmt = get_format(None)
-
-                members[i] = self._device.raw_device
-                self._blivet.destroy_device(member)
-                if fmt.type is not None:
-                    self._blivet.format_device(members[i], fmt)
-
-        # XXX: blivet has to store cipher, key_size, luks_version for existing before we
-        #      can support re-encrypting based on changes to those parameters
-
+        return managed_members
 
     def _create(self):
         if self._device:
             return
 
-        members = self._create_members()
-        members = self._manage_encryption(members)
+        members = self._manage_encryption(self._create_members())
         try:
             pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
         except Exception as e:
