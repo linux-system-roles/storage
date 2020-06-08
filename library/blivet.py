@@ -538,6 +538,8 @@ class BlivetPool(BlivetBase):
 
             leaves = [a for a in ancestors if a.isleaf]
 
+        self._device = None
+
     def _type_check(self):  # pylint: disable=no-self-use
         return True
 
