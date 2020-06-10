@@ -43,6 +43,9 @@
     loop_var: pv
   when: storage_test_pool.type == 'lvm'
 
+- name: Check member encryption
+  include_tasks: verify-pool-members-encryption.yml
+
 - set_fact:
     _storage_test_expected_pv_type: null
     _storage_test_expected_pv_count: null
