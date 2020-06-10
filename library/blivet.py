@@ -72,6 +72,9 @@ leaves:
 mounts:
     description: list of dicts describing mounts to set up
     type: list of dict
+crypts:
+    description: list of dicts describing crypttab entries to set up
+    type: list of dict
 pools:
     description: list of dicts describing the pools w/ device path for each volume
     type: list of dict
@@ -785,6 +788,20 @@ def get_mount_info(pools, volumes, actions, fstab):
     return mount_info
 
 
+def get_crypt_info(actions):
+    info = list()
+    for action in actions:
+        if not (action.is_format and action.format.type == 'luks'):
+            continue
+
+        info.append(dict(backing_device=action.device.path,
+                         name=action.format.map_name,
+                         password=action.format.key_file or '-',
+                         state='present' if action.is_create else 'absent'))
+
+    return sorted(info, key=lambda e: e['state'])
+
+
 def get_required_packages(b, pools, volumes):
     packages = list()
     for pool in pools:
@@ -861,6 +878,7 @@ def run_module():
         actions=list(),
         leaves=list(),
         mounts=list(),
+        crypts=list(),
         pools=list(),
         volumes=list(),
         packages=list(),
@@ -956,6 +974,7 @@ def run_module():
     activate_swaps(b, module.params['pools'], module.params['volumes'])
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
+    result['crypts'] = get_crypt_info(actions)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']
