@@ -166,6 +166,19 @@
   when: blivet_output['mounts']
 
 #
+# Manage /etc/crypttab
+#
+- name: Manage /etc/crypttab to account for changes we just made
+  crypttab:
+    name: "{{ entry.name }}"
+    backing_device: "{{ entry.backing_device }}"
+    password: "{{ entry.password }}"
+    state: "{{ entry.state }}"
+  loop: "{{ blivet_output.crypts }}"
+  loop_control:
+    loop_var: entry
+
+#
 # Update facts since we may have changed system state.
 #
 # Should this be in a handler instead?
