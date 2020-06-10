@@ -10,12 +10,12 @@
 # Environment variables:
 #
 #   LSR_PUBLISH_COVERAGE
-#     if the variable is empty or unset, nothing will be published; if the
-#     variable has its value set to 'strict', the reporting is performed in
-#     strict mode, so situations like missing data to be reported are treated
-#     as errors; if the value of this variable is 'debug', coveralls is run in
-#     debug mode (see coveralls debug --help); other values cause that coverage
-#     results will be reported normally
+#     If the variable is unset or empty (the default), no coverage is published.
+#     Other valid values for the variable are:
+#     strict - the reporting is performed in strict mode, so situations
+#              like missing data to be reported are treated as errors
+#     debug  - coveralls is run in debug mode (see coveralls debug --help)
+#     normal - coverage results will be reported normally
 #   LSR_TESTSDIR
 #     a path to directory where tests and tests artifacts are located; if unset
 #     or empty, this variable is set to ${TOPDIR}/tests; this path should
@@ -35,6 +35,13 @@ if [[ -z "${LSR_PUBLISH_COVERAGE}" ]]; then
   lsr_info "${ME}: Publishing coverage report is not enabled. Skipping."
   exit 0
 fi
+
+case "${LSR_PUBLISH_COVERAGE}" in
+    strict) : ;;
+    debug) : ;;
+    normal) : ;;
+    *) lsr_error Error: \"${LSR_PUBLISH_COVERAGE}\" is not a valid option ;;
+esac
 
 LSR_TESTSDIR=${LSR_TESTSDIR:-${TOPDIR}/tests}
 

@@ -10,8 +10,9 @@
 #
 #   RUN_FLAKE8_DISABLED
 #     if set to an arbitrary non-empty value, flake8 will be not executed
-#   RUN_FLAKE8_IGNORE
-#     list of issues to ignore - see flake8 docs
+#
+#   RUN_FLAKE8_EXTRA_ARGS
+#     any extra command line arguments to provide e.g. --ignore=some,errs
 
 set -e
 
@@ -27,6 +28,4 @@ if [[ "${RUN_FLAKE8_DISABLED}" ]]; then
 fi
 
 set -x
-python -m flake8 \
-  ${RUN_FLAKE8_IGNORE:+--ignore} ${RUN_FLAKE8_IGNORE:-} \
-  "$@"
+python -m flake8 ${RUN_FLAKE8_EXTRA_ARGS:-} "$@"
