@@ -1,0 +1,287 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    mount_location: '/opt/test1'
+    volume_size: '5g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+        max_return: 1
+
+    ##
+    ## Disk
+    ##
+    - name: Test for correct handling of new encrypted volume w/ no key
+      block:
+        - name: Create an encrypted disk volume w/ default fs
+          include_role:
+            name: storage
+          vars:
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
+                encryption: true
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the keyless luks test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('encrypted volume.*missing key') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior w/ encrypted pool w/ no key"
+
+    # encrypted disk volume
+    - name: Create an encrypted disk volume w/ default fs
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            encryption: true
+            encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the encryption layer
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            encryption: false
+            encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Add encryption to the volume
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            encryption: true
+            encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    ##
+    ## Partition
+    ##
+
+    - name: Test for correct handling of new encrypted volume w/ no key
+      block:
+        - name: Create an encrypted partition volume w/ default fs
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the keyless luks test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('encrypted volume.*missing key') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior w/ encrypted pool w/ no key"
+
+    - name: Create an encrypted partition volume w/ default fs
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                type: partition
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: true
+                encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the encryption layer
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                type: partition
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: false
+                encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Add encryption to the volume
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                type: partition
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: true
+                encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    ##
+    ## LVM
+    ##
+
+    - name: Test for correct handling of new encrypted volume w/ no key
+      block:
+        - name: Create an encrypted lvm volume w/ default fs
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the keyless luks test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('encrypted volume.*missing key') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior w/ encrypted pool w/ no key"
+
+    - name: Create an encrypted lvm volume w/ default fs
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: true
+                encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the encryption layer
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: false
+                encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Add encryption to the volume
+      include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: true
+                encryption_passphrase: 'yabbadabbadoo'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml

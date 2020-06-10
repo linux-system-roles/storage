@@ -21,6 +21,11 @@
   register: storage_test_fstab
   changed_when: false
 
+- name: Read the /etc/crypttab file
+  command: cat /etc/crypttab
+  register: storage_test_crypttab
+  changed_when: false
+
 #
 # Verify pools and the volumes they contain.
 #
@@ -51,5 +56,6 @@
 - name: Clean up variable namespace
   set_fact:
     storage_test_fstab: null
+    storage_test_crypttab: null
     storage_test_blkinfo: null
     storage_test_volume: null

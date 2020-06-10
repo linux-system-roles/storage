@@ -1,0 +1,91 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    mount_location: '/opt/test'
+    volume_size: '5g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+        max_return: 1
+
+    - name: Create a disk device with swap
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            disks: "{{ unused_disks }}"
+            fs_type: 'swap'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change the disk device file system type to ext3
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location }}"
+            fs_type: ext3
+            disks: "{{ unused_disks }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location }}"
+            fs_type: ext3
+            disks: "{{ unused_disks }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change it back to swap
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            disks: "{{ unused_disks }}"
+            fs_type: 'swap'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            disks: "{{ unused_disks }}"
+            fs_type: 'swap'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml
