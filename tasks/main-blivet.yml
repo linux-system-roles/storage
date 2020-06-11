@@ -129,14 +129,18 @@
 #  changed options? (just add w/ new settings?)
 # add new mounts
 #
-- name: manage mounts to match the specified state
+# XXX Apparently we have to do the removals, then tell systemd to
+#     update its view, then set up the new mounts. Otherwise,
+#     systemd will forcibly prevent mounting a new volume to an
+#     existing mount point.
+- name: remove obsolete mounts
   mount:
     src: "{{ mount_info['src']|default(omit) }}"
     path: "{{ mount_info['path'] }}"
     fstype: "{{ mount_info['fstype']|default(omit) }}"
     opts: "{{ mount_info['opts']|default(omit) }}"
     state: "{{ mount_info['state'] }}"
-  loop: "{{ blivet_output.mounts }}"
+  loop: "{{ blivet_output.mounts|json_query('[?state==`absent`]') }}"
   loop_control:
     loop_var: mount_info
 
@@ -144,6 +148,35 @@
   systemd:
     daemon_reload: yes
   when: blivet_output['mounts']
+
+- name: set up new/current mounts
+  mount:
+    src: "{{ mount_info['src']|default(omit) }}"
+    path: "{{ mount_info['path'] }}"
+    fstype: "{{ mount_info['fstype']|default(omit) }}"
+    opts: "{{ mount_info['opts']|default(omit) }}"
+    state: "{{ mount_info['state'] }}"
+  loop: "{{ blivet_output.mounts|json_query('[?state!=`absent`]') }}"
+  loop_control:
+    loop_var: mount_info
+
+- name: tell systemd to refresh its view of /etc/fstab
+  systemd:
+    daemon_reload: yes
+  when: blivet_output['mounts']
+
+#
+# Manage /etc/crypttab
+#
+- name: Manage /etc/crypttab to account for changes we just made
+  crypttab:
+    name: "{{ entry.name }}"
+    backing_device: "{{ entry.backing_device }}"
+    password: "{{ entry.password }}"
+    state: "{{ entry.state }}"
+  loop: "{{ blivet_output.crypts }}"
+  loop_control:
+    loop_var: entry
 
 #
 # Update facts since we may have changed system state.

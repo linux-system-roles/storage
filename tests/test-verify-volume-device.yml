@@ -5,12 +5,12 @@
 #
 - name: (1/3) Process device path (set initial value)
   set_fact:
-    storage_test_device_path: "{{ storage_test_volume._device }}"
+    storage_test_device_path: "{{ storage_test_volume._raw_device }}"
 
 # realpath fails when given empty string; the task then returns completely different dict.
 - block:
   - name: (2/3) Process device path (get device file info)
-    command: realpath "{{ storage_test_volume._device }}"
+    command: realpath "{{ storage_test_volume._raw_device }}"
     register: storage_test_realpath
 
   - name: (3/3) Process device path (replace device with its target if it is a symlink)
@@ -23,7 +23,7 @@
 # name/path
 - name: See whether the device node is present
   stat:
-    path: "{{ storage_test_volume._device }}"
+    path: "{{ storage_test_volume._raw_device }}"
     follow: yes
   register: storage_test_dev
 

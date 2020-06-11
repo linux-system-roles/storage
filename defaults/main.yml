@@ -30,3 +30,10 @@ storage_volume_defaults:
   raid_spare_count: null
   raid_chunk_size: null
   raid_metadata_version: null
+
+  encryption: false
+  encryption_passphrase: null
+  encryption_key_file: null
+  encryption_cipher: null
+  encryption_key_size: null
+  encryption_luks_version: null

@@ -95,6 +95,27 @@ When type is `raid` specifies RAID metadata version as a string, e.g.: '1.0'.
 When type is `raid` specifies RAID chunk size as a string, e.g.: '512 KiB'.
 Chunk size has to be multiple of 4 KiB.
 
+##### `encryption`
+This specifies whether or not the volume will be encrypted using LUKS.
+__WARNING__: Toggling encryption for a volume is a destructive operation, meaning
+             all data on that volume will be removed as part of the process of
+             adding/removing the encryption layer.
+
+##### `encryption_passphrase`
+This string specifies a passphrase used to unlock/open the LUKS volume.
+
+##### `encryption_key_file`
+This string specifies the full path to the key file used to unlock the LUKS volume.
+
+##### `encryption_cipher`
+This string specifies a non-default cipher to be used by LUKS.
+
+##### `encryption_key_size`
+This integer specifies the LUKS key size (in bits).
+
+##### `encryption_luks_version`
+This integer specifies the LUKS version to use.
+
 #### `storage_safe_mode`
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.
 
