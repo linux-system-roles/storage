@@ -1,0 +1,55 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    storage_use_partitions: true
+    mount_location1: '/opt/test1'
+    mount_location2: '/opt/test2'
+    mount_location3: '/opt/test3'
+    volume1_size: '2g'
+    volume3_size: '3g'
+    volume2_size: '3g'
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 2
+
+    - name: Try to create a raid pool with invalid raid_level (expect failure)
+      block:
+        - name: Create a disk volume mounted at "{{ mount_location }}"
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: vg1
+                disks: "{{ unused_disks }}"
+                type: lvm
+                raid_level: "fail"
+                state: present
+                volumes:
+                - name: lv1
+                  size: "{{ volume1_size }}"
+                  mount_point: "{{ mount_location1 }}"
+                - name: lv2
+                  size: "{{ volume2_size }}"
+                  mount_point: "{{ mount_location2 }}"
+                - name: lv3
+                  size: "{{ volume3_size }}"
+                  mount_point: "{{ mount_location3 }}"
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+

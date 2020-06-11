@@ -30,6 +30,11 @@ Supported identifiers include: device node (like `/dev/sda` or `/dev/mapper/mpat
 device node basename (like `sda` or `mpathb`), /dev/disk/ symlink
 (like `/dev/disk/by-id/wwn-0x5000c5005bc37f3f`).
 
+##### `raid_level`
+When used with `type: lvm` it manages a volume group with a mdraid array of given level
+on it. Input `disks` are in this case used as RAID members.
+Accepted values are: `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+
 ##### `volumes`
 This is a list of volumes that belong to the current pool. It follows the
 same pattern as the `storage_volumes` variable, explained below.
