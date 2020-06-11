@@ -1,0 +1,57 @@
+- set_fact:
+    _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs|dict2items(key_name='path', value_name='info')|json_query('[?info.vg==`\"{}\"`].path'.format(storage_test_pool.name))|list }}"
+    _storage_test_pool_pvs: []
+    _storage_test_expected_pv_count: "{{ 0 if storage_test_pool.state == 'absent' else (storage_test_pool.raid_level | ternary(1, storage_test_pool.disks|length)) }}"
+  when: storage_test_pool.type == 'lvm'
+
+- name: Get the canonical device path for each member device
+  resolve_blockdev:
+    spec: "{{ pv }}"
+  loop: "{{ _storage_test_pool_pvs_lvm }}"
+  loop_control:
+    loop_var: pv
+  register: pv_paths
+  when: storage_test_pool.type == 'lvm'
+
+- set_fact:
+    _storage_test_pool_pvs: "{{ _storage_test_pool_pvs }} + [ '{{ pv_paths.results[idx].device }}' ]"
+  loop: "{{ _storage_test_pool_pvs_lvm }}"
+  loop_control:
+    index_var: idx
+  when: storage_test_pool.type == 'lvm'
+
+- name: Verify PV count
+  assert:
+    that: "{{ ansible_lvm.pvs|dict2items|json_query('[?value.vg==`\"{}\"`]'.format(storage_test_pool.name))|length == _storage_test_expected_pv_count|int }}"
+    msg: "Unexpected PV count for pool {{ storage_test_pool.name }}"
+  when: storage_test_pool.type == 'lvm'
+
+- set_fact:
+    _storage_test_expected_pv_type: "{{ 'crypt' if storage_test_pool.encryption else 'disk' }}"
+  when: storage_test_pool.type == 'lvm'
+
+- set_fact:
+    _storage_test_expected_pv_type: "{{ 'partition' if storage_use_partitions|default(false) else 'disk' }}"
+  when: storage_test_pool.type == 'lvm' and not storage_test_pool.encryption
+
+- set_fact:
+    _storage_test_expected_pv_type: "{{ storage_test_pool.raid_level }}"
+  when: storage_test_pool.type == 'lvm' and storage_test_pool.raid_level
+
+- name: Check the type of each PV
+  assert:
+    that: "{{ storage_test_blkinfo.info[pv]['type'] == _storage_test_expected_pv_type }}"
+    msg: "Incorrect type for PV {{ pv }} in pool {{ storage_test_pool.name }}"
+  loop: "{{ _storage_test_pool_pvs }}"
+  loop_control:
+    loop_var: pv
+  when: storage_test_pool.type == 'lvm'
+
+- name: Check member encryption
+  include_tasks: verify-pool-members-encryption.yml
+
+- set_fact:
+    _storage_test_expected_pv_type: null
+    _storage_test_expected_pv_count: null
+    _storage_test_pool_pvs_lvm: []
+    _storage_test_pool_pvs: []

@@ -31,12 +31,32 @@ info:
     type: dict
 '''
 
+import os
 import shlex
 
 from ansible.module_utils.basic import AnsibleModule
 
 
 LSBLK_DEVICE_TYPES = {"part": "partition"}
+DEV_MD_DIR = '/dev/md'
+
+
+def fixup_md_path(path):
+    if not path.startswith("/dev/md"):
+        return path
+
+    if not os.path.exists(DEV_MD_DIR):
+        return path
+
+    ret = path
+    for md in os.listdir(DEV_MD_DIR):
+        md_path = "%s/%s" % (DEV_MD_DIR, md)
+        if os.path.realpath(md_path) == os.path.realpath(path):
+            ret = md_path
+            break
+
+    return ret
+
 
 def get_block_info(run_cmd):
     buf = run_cmd(["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE", "-p", "-P", "-a"])[1]
@@ -50,6 +70,9 @@ def get_block_info(run_cmd):
                 print(pair)
                 raise
             if key:
+                if key.lower() == "name":
+                    value = fixup_md_path(value)
+
                 dev[key.lower()] = LSBLK_DEVICE_TYPES.get(value, value)
         if dev:
             info[dev['name']] = dev

@@ -1,0 +1,28 @@
+- set_fact:
+    _storage_test_crypttab_entries: "{{ storage_test_crypttab.stdout_lines|map('regex_search', '^' + _storage_test_pool_member_path|basename + ' .*$')|select('string')|list }}"
+
+- name: Check for /etc/crypttab entry
+  assert:
+    that: "{{ _storage_test_crypttab_entries|length == _storage_test_expected_crypttab_entries|int }}"
+    msg: "Incorrect number of crypttab entries found for pool {{ storage_test_pool.name }} member {{ _storage_test_pool_member_path|basename }}"
+
+- name: Validate the format of the crypttab entry
+  assert:
+    that: "{{ _storage_test_crypttab_entries[0].split()|length >= 3 }}"
+    msg: "Incorrectly formatted crypttab line for volume {{ storage_test_pool.name }} member {{ _storage_test_pool_member_path|basename }}"
+  when: _storage_test_expected_crypttab_entries|int == 1
+
+- name: Check backing device of crypttab entry
+  assert:
+    that: "{{ _storage_test_crypttab_entries[0].split()[1] == storage_test_volume._raw_device }}"
+    msg: "Incorrect backing device in crypttab entry for volume {{ storage_test_volume.name }}"
+  when: false and _storage_test_expected_crypttab_entries|int == 1
+
+- name: Check key file of crypttab entry
+  assert:
+    that: "{{ _storage_test_crypttab_entries[0].split()[2] == _storage_test_expected_crypttab_key_file }}"
+    msg: "Incorrect key file in crypttab entry for volume {{ storage_test_pool.name }} member {{ _storage_test_pool_member_path|basename }}"
+  when: _storage_test_expected_crypttab_entries|int == 1
+
+- set_fact:
+    _storage_test_crypttab_entries: null
