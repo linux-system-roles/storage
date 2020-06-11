@@ -16,6 +16,8 @@ storage_pool_defaults:
   encryption_key_size: null
   encryption_luks_version: null
 
+  raid_level: null
+
 storage_volume_defaults:
   state: "present"
   type: lvm
