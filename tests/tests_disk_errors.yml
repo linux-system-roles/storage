@@ -62,19 +62,16 @@
                 type: disk
                 disks: "{{ unused_disks }}"
 
-        - name: UNREACH
+        - name: unreachable task
           fail:
-            msg: "this should be unreachable"
+            msg: UNREACH
 
       rescue:
         - name: Check that we failed in the role
           assert:
             that:
-              - ansible_failed_task.name != 'UNREACH'
+              - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
-          vars:
-            # Ugh! needed to expand ansible_failed_task
-            storage_provider: blivet
 
         - name: Verify the output of the duplicate volumes test
           assert:

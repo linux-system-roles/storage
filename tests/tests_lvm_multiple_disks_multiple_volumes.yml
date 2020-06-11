@@ -22,15 +22,15 @@
         name: storage
       vars:
         storage_pools:
-            - name: phi
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ volume_size }}"
-                  mount_point: "{{ mount_location1 }}"
-                - name: test2
-                  size: "{{ volume_size }}"
-                  mount_point: "{{ mount_location2 }}"
+          - name: phi
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location1 }}"
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location2 }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -39,15 +39,15 @@
         name: storage
       vars:
         storage_pools:
-            - name: phi
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ volume_size }}"
-                  mount_point: "{{ mount_location1 }}"
-                - name: test2
-                  size: "{{ volume_size }}"
-                  mount_point: "{{ mount_location2 }}"
+          - name: phi
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location1 }}"
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location2 }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -56,9 +56,9 @@
         name: storage
       vars:
         storage_pools:
-            - name: phi
-              disks: "{{ unused_disks }}"
-              volumes: []
-              state: absent
+          - name: phi
+            disks: "{{ unused_disks }}"
+            volumes: []
+            state: absent
 
     - include_tasks: verify-role-results.yml

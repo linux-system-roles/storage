@@ -6,6 +6,7 @@
     storage_test_mount_device_matches: "{{ ansible_mounts|json_query('[?device==`\"{}\"`]'.format(storage_test_volume._device))}}"
     storage_test_mount_point_matches: "{{ ansible_mounts|json_query('[?mount==`\"{}\"`]'.format(storage_test_volume.mount_point))}}"
     storage_test_mount_expected_match_count: "{{ 1 if _storage_test_volume_present and storage_test_volume.mount_point else 0 }}"
+    storage_test_swap_expected_matches: "{{ 1 if _storage_test_volume_present and storage_test_volume.fs_type == 'swap' else 0 }}"
 
 #
 # Verify mount presence.
@@ -34,6 +35,24 @@
   when: storage_test_mount_expected_match_count|int == 1
 
 #
+# Verify swap status.
+#
+- command: realpath "{{ storage_test_volume._device }}"
+  register: storage_test_sys_node
+  when: storage_test_volume.fs_type == "swap"
+
+- name: Gather swap info
+  command: cat /proc/swaps
+  register: storage_test_swaps
+  when: storage_test_volume.fs_type == "swap"
+
+- name: Verify swap status
+  assert:
+    that: "{{ storage_test_swaps.stdout|regex_findall('^' + storage_test_sys_node.stdout + ' ', multiline=True)|list|length|int == storage_test_swap_expected_matches|int }}"
+    msg: "Unexpected number of matching active swaps"
+  when: storage_test_volume.fs_type == "swap"
+
+#
 # Verify mount options.
 #
 
@@ -42,3 +61,6 @@
     storage_test_mount_device_matches: null
     storage_test_mount_point_matches: null
     storage_test_mount_expected_match_count: null
+    storage_test_swap_expected_matches: null
+    storage_test_sys_node: null
+    storage_test_swaps: null

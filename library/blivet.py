@@ -577,7 +577,7 @@ class BlivetPartitionPool(BlivetPool):
 
     def _create(self):
         if self._device.format.type != "disklabel" or \
-           self._device.format.label_type != disklabel_type:
+           (disklabel_type and self._device.format.label_type != disklabel_type):
             if safe_mode:
                 raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' "
                                          "(pool '%s') in safe mode" % (self._device.name, self._pool['name']))
@@ -699,19 +699,22 @@ def get_mount_info(pools, volumes, actions, fstab):
             if action.is_destroy and action.is_format and action.format.type is not None:
                 mount = fstab.lookup('device_path', action.device.path)
                 if mount is not None:
-                    mount_info.append({"path": mount['mount_point'], 'state': 'absent'})
+                    mount_info.append({"src": mount['device_id'], "path": mount['mount_point'],
+                                       'state': 'absent', 'fstype': mount['fs_type']})
 
     def handle_new_mount(volume, fstab):
         replace = None
         mounted = False
 
         mount = fstab.lookup('device_path', volume['_device'])
-        if volume['mount_point']:
+        if volume['mount_point'] or volume['fs_type'] == 'swap':
             mounted = True
 
         # handle removal of existing mounts of this volume
-        if mount and mount['mount_point'] != volume['mount_point']:
-            replace = mount['mount_point']
+        if mount and mount['fs_type'] != 'swap' and mount['mount_point'] != volume['mount_point']:
+            replace = dict(path=mount['mount_point'], state="absent")
+        elif mount and mount['fs_type'] == 'swap':
+            replace = dict(src=mount['device_id'], fstype="swap", path="none", state="absent")
 
         return mounted, replace
 
@@ -721,7 +724,7 @@ def get_mount_info(pools, volumes, actions, fstab):
             if pool['state'] == 'present' and volume['state'] == 'present':
                 mounted, replace = handle_new_mount(volume, fstab)
                 if replace:
-                    mount_info.append({"path": replace, 'state': 'absent'})
+                    mount_info.append(replace)
                 if mounted:
                     mount_vols.append(volume)
 
@@ -730,18 +733,18 @@ def get_mount_info(pools, volumes, actions, fstab):
         if volume['state'] == 'present':
             mounted, replace = handle_new_mount(volume, fstab)
             if replace:
-                mount_info.append({"path": replace, 'state': 'absent'})
+                mount_info.append(replace)
             if mounted:
                 mount_vols.append(volume)
 
     for volume in mount_vols:
         mount_info.append({'src': volume['_mount_id'],
-                           'path': volume['mount_point'],
+                           'path': volume['mount_point'] if volume['fs_type'] != "swap" else "none",
                            'fstype': volume['fs_type'],
                            'opts': volume['mount_options'],
                            'dump': volume['mount_check'],
                            'passno': volume['mount_passno'],
-                           'state': 'mounted'})
+                           'state': 'mounted' if volume['fs_type'] != "swap" else "present"})
 
     return mount_info
 
@@ -760,6 +763,42 @@ def get_required_packages(b, pools, volumes):
         packages.extend(bvolume.required_packages)
 
     return sorted(list(set(packages)))
+
+
+def update_fstab_identifiers(b, pools, volumes):
+    """ Update fstab device identifiers.
+
+        This is to pick up new UUIDs for newly-formatted devices.
+    """
+    all_volumes = volumes[:]
+    for pool in pools:
+        if not pool['state'] == 'present':
+            continue
+
+        all_volumes += pool['volumes']
+
+    for volume in all_volumes:
+        if volume['state'] == 'present':
+            device = b.devicetree.resolve_device(volume['_mount_id'])
+            volume['_mount_id'] = device.fstab_spec
+            if device.format.type == 'swap':
+                device.format.setup()
+
+
+def activate_swaps(b, pools, volumes):
+    """ Activate all swaps specified as present. """
+    all_volumes = volumes[:]
+    for pool in pools:
+        if not pool['state'] == 'present':
+            continue
+
+        all_volumes += pool['volumes']
+
+    for volume in all_volumes:
+        if volume['state'] == 'present':
+            device = b.devicetree.resolve_device(volume['_mount_id'])
+            if device.format.type == 'swap':
+                device.format.setup()
 
 
 def run_module():
@@ -867,6 +906,9 @@ def run_module():
         finally:
             result['changed'] = True
             result['actions'] = [action_dict(a) for a in actions]
+
+    update_fstab_identifiers(b, module.params['pools'], module.params['volumes'])
+    activate_swaps(b, module.params['pools'], module.params['volumes'])
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
     result['leaves'] = [d.path for d in b.devicetree.leaves]

@@ -19,18 +19,18 @@
         name: storage
       vars:
         storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test1'
-                - name: test2
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test2'
-                - name: test3
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test3'
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test1'
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test2'
+              - name: test3
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test3'
 
     - include_tasks: verify-role-results.yml
 
@@ -39,18 +39,18 @@
         name: storage
       vars:
         storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test1'
-                - name: test2
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test2'
-                - name: test3
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test3'
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test1'
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test2'
+              - name: test3
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test3'
 
     - include_tasks: verify-role-results.yml
 
@@ -59,20 +59,20 @@
         name: storage
       vars:
         storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test1'
-                - name: test2
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test2'
-                  state: absent
-                - name: test3
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test3'
-                  state: absent
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test1'
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test2'
+                state: absent
+              - name: test3
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test3'
+                state: absent
 
     - include_tasks: verify-role-results.yml
 
@@ -81,20 +81,20 @@
         name: storage
       vars:
         storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test1'
-                - name: test2
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test2'
-                  state: absent
-                - name: test3
-                  size: "{{ volume_size }}"
-                  mount_point: '/opt/test3'
-                  state: absent
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test1'
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test2'
+                state: absent
+              - name: test3
+                size: "{{ volume_size }}"
+                mount_point: '/opt/test3'
+                state: absent
 
     - include_tasks: verify-role-results.yml
 
@@ -103,7 +103,7 @@
         name: storage
       vars:
         storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              state: absent
-              volumes: []
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+            volumes: []
