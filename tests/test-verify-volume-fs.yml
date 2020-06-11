@@ -1,12 +1,33 @@
 ---
+
+#
+# MDRaid devices paths are returned as a symlinks. But sometimes we need their targets.
+#
+- name: (1/3) Process device path (set initial value)
+  set_fact:
+    storage_test_device_path: "{{ storage_test_volume._device }}"
+
+# realpath fails when given empty string; the task then returns completely different dict.
+- block:
+  - name: (2/3) Process device path (get device file info)
+    command: realpath "{{ storage_test_volume._device }}"
+    register: storage_test_realpath
+
+  - name: (3/3) Process device path (replace device with its target if it is a symlink)
+    set_fact:
+      storage_test_device_path: "{{ storage_test_realpath.stdout }}"
+    when: storage_test_device_path not in storage_test_blkinfo.info
+
+  when: storage_test_volume._device != ""
+
 # type
 - name: Verify fs type
   assert:
-    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].fstype == storage_test_volume.fs_type }}"
+    that: "{{ storage_test_blkinfo.info[storage_test_device_path].fstype == storage_test_volume.fs_type }}"
   when: storage_test_volume.fs_type and _storage_test_volume_present
 
 # label
 - name: Verify fs label
   assert:
-    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].label == storage_test_volume.fs_label }}"
+    that: "{{ storage_test_blkinfo.info[storage_test_device_path].label == storage_test_volume.fs_label }}"
   when: _storage_test_volume_present

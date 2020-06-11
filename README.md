@@ -49,7 +49,7 @@ This specifies the name of the volume.
 
 ##### `type`
 This specifies the type of volume on which the file system will reside.
-Valid values for `type`: `lvm` or `disk`.
+Valid values for `type`: `lvm`, `disk` or `raid`.
 The default is determined according to the OS and release (currently `lvm`).
 
 ##### `disks`
@@ -77,6 +77,23 @@ The `mount_point` specifies the directory on which the file system will be mount
 
 ##### `mount_options`
 The `mount_options` specifies custom mount options as a string, e.g.: 'ro'.
+
+##### `raid_level`
+Specifies RAID level when type is `raid`.
+Accepted values are: `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+
+#### `raid_device_count`
+When type is `raid` specifies number of active RAID devices.
+
+#### `raid_spare_count`
+When type is `raid` specifies number of spare RAID devices.
+
+#### `raid_metadata_version`
+When type is `raid` specifies RAID metadata version as a string, e.g.: '1.0'.
+
+#### `raid_chunk_size`
+When type is `raid` specifies RAID chunk size as a string, e.g.: '512 KiB'.
+Chunk size has to be multiple of 4 KiB.
 
 ##### `encryption`
 This specifies whether or not the volume will be encrypted using LUKS.
