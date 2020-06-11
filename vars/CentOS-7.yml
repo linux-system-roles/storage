@@ -3,4 +3,4 @@ blivet_package_list:
   - python-blivet3
   - libblockdev-dm
   - libblockdev-lvm
-  - libblockdev-part
+  - libblockdev-swap
