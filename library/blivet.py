@@ -72,6 +72,9 @@ leaves:
 mounts:
     description: list of dicts describing mounts to set up
     type: list of dict
+crypts:
+    description: list of dicts describing crypttab entries to set up
+    type: list of dict
 pools:
     description: list of dicts describing the pools w/ device path for each volume
     type: list of dict
@@ -190,6 +193,20 @@ class BlivetVolume(object):
         if device is None:
             return
 
+        if device.format.type == 'luks':
+            # XXX If we have no key we will always re-encrypt.
+            device.format._key_file = self._volume.get('encryption_key_file')
+            device.format.passphrase = self._volume.get('encryption_passphrase')
+
+            # set up the original format as well since it'll get used for processing
+            device.original_format._key_file = self._volume.get('encryption_key_file')
+            device.original_format.passphrase = self._volume.get('encryption_passphrase')
+            if device.isleaf:
+                self._blivet.populate()
+
+            if not device.isleaf:
+                device = device.children[0]
+
         self._device = device
 
         # check that the type is correct, raising an exception if there is a name conflict
@@ -219,10 +236,53 @@ class BlivetVolume(object):
 
         # save device identifiers for use by the role
         self._volume['_device'] = self._device.path
+        self._volume['_raw_device'] = self._device.raw_device.path
         self._volume['_mount_id'] = self._device.fstab_spec
 
         # schedule removal of this device and any descendant devices
-        self._blivet.devicetree.recursive_remove(self._device)
+        self._blivet.devicetree.recursive_remove(self._device.raw_device)
+
+    def _manage_encryption(self):
+        # Make sure to handle adjusting both existing stacks and future stacks.
+        if self._device == self._device.raw_device and self._volume['encryption']:
+            # add luks
+            luks_name = "luks-%s" % self._device._name
+            if not self._device.format.exists:
+                fmt = self._device.format
+            else:
+                fmt = get_format(None)
+
+            self._blivet.format_device(self._device,
+                                       get_format("luks",
+                                                  name=luks_name,
+                                                  cipher=self._volume.get('encryption_cipher'),
+                                                  key_size=self._volume.get('encryption_key_size'),
+                                                  luks_version=self._volume.get('encryption_luks_version'),
+                                                  passphrase=self._volume.get('encryption_passphrase') or None,
+                                                  key_file=self._volume.get('encryption_key_file') or None))
+
+            if not self._device.format.has_key:
+                raise BlivetAnsibleError("encrypted volume '%s' missing key/passphrase" % self._volume['name'])
+
+            luks_device = devices.LUKSDevice(luks_name,
+                                             fmt=fmt,
+                                             parents=[self._device])
+            self._blivet.create_device(luks_device)
+            self._device = luks_device
+        elif self._device != self._device.raw_device and not self._volume['encryption']:
+            # remove luks
+            if not self._device.format.exists:
+                fmt = self._device.format
+            else:
+                fmt = get_format(None)
+
+            self._device = self._device.raw_device
+            self._blivet.destroy_device(self._device.children[0])
+            if fmt.type is not None:
+                self._blivet.format_device(self._device, fmt)
+
+        # XXX: blivet has to store cipher, key_size, luks_version for existing before we
+        #      can support re-encrypting based on changes to those parameters
 
     def _resize(self):
         """ Schedule actions as needed to ensure the device has the desired size. """
@@ -254,7 +314,7 @@ class BlivetVolume(object):
         if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name):
             raise BlivetAnsibleError("cannot remove existing formatting on volume '%s' in safe mode" % self._volume['name'])
 
-        if self._device.format.status:
+        if self._device.format.status and (self._device.format.mountable or self._device.format.type == "swap"):
             self._device.format.teardown()
         self._blivet.format_device(self._device, fmt)
 
@@ -275,16 +335,19 @@ class BlivetVolume(object):
         if self._device is None:
             raise BlivetAnsibleError("failed to look up or create device '%s'" % self._volume['name'])
 
+        self._manage_encryption()
+
         # schedule reformat if appropriate
-        if self._device.exists:
+        if self._device.raw_device.exists:
             self._reformat()
 
         # schedule resize if appropriate
-        if self._device.exists and self._volume['size']:
+        if self._device.raw_device.exists and self._volume['size']:
             self._resize()
 
         # save device identifiers for use by the role
         self._volume['_device'] = self._device.path
+        self._volume['_raw_device'] = self._device.raw_device.path
         self._volume['_mount_id'] = self._device.fstab_spec
 
 
@@ -295,7 +358,10 @@ class BlivetDiskVolume(BlivetVolume):
         return self._volume['disks'][0]
 
     def _type_check(self):
-        return self._device.is_disk
+        return self._device.raw_device.is_disk
+
+    def _create(self):
+        self._reformat()
 
     def _look_up_device(self):
         super(BlivetDiskVolume, self)._look_up_device()
@@ -313,7 +379,7 @@ class BlivetPartitionVolume(BlivetVolume):
     blivet_device_class = devices.PartitionDevice
 
     def _type_check(self):
-        return self._device.type == 'partition'
+        return self._device.raw_device.type == 'partition'
 
     def _get_device_id(self):
         return self._blivet_pool._disks[0].name + '1'
@@ -635,6 +701,7 @@ def manage_volume(b, volume):
     bvolume = _get_blivet_volume(b, volume)
     bvolume.manage()
     volume['_device'] = bvolume._volume.get('_device', '')
+    volume['_raw_device'] = bvolume._volume.get('_raw_device', '')
     volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
@@ -644,6 +711,7 @@ def manage_pool(b, pool):
     bpool.manage()
     for (volume, bvolume) in zip(pool['volumes'], bpool._blivet_volumes):
         volume['_device'] = bvolume._volume.get('_device', '')
+        volume['_raw_device'] = bvolume._volume.get('_raw_device', '')
         volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
@@ -749,6 +817,20 @@ def get_mount_info(pools, volumes, actions, fstab):
     return mount_info
 
 
+def get_crypt_info(actions):
+    info = list()
+    for action in actions:
+        if not (action.is_format and action.format.type == 'luks'):
+            continue
+
+        info.append(dict(backing_device=action.device.path,
+                         name=action.format.map_name,
+                         password=action.format.key_file or '-',
+                         state='present' if action.is_create else 'absent'))
+
+    return sorted(info, key=lambda e: e['state'])
+
+
 def get_required_packages(b, pools, volumes):
     packages = list()
     for pool in pools:
@@ -780,6 +862,14 @@ def update_fstab_identifiers(b, pools, volumes):
     for volume in all_volumes:
         if volume['state'] == 'present':
             device = b.devicetree.resolve_device(volume['_mount_id'])
+            if device is None and volume['encryption']:
+                device = b.devicetree.resolve_device(volume['_raw_device'])
+                if device is not None and not device.isleaf:
+                    device = device.children[0]
+                    volume['_device'] = device.path
+
+            if device is None:
+                raise BlivetAnsibleError("failed to look up device for volume %s (%s/%s)" % (volume['name'], volume['_device'], volume['_mount_id']))
             volume['_mount_id'] = device.fstab_spec
             if device.format.type == 'swap':
                 device.format.setup()
@@ -817,6 +907,7 @@ def run_module():
         actions=list(),
         leaves=list(),
         mounts=list(),
+        crypts=list(),
         pools=list(),
         volumes=list(),
         packages=list(),
@@ -893,7 +984,8 @@ def run_module():
     result['packages'] = b.packages[:]
 
     for action in scheduled:
-        if action.is_destroy and action.is_format and action.format.exists:
+        if action.is_destroy and action.is_format and action.format.exists and \
+           (action.format.mountable or action.format.type == "swap"):
             action.format.teardown()
 
     if scheduled:
@@ -911,6 +1003,7 @@ def run_module():
     activate_swaps(b, module.params['pools'], module.params['volumes'])
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
+    result['crypts'] = get_crypt_info(actions)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']

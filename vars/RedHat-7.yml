@@ -1,6 +1,7 @@
 blivet_package_list:
   - python-enum34
   - python-blivet3
+  - libblockdev-crypto
   - libblockdev-dm
   - libblockdev-lvm
   - libblockdev-mdraid
