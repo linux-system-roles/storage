@@ -16,7 +16,7 @@
   - name: (3/3) Process device path (replace device with its target if it is a symlink)
     set_fact:
       storage_test_device_path: "{{ storage_test_realpath.stdout }}"
-    when: storage_test_device_path not in storage_test_blkinfo.info
+    when: storage_test_device_path in storage_test_blkinfo.info
 
   when: storage_test_volume._device != ""
 
