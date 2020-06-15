@@ -84,6 +84,7 @@ volumes:
 '''
 
 import logging
+import os
 import traceback
 import inspect
 
@@ -1038,6 +1039,11 @@ def update_fstab_identifiers(b, pools, volumes):
             volume['_mount_id'] = device.fstab_spec
             if device.format.type == 'swap':
                 device.format.setup()
+
+            if device.status:
+                volume['_kernel_device'] = os.path.realpath(device.path)
+            if device.raw_device.status:
+                volume['_raw_kernel_device'] = os.path.realpath(device.raw_device.path)
 
 
 def activate_swaps(b, pools, volumes):
