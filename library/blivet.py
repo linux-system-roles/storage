@@ -96,7 +96,6 @@ try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
     from blivet3 import devices
-    from blivet3.devicelibs.mdraid import MD_CHUNK_SIZE
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -109,7 +108,6 @@ except ImportError:
         from blivet import Blivet
         from blivet.callbacks import callbacks
         from blivet import devices
-        from blivet.devicelibs.mdraid import MD_CHUNK_SIZE
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -526,11 +524,12 @@ class BlivetMDRaidVolume(BlivetVolume):
                                                                    self._volume.get("raid_device_count"),
                                                                    self._volume.get("raid_spare_count"))
 
-        chunk_size = Size(self._volume.get("raid_chunk_size", MD_CHUNK_SIZE))
-        metadata_version = self._volume.get("raid_metadata_version", "default")
+        chunk_size = self._volume.get("raid_chunk_size")
+        chunk_size = Size(chunk_size) if chunk_size is not None else None
+        metadata_version = self._volume.get("raid_metadata_version")
 
         # chunk size should be divisible by 4 KiB but mdadm ignores that. why?
-        if chunk_size % Size("4 KiB") != Size(0):
+        if chunk_size is not None and  chunk_size % Size("4 KiB") != Size(0):
             raise BlivetAnsibleError("chunk size must be multiple of 4 KiB")
 
         if safe_mode:
