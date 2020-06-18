@@ -15,6 +15,20 @@
         min_size: "{{ volume_size }}"
         max_return: 1
 
+    - name: Create a key file
+      tempfile:
+        prefix: storage_test
+        suffix: lukskey
+      register: storage_test_key_file
+      changed_when: false
+
+    - name: Write the key into the key file
+      lineinfile:
+        path: "{{ storage_test_key_file.path }}"
+        state: present
+        line: 'veryveryveryveryverysecureindeed'
+      changed_when: false
+
     ##
     ## Disk
     ##
@@ -181,7 +195,7 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
                 encryption: true
-                encryption_passphrase: 'yabbadabbadoo'
+                encryption_key_file: "{{ storage_test_key_file.path }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -285,3 +299,9 @@
             state: absent
 
     - include_tasks: verify-role-results.yml
+
+    - name: Remove the key file
+      file:
+        path: "{{ storage_test_key_file.path }}"
+        state: absent
+      changed_when: false
