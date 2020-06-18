@@ -7,6 +7,12 @@
   register: storage_test_luks_dev
   when: storage_test_volume.encryption
 
+- name: Collect LUKS info for this volume
+  command: cryptsetup luksDump {{ storage_test_volume._raw_device }}
+  register: luks_dump
+  when: storage_test_volume.encryption
+  changed_when: false
+
 - name: Verify the presence/absence of the LUKS device node
   assert:
     that: "{{ storage_test_luks_dev.stat.exists and storage_test_luks_dev.stat.isblk
@@ -32,6 +38,24 @@
   assert:
     that: "{{ storage_test_blkinfo.info[storage_test_volume._device].type == 'crypt' }}"
   when: _storage_test_volume_present and storage_test_volume.encryption
+
+- name: Check LUKS version
+  assert:
+    that: "{{ luks_dump.stdout|regex_search('^\\s+Version: ' + storage_test_volume.encryption_luks_version + '$') }}"
+    msg: "Wrong LUKS version for volume {{ storage_test_volume.name }}"
+  when: _storage_test_volume_present and storage_test_volume.encryption_luks_version
+
+- name: Check LUKS key size
+  assert:
+    that: "{{ luks_dump.stdout|regex_search('^\\s+Key: ' + storage_test_volume.encryption_key_size + ' bits$') }}"
+    msg: "Wrong key size for volume {{ storage_test_volume.name }}"
+  when: _storage_test_volume_present and storage_test_volume.encryption_key_size
+
+- name: Check LUKS cipher
+  assert:
+    that: "{{ luks_dump.stdout|regex_search('^\\s+Cipher: ' + storage_test_volume.encryption_cipher + '$') }}"
+    msg: "Wrong key size for volume {{ storage_test_volume.name }}"
+  when: _storage_test_volume_present and storage_test_volume.encryption_cipher
 
 - set_fact:
     _storage_test_expected_crypttab_entries: "{{ (storage_test_volume.encryption and _storage_test_volume_present)|ternary(1, 0) }}"

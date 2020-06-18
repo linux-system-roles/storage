@@ -251,6 +251,9 @@
                 size: 4g
                 encryption: true
                 encryption_passphrase: 'yabbadabbadoo'
+                encryption_luks_version: luks1
+                encryption_key_size: 512
+                encryption_cipher: 'serpent-xts-plain64'
 
     - include_tasks: verify-role-results.yml
 
