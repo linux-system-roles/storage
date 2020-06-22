@@ -5,6 +5,13 @@
     _storage_test_expected_crypttab_entries: "{{ (storage_test_pool.encryption and storage_test_pool.state == 'present')|ternary(1, 0) }}"
     _storage_test_expected_crypttab_key_file: "{{ storage_test_pool.encryption_key_file or '-' }}"
 
+- name: Validate pool member LUKS settings
+  include_tasks: verify-pool-member-encryption.yml
+  loop: "{{ _storage_test_pool_pvs }}"
+  loop_control:
+    loop_var: _storage_test_pool_member_path
+  when: storage_test_pool.type == 'lvm' and storage_test_pool.encryption
+
 - name: Validate pool member crypttab entries
   include_tasks: verify-pool-member-crypttab.yml
   loop: "{{ _storage_test_pool_pvs }}"
