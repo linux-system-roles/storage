@@ -10,7 +10,7 @@
 - name: Collect LUKS info for this volume
   command: cryptsetup luksDump {{ storage_test_volume._raw_device }}
   register: luks_dump
-  when: storage_test_volume.encryption
+  when: storage_test_volume.encryption and _storage_test_volume_present
   changed_when: false
 
 - name: Verify the presence/absence of the LUKS device node
