@@ -15,12 +15,14 @@
             type: lvm
             state: present
             disks: []
+            encryption: false
             volumes:
               - name: test1
                 type: lvm
                 fs_type: xfs
                 state: present
                 mountpoint: '/foo'
+                encryption: false
 
     - assert:
         that:
@@ -38,6 +40,7 @@
             state: present
             disks: []
             fs_type: ext4
+            encryption: false
 
     - assert:
         that:
@@ -55,6 +58,7 @@
             state: present
             disks: []
             fs_type: swap
+            encryption: false
 
     - assert:
         that:
