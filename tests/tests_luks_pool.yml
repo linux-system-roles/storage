@@ -64,10 +64,9 @@
           changed_when: false
 
         - name: Write the key into the key file
-          lineinfile:
-            path: "{{ storage_test_key_file.path }}"
-            state: present
-            line: 'veryveryveryveryverysecureindeed'
+          copy:
+            dest: "{{ storage_test_key_file.path }}"
+            content: veryveryveryveryverysecureindeed
           changed_when: false
 
         - name: Create an encrypted lvm pool using a key file
