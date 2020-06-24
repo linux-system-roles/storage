@@ -16,20 +16,6 @@
         min_size: "{{ volume_size }}"
         max_return: 1
 
-    - name: Create a key file
-      tempfile:
-        prefix: storage_test
-        suffix: lukskey
-      register: storage_test_key_file
-      changed_when: false
-
-    - name: Write the key into the key file
-      lineinfile:
-        path: "{{ storage_test_key_file.path }}"
-        state: present
-        line: 'veryveryveryveryverysecureindeed'
-      changed_when: false
-
     ##
     ## LVM Pool
     ##
@@ -68,22 +54,44 @@
                    not blivet_output.changed"
             msg: "Unexpected behavior w/ encrypted pool w/ no key"
 
-    - name: Create an encrypted lvm pool using a key file
-      include_role:
-        name: storage
-      vars:
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            encryption: true
-            encryption_key_file: "{{ storage_test_key_file.path }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
+    - name: Test key file handling
+      block:
+        - name: Create a key file
+          tempfile:
+            prefix: storage_test
+            suffix: lukskey
+          register: storage_test_key_file
+          changed_when: false
 
-    - include_tasks: verify-role-results.yml
+        - name: Write the key into the key file
+          lineinfile:
+            path: "{{ storage_test_key_file.path }}"
+            state: present
+            line: 'veryveryveryveryverysecureindeed'
+          changed_when: false
+
+        - name: Create an encrypted lvm pool using a key file
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                encryption: true
+                encryption_key_file: "{{ storage_test_key_file.path }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+
+        - include_tasks: verify-role-results.yml
+      always:
+        - name: Remove the key file
+          file:
+            path: "{{ storage_test_key_file.path }}"
+            state: absent
+          changed_when: false
 
     - name: Remove the encryption layer
       include_role:
@@ -150,9 +158,3 @@
             state: absent
 
     - include_tasks: verify-role-results.yml
-
-    - name: Remove the key file
-      file:
-        path: "{{ storage_test_key_file.path }}"
-        state: absent
-      changed_when: false
