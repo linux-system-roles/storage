@@ -17,6 +17,10 @@ storage_pool_defaults:
   encryption_luks_version: null
 
   raid_level: null
+  raid_device_count: null
+  raid_spare_count: null
+  raid_chunk_size: null
+  raid_metadata_version: null
 
 storage_volume_defaults:
   state: "present"

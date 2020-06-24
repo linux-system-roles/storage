@@ -3,7 +3,7 @@
 # Verify the pool configuration.
 #
 - set_fact:
-    _storage_pool_tests: ['members']
+    _storage_pool_tests: ['members', 'md']
   # future:
   #   name
   #   type
