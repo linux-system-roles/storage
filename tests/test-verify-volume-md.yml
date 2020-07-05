@@ -1,10 +1,10 @@
 ---
 
   # Only when volume is raid
-- name: check RAID options
+- name: Check RAID options
   block:
 
-    - name: get information about RAID
+    - name: Get information about RAID
       command: "mdadm --detail {{ storage_test_volume._raw_device }}"
       register: storage_test_mdadm
       changed_when: false
@@ -22,19 +22,19 @@
         storage_test_md_metadata_version_re: "{{('Version : ' ~ storage_test_volume.raid_metadata_version ~ '\n')|regex_escape()}}"
       when: storage_test_volume.raid_metadata_version is defined
 
-    - name: check RAID active devices count
+    - name: Check RAID active devices count
       assert:
         that: "storage_test_mdadm.stdout is regex(storage_test_md_active_devices_re)"
         msg: "Expected {{ storage_test_volume.raid_device_count }} active RAID devices."
       when: storage_test_volume.raid_device_count is not none
 
-    - name: check RAID spare devices count
+    - name: Check RAID spare devices count
       assert:
         that: "storage_test_mdadm.stdout is regex(storage_test_md_spare_devices_re)"
         msg: "Expected {{ storage_test_volume.raid_spare_count }} spare RAID devices."
       when: storage_test_volume.raid_spare_count is not none
 
-    - name: check RAID metadata version
+    - name: Check RAID metadata version
       assert:
         that: "storage_test_mdadm.stdout is regex(storage_test_md_metadata_version_re)"
         msg: "Expected {{ storage_test_volume.raid_metadata_version }} RAID metadata version."

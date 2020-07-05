@@ -1,5 +1,5 @@
 ---
-- name: test lvm and xfs package deps
+- name: Test lvm and xfs package deps
   blivet:
     packages_only: "{{ packages_only }}"
     pools: "{{ storage_pools|default([]) }}"

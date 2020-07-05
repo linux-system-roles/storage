@@ -26,7 +26,7 @@
                 disks: ['/dev/surelyidonotexist']
                 mount_point: "{{ mount_location }}"
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -62,7 +62,7 @@
                 type: disk
                 disks: "{{ unused_disks }}"
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -91,7 +91,7 @@
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
 
-    - name: create a file
+    - name: Create a file
       file:
         path: "{{ testfile }}"
         state: touch
@@ -108,7 +108,7 @@
                 fs_type: 'ext3'
                 disks: "{{ unused_disks }}"
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -149,7 +149,7 @@
                 fs_type: 'ext3'
                 disks: "{{ unused_disks }}"
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -178,12 +178,12 @@
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
 
-    - name: stat the file
+    - name: Stat the file
       stat:
         path: "{{ testfile }}"
       register: stat_r
 
-    - name: assert file presence
+    - name: Assert file presence
       assert:
         that:
           stat_r.stat.isreg is defined and stat_r.stat.isreg
@@ -200,7 +200,7 @@
                 disks: "{{ unused_disks }}"
                 type: partition
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -229,7 +229,7 @@
                 disks: "{{ unused_disks }}"
                 type: lvm
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -247,12 +247,12 @@
                       not blivet_output.changed }}"
             msg: "Unexpected behavior w/ existing data on specified disks"
 
-    - name: stat the file
+    - name: Stat the file
       stat:
         path: "{{ testfile }}"
       register: stat_r
 
-    - name: assert file presence
+    - name: Assert file presence
       assert:
         that:
           stat_r.stat.isreg is defined and stat_r.stat.isreg

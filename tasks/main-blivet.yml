@@ -1,10 +1,10 @@
 ---
-- name: get a list of rpm packages installed on host machine
+- name: Get a list of rpm packages installed on host machine
   package_facts:
     manager: "auto"
   when: false
 
-- name: make sure blivet is available
+- name: Make sure blivet is available
   package:
     name: "{{ blivet_package_list }}"
     state: present
@@ -15,7 +15,7 @@
 ## The pools are easy, as are the standalone volumes. The pool volumes are trickier,
 ## perhaps because I am new to ansible/yaml/jinja.
 ##
-- name: initialize internal facts
+- name: Initialize internal facts
   set_fact:
     _storage_pools: []  # list of pools w/ defaults applied as necessary
     _storage_volumes: []  # list of standalone volumes w/ defaults applied as necessary
@@ -87,7 +87,7 @@
 - debug:
     var: _storage_volumes
 
-- name: get required packages
+- name: Get required packages
   blivet:
     pools: "{{ _storage_pools }}"
     volumes: "{{ _storage_volumes }}"
@@ -96,12 +96,12 @@
     packages_only: true
   register: package_info
 
-- name: make sure required packages are installed
+- name: Make sure required packages are installed
   package:
     name: "{{ package_info.packages }}"
     state: present
 
-- name: manage the pools and volumes to match the specified state
+- name: Manage the pools and volumes to match the specified state
   blivet:
     pools: "{{ _storage_pools }}"
     volumes: "{{ _storage_volumes }}"
@@ -113,11 +113,11 @@
 - debug:
     var: blivet_output
 
-- name: set the list of pools for test verification
+- name: Set the list of pools for test verification
   set_fact:
     _storage_pools_list: "{{ blivet_output.pools }}"
 
-- name: set the list of volumes for test verification
+- name: Set the list of volumes for test verification
   set_fact:
     _storage_volumes_list: "{{ blivet_output.volumes }}"
 
@@ -133,7 +133,7 @@
 #     update its view, then set up the new mounts. Otherwise,
 #     systemd will forcibly prevent mounting a new volume to an
 #     existing mount point.
-- name: remove obsolete mounts
+- name: Remove obsolete mounts
   mount:
     src: "{{ mount_info['src']|default(omit) }}"
     path: "{{ mount_info['path'] }}"
@@ -144,12 +144,12 @@
   loop_control:
     loop_var: mount_info
 
-- name: tell systemd to refresh its view of /etc/fstab
+- name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: yes
   when: blivet_output['mounts']
 
-- name: set up new/current mounts
+- name: Set up new/current mounts
   mount:
     src: "{{ mount_info['src']|default(omit) }}"
     path: "{{ mount_info['path'] }}"
@@ -160,7 +160,7 @@
   loop_control:
     loop_var: mount_info
 
-- name: tell systemd to refresh its view of /etc/fstab
+- name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: yes
   when: blivet_output['mounts']

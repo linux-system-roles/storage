@@ -6,7 +6,7 @@
     - include_role:
         name: storage
 
-    - name: test lvm and xfs package deps
+    - name: Test lvm and xfs package deps
       include_tasks: run_blivet.yml
       vars:
         packages_only: true
@@ -30,7 +30,7 @@
           - "{{ not blivet_output.changed }}"
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
-    - name: test disk and ext4 package deps
+    - name: Test disk and ext4 package deps
       include_tasks: run_blivet.yml
       vars:
         packages_only: true
@@ -48,7 +48,7 @@
           - "{{ not blivet_output.changed }}"
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
-    - name: test disk and swap package deps
+    - name: Test disk and swap package deps
       include_tasks: run_blivet.yml
       vars:
         packages_only: true
@@ -65,4 +65,3 @@
           - "{{ blivet_output.packages}} == []"
           - "{{ not blivet_output.changed }}"
         msg: "unexpected required package list: {{ blivet_output.packages }}"
-

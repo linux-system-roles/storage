@@ -31,7 +31,7 @@
                 mount_point: "{{ mount_location }}"
                 encryption: true
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -113,7 +113,7 @@
                     size: 4g
                     encryption: true
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 
@@ -226,7 +226,7 @@
                     size: 4g
                     encryption: true
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 

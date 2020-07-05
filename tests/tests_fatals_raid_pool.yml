@@ -42,7 +42,7 @@
                   size: "{{ volume3_size }}"
                   mount_point: "{{ mount_location3 }}"
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 

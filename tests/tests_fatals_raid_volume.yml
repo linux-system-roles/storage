@@ -28,7 +28,7 @@
                 disks: "{{ unused_disks }}"
                 mount_point: "{{ mount_location }}"
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 

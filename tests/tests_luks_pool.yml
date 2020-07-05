@@ -36,7 +36,7 @@
                     mount_point: "{{ mount_location }}"
                     size: 4g
 
-        - name: unreachable task
+        - name: Unreachable task
           fail:
             msg: UNREACH
 

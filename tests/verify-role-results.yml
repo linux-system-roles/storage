@@ -11,7 +11,7 @@
 #
 # Collect some information about the current state of the system.
 #
-- name: Collect info about the volumes.
+- name: Collect info about the volumes
   blockdev_info:
   register: storage_test_blkinfo
   changed_when: false
