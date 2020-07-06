@@ -962,7 +962,8 @@ def get_mount_info(pools, volumes, actions, fstab):
         mounted = False
 
         mount = fstab.lookup('device_path', volume['_device'])
-        if volume['mount_point'] or volume['fs_type'] == 'swap':
+        if (volume['mount_point'] and volume['mount_point'].startswith('/')) \
+           or volume['fs_type'] == 'swap':
             mounted = True
 
         # handle removal of existing mounts of this volume
