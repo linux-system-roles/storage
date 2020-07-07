@@ -45,11 +45,14 @@ __WARNING__: Toggling encryption for a pool is a destructive operation, meaning
              the pool itself will be removed as part of the process of
              adding/removing the encryption layer.
 
-##### `encryption_passphrase`
-This string specifies a passphrase used to unlock/open the LUKS volume(s).
+##### `encryption_password`
+This string specifies a password or passphrase used to unlock/open the LUKS volume(s).
 
-##### `encryption_key_file`
-This string specifies the full path to the key file used to unlock the LUKS volume(s).
+##### `encryption_key`
+This string specifies the full path to the key file on the managed nodes used to unlock
+the LUKS volume(s).  It is the responsibility of the user of this role to securely copy
+this file to the managed nodes, or otherwise ensure that the file is on the managed
+nodes.
 
 ##### `encryption_cipher`
 This string specifies a non-default cipher to be used by LUKS.
@@ -122,11 +125,14 @@ __WARNING__: Toggling encryption for a volume is a destructive operation, meanin
              all data on that volume will be removed as part of the process of
              adding/removing the encryption layer.
 
-##### `encryption_passphrase`
-This string specifies a passphrase used to unlock/open the LUKS volume.
+##### `encryption_password`
+This string specifies a password or passphrase used to unlock/open the LUKS volume.
 
-##### `encryption_key_file`
-This string specifies the full path to the key file used to unlock the LUKS volume.
+##### `encryption_key`
+This string specifies the full path to the key file on the managed nodes used to unlock
+the LUKS volume(s).  It is the responsibility of the user of this role to securely copy
+this file to the managed nodes, or otherwise ensure that the file is on the managed
+nodes.
 
 ##### `encryption_cipher`
 This string specifies a non-default cipher to be used by LUKS.
