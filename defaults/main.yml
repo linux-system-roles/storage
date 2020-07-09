@@ -8,6 +8,7 @@ storage_safe_mode: true  # fail instead of implicitly/automatically removing dev
 storage_pool_defaults:
   state: "present"
   type: lvm
+  disks: []
   volumes: []
 
   encryption: false
@@ -27,6 +28,7 @@ storage_volume_defaults:
   state: "present"
   type: lvm
   size: 0
+  disks: []
 
   fs_type: "xfs"
   fs_label: ""
