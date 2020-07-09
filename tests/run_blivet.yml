@@ -1,7 +1,12 @@
 ---
+- include_vars:
+    file: roles/linux-system-roles.storage/defaults/main.yml
+
 - name: test lvm and xfs package deps
   blivet:
     packages_only: "{{ packages_only }}"
     pools: "{{ storage_pools|default([]) }}"
     volumes: "{{ storage_volumes|default([]) }}"
+    pool_defaults: "{{ storage_pool_defaults }}"
+    volume_defaults: "{{ storage_volume_defaults }}"
   register: blivet_output
