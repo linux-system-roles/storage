@@ -1364,7 +1364,7 @@ def run_module():
         module.fail_json(msg="multiple pools with the same name: {0}".format(",".join(duplicates)),
                          **result)
     for pool in module.params['pools']:
-        duplicates = find_duplicate_names(pool['volumes'])
+        duplicates = find_duplicate_names(pool.get('volumes', list()))
         if duplicates:
             module.fail_json(msg="multiple volumes in pool '{0}' with the "
                                  "same name: {1}".format(pool['name'], ",".join(duplicates)),
