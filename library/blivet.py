@@ -821,7 +821,7 @@ class BlivetPool(BlivetBase):
 
     def _look_up_disks(self):
         """ Look up the pool's disks in blivet's device tree. """
-        if not self._pool['disks']:
+        if not self._device and not self._pool['disks']:
             raise BlivetAnsibleError("no disks specified for pool '%s'" % self._pool['name'])
         elif not isinstance(self._pool['disks'], list):
             raise BlivetAnsibleError("pool disks must be specified as a list")
@@ -832,7 +832,7 @@ class BlivetPool(BlivetBase):
             if device is not None:  # XXX fail if any disk isn't resolved?
                 disks.append(device)
 
-        if self._pool['disks'] and not disks:
+        if self._pool['disks'] and not self._device and not disks:
             raise BlivetAnsibleError("unable to resolve any disks specified for pool '%s' (%s)" % (self._pool['name'], self._pool['disks']))
 
         self._disks = disks
@@ -974,9 +974,9 @@ class BlivetPool(BlivetBase):
         """ Schedule actions to configure this pool according to the yaml input. """
         global safe_mode
         # look up the device
-        self._look_up_disks()
         self._look_up_device()
         self._apply_defaults()
+        self._look_up_disks()
 
         # schedule destroy if appropriate, including member type change
         if not self.ultimately_present:
