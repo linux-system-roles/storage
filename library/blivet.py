@@ -821,6 +821,9 @@ class BlivetPool(BlivetBase):
 
     def _look_up_disks(self):
         """ Look up the pool's disks in blivet's device tree. """
+        if self._disks:
+            return
+
         if not self._device and not self._pool['disks']:
             raise BlivetAnsibleError("no disks specified for pool '%s'" % self._pool['name'])
         elif not isinstance(self._pool['disks'], list):
@@ -999,6 +1002,7 @@ class BlivetPartitionPool(BlivetPool):
         return self._device.partitionable
 
     def _look_up_device(self):
+        self._look_up_disks()
         self._device = self._disks[0]
 
     def _create(self):
