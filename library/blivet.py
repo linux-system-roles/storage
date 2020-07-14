@@ -118,6 +118,7 @@ except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.common import sys_info
 
 if BLIVET_PACKAGE:
     blivet_flags.debug = True
@@ -449,6 +450,20 @@ class BlivetDiskVolume(BlivetVolume):
 
     def _type_check(self):
         return self._device.raw_device.is_disk
+
+    def _get_format(self):
+        fmt = super(BlivetDiskVolume, self)._get_format()
+        # pass -F to mke2fs on whole disks in RHEL7
+        if self._volume['fs_type'] in ('ext2', 'ext3', 'ext4') and \
+           sys_info.get_distribution().lower() in ('redhat', 'centos') and \
+           sys_info.get_distribution_version().startswith('7.'):
+            if fmt.create_options:
+                fmt.create_options += " "
+            else:
+                fmt.create_options = ""
+            fmt.create_options += "-F"
+
+        return fmt
 
     def _create(self):
         self._reformat()
