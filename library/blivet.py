@@ -228,6 +228,8 @@ class BlivetVolume(BlivetBase):
 
         fmt = get_format(self._volume['fs_type'])
         packages.extend(fmt.packages)
+        if self._volume['encryption']:
+            packages.extend(get_format('luks').packages)
         return packages
 
     @property
@@ -619,6 +621,9 @@ class BlivetPool(BlivetBase):
         packages = list()
         if self.ultimately_present and self.__class__.blivet_device_class is not None:
             packages.extend(self.__class__.blivet_device_class._packages)
+
+        if self._pool['encryption']:
+            packages.extend(get_format('luks').packages)
 
         return packages
 

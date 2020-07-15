@@ -54,22 +54,43 @@
                    not blivet_output.changed"
             msg: "Unexpected behavior w/ encrypted pool w/ no key"
 
-    - name: Create an encrypted lvm volume w/ default fs
-      include_role:
-        name: storage
-      vars:
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            encryption: true
-            encryption_passphrase: 'yabbadabbadoo'
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
+    - name: Test key file handling
+      block:
+        - name: Create a key file
+          tempfile:
+            prefix: storage_test
+            suffix: lukskey
+          register: storage_test_key_file
+          changed_when: false
 
-    - include_tasks: verify-role-results.yml
+        - name: Write the key into the key file
+          copy:
+            dest: "{{ storage_test_key_file.path }}"
+            content: veryveryveryveryverysecureindeed
+          changed_when: false
+
+        - name: Create an encrypted lvm pool using a key file
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                encryption: true
+                encryption_key_file: "{{ storage_test_key_file.path }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+
+        - include_tasks: verify-role-results.yml
+      always:
+        - name: Remove the key file
+          file:
+            path: "{{ storage_test_key_file.path }}"
+            state: absent
+          changed_when: false
 
     - name: Remove the encryption layer
       include_role:
@@ -98,6 +119,9 @@
             disks: "{{ unused_disks }}"
             encryption: true
             encryption_passphrase: 'yabbadabbadoo'
+            encryption_luks_version: luks1
+            encryption_key_size: 512
+            encryption_cipher: 'serpent-xts-plain64'
             volumes:
               - name: test1
                 mount_point: "{{ mount_location }}"

@@ -167,23 +167,44 @@
 
     - include_tasks: verify-role-results.yml
 
-    - name: Add encryption to the volume
-      include_role:
-        name: storage
-      vars:
-        storage_pools:
-          - name: foo
-            type: partition
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                type: partition
-                mount_point: "{{ mount_location }}"
-                size: 4g
-                encryption: true
-                encryption_passphrase: 'yabbadabbadoo'
+    - name: Test key file handling
+      block:
+        - name: Create a key file
+          tempfile:
+            prefix: storage_test
+            suffix: lukskey
+          register: storage_test_key_file
+          changed_when: false
 
-    - include_tasks: verify-role-results.yml
+        - name: Write the key into the key file
+          copy:
+            dest: "{{ storage_test_key_file.path }}"
+            content: veryveryveryveryverysecureindeed
+          changed_when: false
+
+        - name: Add encryption to the volume
+          include_role:
+            name: storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_key_file: "{{ storage_test_key_file.path }}"
+
+        - include_tasks: verify-role-results.yml
+      always:
+        - name: Remove the key file
+          file:
+            path: "{{ storage_test_key_file.path }}"
+            state: absent
+          changed_when: false
 
     ##
     ## LVM
@@ -237,6 +258,9 @@
                 size: 4g
                 encryption: true
                 encryption_passphrase: 'yabbadabbadoo'
+                encryption_luks_version: luks1
+                encryption_key_size: 512
+                encryption_cipher: 'serpent-xts-plain64'
 
     - include_tasks: verify-role-results.yml
 
