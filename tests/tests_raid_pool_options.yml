@@ -17,9 +17,10 @@
 
     - include_tasks: get_unused_disk.yml
       vars:
-        max_return: 2
+        max_return: 3
+        disks_needed: 3
 
-    - name: Create a RAID0 device
+    - name: Create a RAID1 device
       include_role:
         name: storage
       vars:
@@ -27,7 +28,10 @@
           - name: vg1
             disks: "{{ unused_disks }}"
             type: lvm
-            raid_level: "raid0"
+            raid_level: "raid1"
+            raid_device_count: 2
+            raid_spare_count: 1
+            raid_metadata_version: "1.0"
             state: present
             volumes:
               - name: lv1
@@ -42,7 +46,7 @@
 
     - include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous invocation to verify idempotence
+    - name: Remove the pool created above
       include_role:
         name: storage
       vars:
@@ -50,30 +54,10 @@
           - name: vg1
             disks: "{{ unused_disks }}"
             type: lvm
-            raid_level: "raid0"
-            state: present
-            volumes:
-              - name: lv1
-                size: "{{ volume1_size }}"
-                mount_point: "{{ mount_location1 }}"
-              - name: lv2
-                size: "{{ volume2_size }}"
-                mount_point: "{{ mount_location2 }}"
-              - name: lv3
-                size: "{{ volume3_size }}"
-                mount_point: "{{ mount_location3 }}"
-
-    - include_tasks: verify-role-results.yml
-
-    - name: Remove the device created above
-      include_role:
-        name: storage
-      vars:
-        storage_pools:
-          - name: vg1
-            disks: "{{ unused_disks }}"
-            type: lvm
-            raid_level: "raid0"
+            raid_level: "raid1"
+            raid_device_count: 2
+            raid_spare_count: 1
+            raid_metadata_version: "1.0"
             state: absent
             volumes:
               - name: lv1
