@@ -13,7 +13,7 @@
     - include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
-        max_return: 1
+        max_return: 2
 
     - name: Create a disk device with swap
       include_role:
@@ -22,8 +22,21 @@
         storage_volumes:
           - name: test1
             type: disk
-            disks: "{{ unused_disks }}"
+            disks: "{{ [unused_disks[0]] }}"
             fs_type: 'swap'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Format second disk as ext3
+      include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: test2
+            type: disk
+            mount_point: none
+            fs_type: ext3
+            disks: "{{ [unused_disks[1]] }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -36,7 +49,7 @@
             type: disk
             mount_point: "{{ mount_location }}"
             fs_type: ext3
-            disks: "{{ unused_disks }}"
+            disks: "{{ [unused_disks[0]] }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -49,7 +62,7 @@
             type: disk
             mount_point: "{{ mount_location }}"
             fs_type: ext3
-            disks: "{{ unused_disks }}"
+            disks: "{{ [unused_disks[0]] }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -60,7 +73,7 @@
         storage_volumes:
           - name: test1
             type: disk
-            disks: "{{ unused_disks }}"
+            disks: "{{ [unused_disks[0]] }}"
             fs_type: 'swap'
 
     - include_tasks: verify-role-results.yml
@@ -72,7 +85,7 @@
         storage_volumes:
           - name: test1
             type: disk
-            disks: "{{ unused_disks }}"
+            disks: "{{ [unused_disks[0]] }}"
             fs_type: 'swap'
 
     - include_tasks: verify-role-results.yml
@@ -84,8 +97,13 @@
         storage_volumes:
           - name: test1
             type: disk
-            disks: "{{ unused_disks }}"
+            disks: "{{ [unused_disks[0]] }}"
             mount_point: "{{ mount_location }}"
+            state: absent
+          - name: test2
+            type: disk
+            disks: "{{ [unused_disks[1]] }}"
+            mount_point: none
             state: absent
 
     - include_tasks: verify-role-results.yml
