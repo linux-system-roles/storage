@@ -94,7 +94,7 @@
       vars:
         max_return: 2
 
-    - name: Create a RAID0 device mounted on "{{ mount_location1 }}"
+    - name: Create a RAID1 device mounted on "{{ mount_location1 }}"
       include_role:
         name: storage
       vars:
@@ -168,7 +168,7 @@
       vars:
         max_return: 3
 
-    - name: Create a RAID0 device mounted on "{{ mount_location1 }}"
+    - name: Create a RAID5 device mounted on "{{ mount_location1 }}"
       include_role:
         name: storage
       vars:
@@ -242,7 +242,7 @@
       vars:
         max_return: 4
 
-    - name: Create a RAID0 device mounted on "{{ mount_location1 }}"
+    - name: Create a RAID6 device mounted on "{{ mount_location1 }}"
       include_role:
         name: storage
       vars:
@@ -316,7 +316,7 @@
       vars:
         max_return: 4
 
-    - name: Create a RAID0 device mounted on "{{ mount_location1 }}"
+    - name: Create a RAID10 device mounted on "{{ mount_location1 }}"
       include_role:
         name: storage
       vars:
