@@ -295,14 +295,14 @@ class BlivetVolume(BlivetBase):
 
         fmt = get_format(self._volume.get('fs_type'))
         packages.extend(fmt.packages)
-        if self._volume['encryption']:
+        if self._volume.get('encryption'):
             packages.extend(get_format('luks').packages)
         return packages
 
     @property
     def ultimately_present(self):
         """ Should this volume be present when we are finished? """
-        return (self._volume['state'] == 'present' and
+        return (self._volume.get('state', 'present') == 'present' and
                 (self._blivet_pool is None or self._blivet_pool.ultimately_present))
 
     def _type_check(self):  # pylint: disable=no-self-use
@@ -771,7 +771,7 @@ class BlivetPool(BlivetBase):
         if self.ultimately_present and self.__class__.blivet_device_class is not None:
             packages.extend(self.__class__.blivet_device_class._packages)
 
-        if self._pool['encryption']:
+        if self._pool.get('encryption'):
             packages.extend(get_format('luks').packages)
 
         return packages
@@ -779,7 +779,7 @@ class BlivetPool(BlivetBase):
     @property
     def ultimately_present(self):
         """ Should this pool be present when we are finished? """
-        return self._pool['state'] == 'present'
+        return self._pool.get('state', 'present') == 'present'
 
     @property
     def _is_raid(self):
@@ -960,7 +960,7 @@ class BlivetPool(BlivetBase):
 
     def _get_volumes(self):
         """ Set up BlivetVolume instances for this pool's volumes. """
-        for volume in self._pool['volumes']:
+        for volume in self._pool.get('volumes', []):
             bvolume = _get_blivet_volume(self._blivet, volume, self)
             self._blivet_volumes.append(bvolume)
 
