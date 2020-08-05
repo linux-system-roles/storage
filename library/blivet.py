@@ -158,6 +158,10 @@ class BlivetBase(object):
         self._spec_dict = spec_dict
         self._device = None
 
+    def _get_format(self):
+        # abstract method
+        raise NotImplementedError()
+
     def _manage_one_encryption(self, device):
         ret = device
         # Make sure to handle adjusting both existing stacks and future stacks.
@@ -218,9 +222,9 @@ class BlivetBase(object):
         if requested_actives is not None and requested_spares is not None:
             if (requested_actives + requested_spares != len(members) or
                     requested_actives < 0 or requested_spares < 0):
-                raise BlivetAnsibleError("failed to set up volume '%s': cannot create RAID "
+                raise BlivetAnsibleError("failed to set up '%s': cannot create RAID "
                                         "with %s members (%s active and %s spare)"
-                                        % (self._volume["name"], len(members),
+                                        % (self._spec_dict["name"], len(members),
                                             requested_actives, requested_spares))
 
         if requested_actives is not None:
@@ -570,7 +574,7 @@ class BlivetMDRaidVolume(BlivetVolume):
             return
 
         if safe_mode:
-            raise BlivetAnsibleError("cannot create new RAID '%s' in safe mode" % safe_mode)
+            raise BlivetAnsibleError("cannot create new RAID in safe mode")
 
         # begin creating the devices
         members = self._create_raid_members(self._volume["disks"])
@@ -579,7 +583,7 @@ class BlivetMDRaidVolume(BlivetVolume):
             try:
                 do_partitioning(self._blivet)
             except Exception as e:
-                raise BlivetAnsibleError("failed to allocate partitions for mdraid '%s': %s" % (raid_name, str(e)))
+                raise BlivetAnsibleError("failed to allocate partitions for mdraid '%s': %s" % (self._volume['name'], str(e)))
 
         raid_array = self._new_mdarray(members)
 
@@ -724,9 +728,6 @@ class BlivetPool(BlivetBase):
         if not self._type_check():
             self._device = None
             return  # TODO: see if we can create this device w/ the specified name
-
-    def _get_format(self):
-        raise NotImplementedError()
 
     def _create_members(self):
         """ Schedule actions as needed to ensure pool member devices exist. """
