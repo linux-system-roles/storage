@@ -3,13 +3,10 @@
   # Only when pool is raid
 - name: check RAID options
   block:
-
     - name: get information about RAID
-      command: "mdadm --detail /dev/md/{{ storage_test_pool.name }}-1"
+      command: "mdadm --detail {{ _storage_test_pool_pvs[0] }}"
       register: storage_test_mdadm
       changed_when: false
-      # Note: using "mdadm --detail {{ storage_test_pool.volumes[0]._device }}"
-      # causes mdadm segfault on RHEL even though it works on Fedora
 
     # pre-chew regex search patterns
     - set_fact:
