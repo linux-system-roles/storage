@@ -1,4 +1,7 @@
 #!/bin/bash
+# shellcheck disable=SC2034
+# https://github.com/koalaman/shellcheck/wiki/SC2034
+# warning - this disables all unused variable checking in this file
 # SPDX-License-Identifier: MIT
 #
 # Use this file to specify custom configuration for a project. Generally, this
