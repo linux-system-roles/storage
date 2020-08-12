@@ -43,19 +43,19 @@
   assert:
     that: "{{ luks_dump.stdout|regex_search('^\\s+Version: ' + storage_test_volume.encryption_luks_version + '$') }}"
     msg: "Wrong LUKS version for volume {{ storage_test_volume.name }}"
-  when: _storage_test_volume_present and storage_test_volume.encryption_luks_version
+  when: _storage_test_volume_present and storage_test_volume.encryption and storage_test_volume.encryption_luks_version
 
 - name: Check LUKS key size
   assert:
     that: "{{ luks_dump.stdout|regex_search('^\\s+Key: ' + storage_test_volume.encryption_key_size|string + ' bits$') }}"
     msg: "Wrong key size for volume {{ storage_test_volume.name }}"
-  when: _storage_test_volume_present and storage_test_volume.encryption_key_size
+  when: _storage_test_volume_present and storage_test_volume.encryption and storage_test_volume.encryption_key_size
 
 - name: Check LUKS cipher
   assert:
     that: "{{ luks_dump.stdout|regex_search('^\\s+Cipher: ' + storage_test_volume.encryption_cipher + '$') }}"
     msg: "Wrong key size for volume {{ storage_test_volume.name }}"
-  when: _storage_test_volume_present and storage_test_volume.encryption_cipher
+  when: _storage_test_volume_present and storage_test_volume.encryption and storage_test_volume.encryption_cipher
 
 - set_fact:
     _storage_test_expected_crypttab_entries: "{{ (storage_test_volume.encryption and _storage_test_volume_present)|ternary(1, 0) }}"
