@@ -26,8 +26,8 @@
 
     - assert:
         that:
-          - "{{ blivet_output.packages }} == ['lvm2', 'xfsprogs']"
-          - "{{ not blivet_output.changed }}"
+          - blivet_output.packages == ['lvm2', 'xfsprogs']
+          - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
     - name: test disk and ext4 package deps
@@ -44,8 +44,8 @@
 
     - assert:
         that:
-          - "{{ blivet_output.packages}} == ['e2fsprogs']"
-          - "{{ not blivet_output.changed }}"
+          - blivet_output.packages == ['e2fsprogs']
+          - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
     - name: test disk and swap package deps
@@ -62,7 +62,7 @@
 
     - assert:
         that:
-          - "{{ blivet_output.packages}} == []"
-          - "{{ not blivet_output.changed }}"
+          - blivet_output.packages == []
+          - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
