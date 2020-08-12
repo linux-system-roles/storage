@@ -81,11 +81,11 @@
 ## End of absurdly long process to inject defaults into user-specified pools and volumes lists.
 ##
 
-- name: "debug _storage_pools"
+- name: "Debug _storage_pools"
   debug:
     var: _storage_pools
 
-- name: "debug _storage_volumes"
+- name: "Debug _storage_volumes"
   debug:
     var: _storage_volumes
 
@@ -112,7 +112,7 @@
     safe_mode: "{{ storage_safe_mode }}"
   register: blivet_output
 
-- name: "debug blivet_output"
+- name: "Debug blivet_output"
   debug:
     var: blivet_output
 
