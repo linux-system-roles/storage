@@ -59,7 +59,7 @@ def fixup_md_path(path):
 
 
 def get_block_info(run_cmd):
-    buf = run_cmd(["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE", "-p", "-P", "-a"])[1]
+    buf = run_cmd(["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE,SIZE", "-p", "-P", "-a"])[1]
     info = dict()
     for line in buf.splitlines():
         dev = dict()

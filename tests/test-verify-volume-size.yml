@@ -1,0 +1,24 @@
+---
+
+- name: parse the actual size of the volume
+  bsize:
+    size: "{{ storage_test_blkinfo.info[storage_test_volume._device].size }}"
+  register: storage_test_actual_size
+  when: _storage_test_volume_present and storage_test_volume.type not in ('partition', 'disk')
+
+- name: parse the requested size of the volume
+  bsize:
+    size: "{{ storage_test_volume.size }}"
+  register: storage_test_requested_size
+  when: _storage_test_volume_present and storage_test_volume.size is defined and storage_test_volume.type not in ('partition', 'disk', 'raid')
+
+- debug:
+    var: storage_test_actual_size
+
+- debug:
+    var: storage_test_requested_size
+
+- assert:
+    that: storage_test_actual_size == storage_test_requested_size
+    msg: "Volume {{ storage_test_volume.name }} has unexpected size"
+  when: _storage_test_volume_present and storage_test_volume.size is defined and storage_test_volume.type not in ('partition', 'disk', 'raid')
