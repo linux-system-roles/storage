@@ -47,6 +47,9 @@
     loop_var: pv
   when: storage_test_pool.type == 'lvm'
 
+- name: Check raid
+  include_tasks: verify-pool-md.yml
+
 - name: Check member encryption
   include_tasks: verify-pool-members-encryption.yml
 

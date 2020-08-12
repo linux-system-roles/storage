@@ -20,7 +20,7 @@
       vars:
         max_return: 2
 
-    - name: Create a RAID0 device mounted on "{{ mount_location1 }}"
+    - name: Create a RAID0 device
       include_role:
         name: storage
       vars:

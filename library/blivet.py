@@ -96,7 +96,6 @@ try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
     from blivet3 import devices
-    from blivet3.devicelibs.mdraid import MD_CHUNK_SIZE
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -109,7 +108,6 @@ except ImportError:
         from blivet import Blivet
         from blivet.callbacks import callbacks
         from blivet import devices
-        from blivet.devicelibs.mdraid import MD_CHUNK_SIZE
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -160,6 +158,10 @@ class BlivetBase(object):
         self._spec_dict = spec_dict
         self._device = None
 
+    def _get_format(self):
+        # abstract method
+        raise NotImplementedError()
+
     def _manage_one_encryption(self, device):
         ret = device
         # Make sure to handle adjusting both existing stacks and future stacks.
@@ -205,6 +207,56 @@ class BlivetBase(object):
 
         return ret
 
+    def _new_mdarray(self, members, raid_name=""):
+
+        if raid_name == "":
+            raid_name = self._spec_dict["name"]
+
+        # calculate and verify active and spare devices counts
+        active_count = len(members)
+        spare_count = 0
+
+        requested_actives = self._spec_dict.get("raid_device_count")
+        requested_spares = self._spec_dict.get("raid_spare_count")
+
+        if requested_actives is not None and requested_spares is not None:
+            if (requested_actives + requested_spares != len(members) or
+                    requested_actives < 0 or requested_spares < 0):
+                raise BlivetAnsibleError("failed to set up '%s': cannot create RAID "
+                                        "with %s members (%s active and %s spare)"
+                                        % (self._spec_dict["name"], len(members),
+                                            requested_actives, requested_spares))
+
+        if requested_actives is not None:
+            active_count = requested_actives
+            spare_count = len(members) - active_count
+
+        if requested_spares is not None:
+            spare_count = requested_spares
+            active_count = len(members) - spare_count
+
+        # get chunk_size
+        chunk_size = self._spec_dict.get("raid_chunk_size")
+        chunk_size = Size(chunk_size) if chunk_size is not None else None
+
+        # chunk size should be divisible by 4 KiB but mdadm ignores that. why?
+        if chunk_size is not None and chunk_size % Size("4 KiB") != Size(0):
+            raise BlivetAnsibleError("chunk size must be multiple of 4 KiB")
+
+        try:
+            raid_array = self._blivet.new_mdarray(name=raid_name,
+                                                  level=self._spec_dict["raid_level"],
+                                                  member_devices=active_count,
+                                                  total_devices=len(members),
+                                                  parents=members,
+                                                  chunk_size=chunk_size,
+                                                  metadata_version=self._spec_dict.get("raid_metadata_version"),
+                                                  fmt=self._get_format())
+        except ValueError as e:
+            raise BlivetAnsibleError("cannot create RAID '%s': %s" % (raid_name, str(e)))
+
+        return raid_array
+
 
 class BlivetVolume(BlivetBase):
     _type = "volume"
@@ -228,6 +280,8 @@ class BlivetVolume(BlivetBase):
 
         fmt = get_format(self._volume['fs_type'])
         packages.extend(fmt.packages)
+        if self._volume['encryption']:
+            packages.extend(get_format('luks').packages)
         return packages
 
     @property
@@ -519,43 +573,19 @@ class BlivetMDRaidVolume(BlivetVolume):
         if self._device:
             return
 
-        raid_name = self._volume["name"]
-        member_names = self._volume["disks"]
-        raid_level = self._volume["raid_level"]
-        members_count, active_count = self._process_device_numbers(len(member_names),
-                                                                   self._volume.get("raid_device_count"),
-                                                                   self._volume.get("raid_spare_count"))
-
-        chunk_size = Size(self._volume.get("raid_chunk_size", MD_CHUNK_SIZE))
-        metadata_version = self._volume.get("raid_metadata_version", "default")
-
-        # chunk size should be divisible by 4 KiB but mdadm ignores that. why?
-        if chunk_size % Size("4 KiB") != Size(0):
-            raise BlivetAnsibleError("chunk size must be multiple of 4 KiB")
-
         if safe_mode:
-            raise BlivetAnsibleError("cannot create new RAID '%s' in safe mode" % safe_mode)
+            raise BlivetAnsibleError("cannot create new RAID in safe mode")
 
         # begin creating the devices
-        members = self._create_raid_members(member_names)
+        members = self._create_raid_members(self._volume["disks"])
 
         if use_partitions:
             try:
                 do_partitioning(self._blivet)
             except Exception as e:
-                raise BlivetAnsibleError("failed to allocate partitions for mdraid '%s': %s" % (raid_name, str(e)))
+                raise BlivetAnsibleError("failed to allocate partitions for mdraid '%s': %s" % (self._volume['name'], str(e)))
 
-        try:
-            raid_array = self._blivet.new_mdarray(name=raid_name,
-                                                  level=raid_level,
-                                                  member_devices=active_count,
-                                                  total_devices=members_count,
-                                                  parents=members,
-                                                  chunk_size=chunk_size,
-                                                  metadata_version=metadata_version,
-                                                  fmt=self._get_format())
-        except ValueError as e:
-            raise BlivetAnsibleError("cannot create RAID '%s': %s" % (raid_name, str(e)))
+        raid_array = self._new_mdarray(members)
 
         self._blivet.create_device(raid_array)
 
@@ -619,6 +649,9 @@ class BlivetPool(BlivetBase):
         packages = list()
         if self.ultimately_present and self.__class__.blivet_device_class is not None:
             packages.extend(self.__class__.blivet_device_class._packages)
+
+        if self._pool['encryption']:
+            packages.extend(get_format('luks').packages)
 
         return packages
 
@@ -696,9 +729,6 @@ class BlivetPool(BlivetBase):
             self._device = None
             return  # TODO: see if we can create this device w/ the specified name
 
-    def _get_format(self):
-        raise NotImplementedError()
-
     def _create_members(self):
         """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
@@ -727,16 +757,8 @@ class BlivetPool(BlivetBase):
 
         if self._is_raid:
             raid_name = "%s-1" % self._pool['name']
-            raid_level = self._pool['raid_level']
 
-            try:
-                raid_array = self._blivet.new_mdarray(name=raid_name, level=raid_level,
-                                                  member_devices=len(members),
-                                                  total_devices=(len(members)),
-                                                  parents=members,
-                                                  fmt=self._get_format())
-            except ValueError as e:
-                raise BlivetAnsibleError("cannot create RAID '%s': %s" % (raid_name, str(e)))
+            raid_array = self._new_mdarray(members, raid_name=raid_name)
 
             self._blivet.create_device(raid_array)
             result = [raid_array]
@@ -941,7 +963,8 @@ def get_mount_info(pools, volumes, actions, fstab):
         mounted = False
 
         mount = fstab.lookup('device_path', volume['_device'])
-        if volume['mount_point'] or volume['fs_type'] == 'swap':
+        if (volume['mount_point'] and volume['mount_point'].startswith('/')) \
+           or volume['fs_type'] == 'swap':
             mounted = True
 
         # handle removal of existing mounts of this volume

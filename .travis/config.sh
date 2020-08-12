@@ -1,3 +1,7 @@
+#!/bin/bash
+# shellcheck disable=SC2034
+# https://github.com/koalaman/shellcheck/wiki/SC2034
+# warning - this disables all unused variable checking in this file
 # SPDX-License-Identifier: MIT
 #
 # Use this file to specify custom configuration for a project. Generally, this
@@ -47,6 +51,11 @@
 #   * .travis/runpytest.sh:
 #
 #       - RUN_PYTEST_SETUP_MODULE_UTILS
+#
+#   * .travis/runshellcheck.sh:
+#
+#       - RUN_SHELLCHECK_DISABLED
+#       - RUN_SHELLCHECK_EXTRA_ARGS
 RUN_BLACK_DISABLED=true
 RUN_FLAKE8_DISABLED=true
 RUN_PYLINT_SETUP_MODULE_UTILS=true
