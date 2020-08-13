@@ -366,7 +366,15 @@ class BlivetVolume(BlivetBase):
         except Exception:
             raise BlivetAnsibleError("invalid size specification for volume '%s': '%s'" % (self._volume['name'], self._volume['size']))
 
-        if size and self._device.resizable and self._device.size != size:
+        if size and self._device.size != size:
+            try:
+                self._device.format.update_size_info()
+            except AttributeError:
+                pass
+
+            if not self._device.resizable:
+                return
+
             if self._device.format.resizable:
                 self._device.format.update_size_info()
 
@@ -1178,7 +1186,7 @@ def run_module():
     result['packages'] = b.packages[:]
 
     for action in scheduled:
-        if action.is_destroy and action.is_format and action.format.exists and \
+        if (action.is_destroy or action.is_resize) and action.is_format and action.format.exists and \
            (action.format.mountable or action.format.type == "swap"):
             action.format.teardown()
 

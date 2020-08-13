@@ -341,28 +341,6 @@
                       not blivet_output.changed }}"
             msg: "Unexpected behavior w/ existing data on specified disks"
 
-    - name: Test for correct handling of safe_mode with resize
-      block:
-        - name: Try to resize in safe mode
-          include_role:
-            name: storage
-          vars:
-            storage_pools:
-              - name: testpool1
-                type: lvm
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: testvol1
-                    fs_type: 'ext4'
-                    size: '2g'
-
-        - name: Verify the output
-          assert:
-            that: "{{ not blivet_output.failed and blivet_output.changed }}"
-            msg: "Unexpected behavior w/ existing data on specified disks"
-
-      when: false
-
     - name: Test for correct handling of safe_mode with existing pool
       block:
         - name: Try to create LVM pool on disks that already belong to an existing pool
