@@ -179,11 +179,11 @@ class BlivetBase(object):
                                                   cipher=self._spec_dict.get('encryption_cipher'),
                                                   key_size=self._spec_dict.get('encryption_key_size'),
                                                   luks_version=self._spec_dict.get('encryption_luks_version'),
-                                                  passphrase=self._spec_dict.get('encryption_passphrase') or None,
-                                                  key_file=self._spec_dict.get('encryption_key_file') or None))
+                                                  passphrase=self._spec_dict.get('encryption_password') or None,
+                                                  key_file=self._spec_dict.get('encryption_key') or None))
 
             if not device.format.has_key:
-                raise BlivetAnsibleError("encrypted %s '%s' missing key/passphrase" % (self._type, self._spec_dict['name']))
+                raise BlivetAnsibleError("encrypted %s '%s' missing key/password" % (self._type, self._spec_dict['name']))
 
             luks_device = devices.LUKSDevice(luks_name,
                                              fmt=fmt,
@@ -309,12 +309,12 @@ class BlivetVolume(BlivetBase):
 
         if device.format.type == 'luks':
             # XXX If we have no key we will always re-encrypt.
-            device.format._key_file = self._volume.get('encryption_key_file')
-            device.format.passphrase = self._volume.get('encryption_passphrase')
+            device.format._key_file = self._volume.get('encryption_key')
+            device.format.passphrase = self._volume.get('encryption_password')
 
             # set up the original format as well since it'll get used for processing
-            device.original_format._key_file = self._volume.get('encryption_key_file')
-            device.original_format.passphrase = self._volume.get('encryption_passphrase')
+            device.original_format._key_file = self._volume.get('encryption_key')
+            device.original_format.passphrase = self._volume.get('encryption_password')
             if device.isleaf:
                 self._blivet.populate()
 

@@ -10,8 +10,8 @@ storage_pool_defaults:
   type: lvm
 
   encryption: false
-  encryption_passphrase: null
-  encryption_key_file: null
+  encryption_password: null
+  encryption_key: null
   encryption_cipher: null
   encryption_key_size: null
   encryption_luks_version: null
@@ -45,8 +45,8 @@ storage_volume_defaults:
   raid_metadata_version: null
 
   encryption: false
-  encryption_passphrase: null
-  encryption_key_file: null
+  encryption_password: null
+  encryption_key: null
   encryption_cipher: null
   encryption_key_size: null
   encryption_luks_version: null

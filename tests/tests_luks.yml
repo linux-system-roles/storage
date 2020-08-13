@@ -60,7 +60,7 @@
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
             encryption: true
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
 
@@ -74,7 +74,7 @@
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
             encryption: false
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
 
@@ -88,7 +88,7 @@
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
             encryption: true
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
 
@@ -145,7 +145,7 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
                 encryption: true
-                encryption_passphrase: 'yabbadabbadoo'
+                encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
 
@@ -163,7 +163,7 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
                 encryption: false
-                encryption_passphrase: 'yabbadabbadoo'
+                encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
 
@@ -196,7 +196,7 @@
                     mount_point: "{{ mount_location }}"
                     size: 4g
                     encryption: true
-                    encryption_key_file: "{{ storage_test_key_file.path }}"
+                    encryption_key: "{{ storage_test_key_file.path }}"
 
         - include_tasks: verify-role-results.yml
       always:
@@ -257,7 +257,7 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
                 encryption: true
-                encryption_passphrase: 'yabbadabbadoo'
+                encryption_password: 'yabbadabbadoo'
                 encryption_luks_version: luks1
                 encryption_key_size: 512
                 encryption_cipher: 'serpent-xts-plain64'
@@ -277,7 +277,7 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
                 encryption: false
-                encryption_passphrase: 'yabbadabbadoo'
+                encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
 
@@ -294,7 +294,7 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
                 encryption: true
-                encryption_passphrase: 'yabbadabbadoo'
+                encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
 

@@ -78,7 +78,7 @@
                 type: lvm
                 disks: "{{ unused_disks }}"
                 encryption: true
-                encryption_key_file: "{{ storage_test_key_file.path }}"
+                encryption_key: "{{ storage_test_key_file.path }}"
                 volumes:
                   - name: test1
                     mount_point: "{{ mount_location }}"
@@ -101,7 +101,7 @@
             type: lvm
             disks: "{{ unused_disks }}"
             encryption: false
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
             volumes:
               - name: test1
                 mount_point: "{{ mount_location }}"
@@ -118,7 +118,7 @@
             type: lvm
             disks: "{{ unused_disks }}"
             encryption: true
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
             encryption_luks_version: luks1
             encryption_key_size: 512
             encryption_cipher: 'serpent-xts-plain64'
@@ -138,7 +138,7 @@
             type: lvm
             disks: "{{ unused_disks }}"
             encryption: true
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
             volumes:
               - name: test1
                 mount_point: "{{ mount_location_2 }}"

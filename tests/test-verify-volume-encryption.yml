@@ -60,7 +60,7 @@
 - set_fact:
     _storage_test_expected_crypttab_entries: "{{ (storage_test_volume.encryption and _storage_test_volume_present)|ternary(1, 0) }}"
     _storage_test_crypttab_entries: "{{ storage_test_crypttab.stdout_lines|map('regex_search', '^' + storage_test_volume._device|basename + ' .*$')|select('string')|list }}"
-    _storage_test_expected_crypttab_key_file: "{{ storage_test_volume.encryption_key_file or '-' }}"
+    _storage_test_expected_crypttab_key_file: "{{ storage_test_volume.encryption_key or '-' }}"
 
 - name: Check for /etc/crypttab entry
   assert:
