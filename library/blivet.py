@@ -333,7 +333,7 @@ class BlivetVolume(BlivetBase):
         fmt = get_format(self._volume['fs_type'],
                          mountpoint=self._volume.get('mount_point'),
                          label=self._volume['fs_label'],
-                         options=self._volume['fs_create_options'])
+                         create_options=self._volume['fs_create_options'])
         if not fmt.supported or not fmt.formattable:
             raise BlivetAnsibleError("required tools for file system '%s' are missing" % self._volume['fs_type'])
 
@@ -387,6 +387,8 @@ class BlivetVolume(BlivetBase):
                 raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" % (self._device.name,
                                                                                               self._device.size,
                                                                                               size, str(e)))
+        elif size and self._device.exists and self._device.size != size and not self._device.resizable:
+            raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" % (self._device.name, self._device.size, size))
 
     def _reformat(self):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
@@ -399,6 +401,8 @@ class BlivetVolume(BlivetBase):
 
         if self._device.format.status and (self._device.format.mountable or self._device.format.type == "swap"):
             self._device.format.teardown()
+        if not self._device.isleaf:
+            self._blivet.devicetree.recursive_remove(self._device, remove_device=False)
         self._blivet.format_device(self._device, fmt)
 
     def manage(self):
@@ -423,6 +427,9 @@ class BlivetVolume(BlivetBase):
         # schedule reformat if appropriate
         if self._device.raw_device.exists:
             self._reformat()
+
+        if self.ultimately_present and self._volume['mount_point'] and not self._device.format.mountable:
+            raise BlivetAnsibleError("volume '%s' has a mount point but no mountable file system" % self._volume['name'])
 
         # schedule resize if appropriate
         if self._device.raw_device.exists and self._volume['size']:
@@ -465,6 +472,9 @@ class BlivetPartitionVolume(BlivetVolume):
 
     def _get_device_id(self):
         return self._blivet_pool._disks[0].name + '1'
+
+    def _resize(self):
+        pass
 
     def _create(self):
         if self._device:

@@ -8,6 +8,7 @@ storage_safe_mode: true  # fail instead of implicitly/automatically removing dev
 storage_pool_defaults:
   state: "present"
   type: lvm
+  volumes: []
 
   encryption: false
   encryption_password: null
