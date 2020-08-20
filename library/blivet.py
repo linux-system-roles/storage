@@ -118,7 +118,6 @@ except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.common import sys_info
 
 if BLIVET_PACKAGE:
     blivet_flags.debug = True
@@ -454,14 +453,13 @@ class BlivetDiskVolume(BlivetVolume):
     def _get_format(self):
         fmt = super(BlivetDiskVolume, self)._get_format()
         # pass -F to mke2fs on whole disks in RHEL7
-        if self._volume['fs_type'] in ('ext2', 'ext3', 'ext4') and \
-           sys_info.get_distribution().lower() in ('redhat', 'centos') and \
-           sys_info.get_distribution_version().startswith('7.'):
+        mkfs_options = mkfs_option_map.get(self._volume['fs_type'])
+        if mkfs_options:
             if fmt.create_options:
                 fmt.create_options += " "
             else:
                 fmt.create_options = ""
-            fmt.create_options += "-F"
+            fmt.create_options += mkfs_options
 
         return fmt
 
@@ -1126,7 +1124,8 @@ def run_module():
         packages_only=dict(type='bool', required=False, default=False),
         disklabel_type=dict(type='str', required=False, default=None),
         safe_mode=dict(type='bool', required=False, default=True),
-        use_partitions=dict(type='bool', required=False, default=True))
+        use_partitions=dict(type='bool', required=False, default=True),
+        mkfs_option_map=dict(type='dict', required=False, default={}))
 
     # seed the result dict in the object
     result = dict(
@@ -1161,6 +1160,9 @@ def run_module():
 
     global safe_mode
     safe_mode = module.params['safe_mode']
+
+    global mkfs_option_map
+    mkfs_option_map = module.params['mkfs_option_map']
 
     b = Blivet()
     b.reset()

@@ -6,3 +6,7 @@ blivet_package_list:
   - libblockdev-lvm
   - libblockdev-mdraid
   - libblockdev-swap
+__storage_blivet_mkfs_option_map:
+  ext2: '-F'
+  ext3: '-F'
+  ext4: '-F'
