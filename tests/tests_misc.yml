@@ -139,7 +139,7 @@
         - name: Verify the output when resizing with large size
           assert:
             that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('volume.*foo-test1.*cannot be resized from.*to.*') and
+                   blivet_output.msg|regex_search('volume.*test1.*cannot be resized to.*') and
                    not blivet_output.changed"
             msg: "Unexpected behavior when resizing with large size"
 
