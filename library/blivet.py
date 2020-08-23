@@ -35,6 +35,10 @@ options:
         description:
             - boolean indicating that we should fail rather than implicitly/automatically
               removing devices or formatting
+    diskvolume_mkfs_option_map:
+        description:
+            - dict which maps filesystem names to additional mkfs options that should be used
+              when creating a disk volume (that is, a whole disk filesystem)
 
 author:
     - David Lehman (dlehman@redhat.com)
@@ -449,6 +453,19 @@ class BlivetDiskVolume(BlivetVolume):
 
     def _type_check(self):
         return self._device.raw_device.is_disk
+
+    def _get_format(self):
+        fmt = super(BlivetDiskVolume, self)._get_format()
+        # pass -F to mke2fs on whole disks in RHEL7
+        mkfs_options = diskvolume_mkfs_option_map.get(self._volume['fs_type'])
+        if mkfs_options:
+            if fmt.create_options:
+                fmt.create_options += " "
+            else:
+                fmt.create_options = ""
+            fmt.create_options += mkfs_options
+
+        return fmt
 
     def _create(self):
         self._reformat()
@@ -1111,7 +1128,8 @@ def run_module():
         packages_only=dict(type='bool', required=False, default=False),
         disklabel_type=dict(type='str', required=False, default=None),
         safe_mode=dict(type='bool', required=False, default=True),
-        use_partitions=dict(type='bool', required=False, default=True))
+        use_partitions=dict(type='bool', required=False, default=True),
+        diskvolume_mkfs_option_map=dict(type='dict', required=False, default={}))
 
     # seed the result dict in the object
     result = dict(
@@ -1146,6 +1164,9 @@ def run_module():
 
     global safe_mode
     safe_mode = module.params['safe_mode']
+
+    global diskvolume_mkfs_option_map
+    diskvolume_mkfs_option_map = module.params['diskvolume_mkfs_option_map']
 
     b = Blivet()
     b.reset()
