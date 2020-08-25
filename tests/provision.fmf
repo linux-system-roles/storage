@@ -5,3 +5,4 @@ standard-inventory-qcow2:
       - size: 10737418240
       - size: 10737418240
       - size: 10737418240
+      - size: 10737418240
