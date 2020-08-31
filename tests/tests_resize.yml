@@ -16,7 +16,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -27,7 +27,7 @@
 
     - name: Create one LVM logical volume with "{{ volume_size_before }}" under one volume group
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
           storage_pools:
             - name: foo
@@ -44,7 +44,7 @@
 
     - name: Change volume_size to "{{ volume_size_after }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
           storage_pools:
             - name: foo
@@ -60,7 +60,7 @@
 
     - name: Change volume size to "{{ volume_size_before }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -78,7 +78,7 @@
       block:
         - name: Try to create LVM with a too-large volume size, resize to "{{ too_large_size }}"
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -111,7 +111,7 @@
       block:
         - name: Try to create LVM with volume size equal disk's size, resize to "{{ disk_size }}"
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -144,7 +144,7 @@
       block:
         - name: Try to create LVM with an invalid size specification, resize to "{{ invalid_size1 }}"
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -177,7 +177,7 @@
       block:
         - name: Try to create LVM with an invalid size specification, resize to "{{ invalid_size2 }}"
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -208,7 +208,7 @@
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
           storage_pools:
             - name: foo
@@ -225,7 +225,7 @@
 
     - name: Create a LVM logical volume with "{{ volume_size_before }}" for ext3 FS
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -241,7 +241,7 @@
 
     - name: Change volume size to "{{ volume_size_after }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -257,7 +257,7 @@
 
     - name: Change volume size to "{{ volume_size_before }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -273,7 +273,7 @@
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
           storage_pools:
             - name: foo
@@ -290,7 +290,7 @@
 
     - name: Create a LVM logical volume with "{{ volume_size_before }}" for ext2 FS
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -306,7 +306,7 @@
 
     - name: Change volume size to "{{ volume_size_after }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -322,7 +322,7 @@
 
     - name: Change volume size to "{{ volume_size_before }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -338,7 +338,7 @@
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
           storage_pools:
             - name: foo

@@ -9,7 +9,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -22,7 +22,7 @@
 
     - name: check that raid_level null does not create raid
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1
@@ -43,7 +43,7 @@
     # Cleanup before assert so it is always executed
     - name: cleanup
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1

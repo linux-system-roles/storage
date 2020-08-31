@@ -7,7 +7,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -18,7 +18,7 @@
       block:
         - name: Create a disk volume mounted at "{{ mount_location }}"
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1
@@ -52,7 +52,7 @@
       block:
         - name: Try to create two volumes w/ the same name
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: vol1
@@ -82,7 +82,7 @@
 
     - name: Create a file system on disk
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
@@ -100,7 +100,7 @@
       block:
         - name: Try to replace the file system on disk in safe mode
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1
@@ -128,7 +128,7 @@
 
     - name: Unmount file system
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
@@ -141,7 +141,7 @@
       block:
         - name: Try to replace the file system on disk in safe mode
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1
@@ -169,7 +169,7 @@
 
     - name: Remount file system
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
@@ -193,7 +193,7 @@
       block:
         - name: Try to create a partition pool on the disk already containing a file system in safe_mode
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -222,7 +222,7 @@
       block:
         - name: Try to create LVM pool on disk that already belongs to an existing filesystem
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -260,7 +260,7 @@
 
     - name: Create a partition pool on the disk already containing a file system w/o safe_mode
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -275,7 +275,7 @@
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_safe_mode: false
         storage_pools:

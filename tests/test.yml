@@ -5,7 +5,7 @@
     storage_use_partitions: true
 
   roles:
-    - name: storage
+    - name: linux-system-roles.storage
       storage_pools:
         - name: foo
           disks: ['vdb']

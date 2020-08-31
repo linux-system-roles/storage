@@ -16,7 +16,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -27,7 +27,7 @@
       block:
         - name: Try to create LVM with an invalid disk specification.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -65,7 +65,7 @@
       block:
         - name: Try to create LVM with an invalid size specification.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -98,7 +98,7 @@
       block:
         - name: Try to create LVM with a too-large volume size.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -131,7 +131,7 @@
       block:
         - name: Try to create LVM pool with disks specified as non-list.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -164,7 +164,7 @@
       block:
         - name: Try to create LVM pool with no disks specified.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -197,7 +197,7 @@
       block:
         - name: Try to create LVM volume from outside of any pool.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1
@@ -229,7 +229,7 @@
       block:
         - name: Try to create two pools w/ the same name
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: pool1
@@ -261,7 +261,7 @@
       block:
         - name: Try to create two volumes w/ the same name
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: pool1
@@ -297,7 +297,7 @@
 
     - name: Create a pool
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: testpool1
@@ -312,7 +312,7 @@
       block:
         - name: Try to replace file system in safe mode
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: testpool1
@@ -345,7 +345,7 @@
       block:
         - name: Try to create LVM pool on disks that already belong to an existing pool
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -374,7 +374,7 @@
       block:
         - name: Try to replace a pool by a file system on disk in safe mode
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1
@@ -403,7 +403,7 @@
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_safe_mode: false
         storage_pools:
