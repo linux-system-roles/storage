@@ -9,7 +9,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -24,7 +24,7 @@
       block:
         - name: Create an encrypted lvm pool
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -71,7 +71,7 @@
 
         - name: Create an encrypted lvm pool using a key file
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -94,7 +94,7 @@
 
     - name: Remove the encryption layer
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -111,7 +111,7 @@
 
     - name: Add encryption to the volume
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -131,7 +131,7 @@
 
     - name: Change the mountpoint, leaving encryption in place
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -148,7 +148,7 @@
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: foo

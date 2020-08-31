@@ -13,7 +13,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -23,7 +23,7 @@
       block:
         - name: Create a disk volume mounted at "{{ mount_location }}"
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: vg1

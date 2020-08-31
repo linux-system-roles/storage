@@ -8,7 +8,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -17,7 +17,7 @@
 
     - name: Create a RAID0 device mounted on "{{ mount_location }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
@@ -34,7 +34,7 @@
 
     - name: Remove the disk device created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1

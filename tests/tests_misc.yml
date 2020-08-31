@@ -12,7 +12,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -21,7 +21,7 @@
 
     - name: Test creating ext4 filesystem with valid parameter "-Fb 4096"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -38,7 +38,7 @@
 
     - name: Remove the volume group created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -52,7 +52,7 @@
       block:
         - name: Try to create ext4 filesystem with invalid parameter "-Fb 512"
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -85,7 +85,7 @@
 
     - name: Remove the volume group created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -95,7 +95,7 @@
 
     - name: Create one LVM logical volume with "{{ volume1_size }}" under one volume group
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -113,7 +113,7 @@
       block:
         - name: Resizing with one large value which large than disk's size
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -145,7 +145,7 @@
 
     - name: Remove the volume group created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -155,7 +155,7 @@
 
     - name: Create one partition on one disk
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
@@ -171,7 +171,7 @@
 
     - name: Test setting up disk volume will remove the partition create above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: foo
@@ -185,7 +185,7 @@
 
     - name: Remove the disk volume created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: foo
@@ -197,7 +197,7 @@
       block:
         - name: Try to mount swap filesystem to "{{  mount_location }}"
           include_role:
-              name: storage
+              name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1

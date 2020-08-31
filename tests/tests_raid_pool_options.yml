@@ -13,7 +13,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -22,7 +22,7 @@
 
     - name: Create a RAID1 device
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1
@@ -48,7 +48,7 @@
 
     - name: Remove the pool created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1

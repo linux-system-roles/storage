@@ -13,7 +13,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -21,7 +21,7 @@
 
     - name: Create a RAID0 device
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1
@@ -44,7 +44,7 @@
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1
@@ -67,7 +67,7 @@
 
     - name: Remove the device created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1
