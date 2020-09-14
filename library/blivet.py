@@ -307,7 +307,11 @@ class BlivetVolume(BlivetBase):
         if self._device:
             return
 
-        device = self._blivet.devicetree.resolve_device(self._get_device_id())
+        device_id = self._get_device_id()
+        if device_id is None:
+            return
+
+        device = self._blivet.devicetree.resolve_device(device_id)
         if device is None:
             return
 
@@ -524,6 +528,8 @@ class BlivetLVMVolume(BlivetVolume):
     blivet_device_class = devices.LVMLogicalVolumeDevice
 
     def _get_device_id(self):
+        if not self._blivet_pool._device:
+            return None
         return "%s-%s" % (self._blivet_pool._device.name, self._volume['name'])
 
     def _create(self):
