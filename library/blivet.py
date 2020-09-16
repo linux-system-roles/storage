@@ -1174,7 +1174,10 @@ def run_module():
     actions = list()
 
     if module.params['packages_only']:
-        result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        try:
+            result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        except BlivetAnsibleError as e:
+            module.fail_json(msg=str(e), **result)
         module.exit_json(**result)
 
     def record_action(action):
