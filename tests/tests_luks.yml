@@ -4,6 +4,7 @@
   vars:
     storage_safe_mode: false
     mount_location: '/opt/test1'
+    testfile: "{{ mount_location }}/quux"
     volume_size: '5g'
 
   tasks:
@@ -64,6 +65,34 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Remove the encryption layer
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_safe_mode: true
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
+                encryption: false
+                encryption_password: 'yabbadabbadoo'
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Remove the encryption layer
       include_role:
         name: linux-system-roles.storage
@@ -77,6 +106,34 @@
             encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
+
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Add encryption to the volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_safe_mode: true
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
+                encryption: true
+                encryption_password: 'yabbadabbadoo'
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+    - import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the volume
       include_role:
@@ -264,6 +321,39 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Remove the encryption layer
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: false
+                    encryption_password: 'yabbadabbadoo'
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Remove the encryption layer
       include_role:
         name: linux-system-roles.storage
@@ -280,6 +370,39 @@
                 encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
+
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Add encryption to the volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_password: 'yabbadabbadoo'
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+    - import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the volume
       include_role:

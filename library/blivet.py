@@ -167,11 +167,16 @@ class BlivetBase(object):
         raise NotImplementedError()
 
     def _manage_one_encryption(self, device):
+        global safe_mode
         ret = device
         # Make sure to handle adjusting both existing stacks and future stacks.
         if device == device.raw_device and self._spec_dict['encryption']:
             # add luks
             luks_name = "luks-%s" % device._name
+            if safe_mode and (device.original_format.type is not None or
+                              device.original_format.name != get_format(None).name):
+                raise BlivetAnsibleError("cannot remove existing formatting on device '%s' in safe mode due to adding encryption" %
+                                         device._name)
             if not device.format.exists:
                 fmt = device.format
             else:
@@ -196,6 +201,10 @@ class BlivetBase(object):
             ret = luks_device
         elif device != device.raw_device and not self._spec_dict['encryption']:
             # remove luks
+            if safe_mode and (device.original_format.type is not None or
+                              device.original_format.name != get_format(None).name):
+                raise BlivetAnsibleError("cannot remove existing formatting on device '%s' in safe mode due to encryption removal" %
+                                         device._name)
             if not device.format.exists:
                 fmt = device.format
             else:
@@ -823,17 +832,21 @@ class BlivetPool(BlivetBase):
 
     def manage(self):
         """ Schedule actions to configure this pool according to the yaml input. """
+        global safe_mode
         # look up the device
         self._look_up_disks()
         self._look_up_device()
 
         # schedule destroy if appropriate, including member type change
-        if not self.ultimately_present or self._member_management_is_destructive():
-            if not self.ultimately_present:
-                self._manage_volumes()
+        if not self.ultimately_present:
+            self._manage_volumes()
             self._destroy()
-            if not self.ultimately_present:
-                return
+            return
+        elif self._member_management_is_destructive():
+            if safe_mode:
+                raise BlivetAnsibleError("cannot remove and recreate existing pool '%s' in safe mode" % self._pool['name'])
+            else:
+                self._destroy()
 
         # schedule create if appropriate
         self._create()
