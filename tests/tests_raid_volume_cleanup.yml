@@ -1,0 +1,102 @@
+---
+- name: Test RAID cleanup
+  hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    storage_use_partitions: true
+    mount_location1: '/opt/test1'
+    mount_location2: '/opt/test2'
+    volume1_size: '5g'
+    volume2_size: '4g'
+
+  tasks:
+    - name: Run the role
+      include_role:
+        name: linux-system-roles.storage
+
+    - name: Mark tasks to be skipped
+      set_fact:
+        storage_skip_checks:
+          - blivet_available
+          - packages_installed
+          - service_facts
+
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 3
+        disks_needed: 3
+
+    - name: Create two LVM logical volumes under volume group 'foo'
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+              - name: test2
+                size: "{{ volume2_size }}"
+                mount_point: "{{ mount_location2 }}"
+
+    - name: Enable safe mode
+      set_fact:
+        storage_safe_mode: true
+
+    - name: >-
+        Try to overwrite existing device with raid volume
+        and safe mode on (expect failure)
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: cannot remove existing formatting.*in safe mode
+        __storage_failed_msg: >-
+          Unexpected behavior when overwriting existing device with RAID volume
+        __storage_failed_params:
+          storage_volumes:
+            - name: test1
+              type: raid
+              raid_level: "raid1"
+              raid_device_count: 2
+              raid_spare_count: 1
+              disks: "{{ unused_disks }}"
+              mount_point: "{{ mount_location1 }}"
+              state: present
+
+    - name: Disable safe mode
+      set_fact:
+        storage_safe_mode: false
+
+    - name: Create a RAID0 device mounted on "{{ mount_location1 }}"
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: raid
+            raid_level: "raid1"
+            raid_device_count: 2
+            raid_spare_count: 1
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location1 }}"
+            state: present
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Cleanup - remove the disk device created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: raid
+            raid_level: "raid1"
+            raid_device_count: 2
+            raid_spare_count: 1
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location1 }}"
+            state: absent
