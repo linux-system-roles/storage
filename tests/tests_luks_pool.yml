@@ -174,6 +174,15 @@
               - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
 
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove and recreate existing
+                   pool.*in safe mode')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing pool in safe mode"
+
     - import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the pool

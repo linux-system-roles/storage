@@ -91,6 +91,15 @@
               - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
 
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to encryption removal')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing pool in safe mode"
+
     - import_tasks: verify-data-preservation.yml
 
     - name: Remove the encryption layer
@@ -132,6 +141,15 @@
             that:
               - ansible_failed_result.msg != 'UNREACH'
             msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to adding encryption')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing pool in safe mode"
 
     - import_tasks: verify-data-preservation.yml
 
