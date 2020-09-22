@@ -1002,8 +1002,13 @@ class BlivetMDRaidVolume(BlivetVolume):
         if self._device:
             return
 
-        if safe_mode:
-            raise BlivetAnsibleError("cannot create new RAID in safe mode")
+        for spec in self._volume["disks"]:
+            disk = self._blivet.devicetree.resolve_device(spec)
+            if not disk.isleaf or disk.format.type is not None:
+                if safe_mode and (disk.format.type is not None or disk.format.name != get_format(None).name):
+                    raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' in safe mode" % disk.name)
+                else:
+                    self._blivet.devicetree.recursive_remove(disk)
 
         # begin creating the devices
         members = self._create_raid_members(self._volume["disks"])
