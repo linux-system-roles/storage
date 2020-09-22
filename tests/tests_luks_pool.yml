@@ -2,7 +2,6 @@
 - hosts: all
   become: true
   vars:
-    storage_safe_mode: false
     mount_location: '/opt/test1'
     mount_location_2: '/opt/test2'
     testfile: "{{ mount_location }}/quux"
@@ -102,7 +101,6 @@
           include_role:
             name: linux-system-roles.storage
           vars:
-            storage_safe_mode: true
             storage_pools:
               - name: foo
                 type: lvm
@@ -129,6 +127,7 @@
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: lvm
@@ -150,7 +149,6 @@
           include_role:
             name: linux-system-roles.storage
           vars:
-            storage_safe_mode: true
             storage_pools:
               - name: foo
                 type: lvm
@@ -189,6 +187,7 @@
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: lvm
