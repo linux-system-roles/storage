@@ -1,0 +1,13 @@
+# Create a file to be checked that it still exists and no data loss has occured.
+# To use:
+# - set testfile to a path under the mountpoint being tested
+# - include this file (create-test-file.yml) before executing the
+#   operation to be tested
+# - execute the operation that could potentially result in a loss of
+#   data in the filesystem where testfile is located
+# - include verify-data-preservation.yml
+
+- name: create a file
+  file:
+    path: "{{ testfile }}"
+    state: touch

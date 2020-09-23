@@ -2,8 +2,8 @@
 - hosts: all
   become: true
   vars:
-    storage_safe_mode: false
     mount_location: '/opt/test1'
+    testfile: "{{ mount_location }}/quux"
     volume_size: '5g'
 
   tasks:
@@ -64,10 +64,47 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Remove the encryption layer
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
+                encryption: false
+                encryption_password: 'yabbadabbadoo'
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to encryption removal')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing filesystem in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Remove the encryption layer
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_volumes:
           - name: foo
             type: disk
@@ -78,10 +115,47 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Add encryption to the volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
+                encryption: true
+                encryption_password: 'yabbadabbadoo'
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to adding encryption')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing filesystem in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Add encryption to the volume
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_volumes:
           - name: foo
             type: disk
@@ -102,6 +176,7 @@
           include_role:
             name: linux-system-roles.storage
           vars:
+            storage_safe_mode: false
             storage_pools:
               - name: foo
                 type: partition
@@ -135,6 +210,7 @@
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: partition
@@ -149,10 +225,51 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Remove the encryption layer
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: false
+                    encryption_password: 'yabbadabbadoo'
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to encryption removal')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing filesystem in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Remove the encryption layer
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: partition
@@ -166,6 +283,48 @@
                 encryption_password: 'yabbadabbadoo'
 
     - include_tasks: verify-role-results.yml
+
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Add encryption to the volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_password: 'yabbadabbadoo'
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to adding encryption')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing volume in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
 
     - name: Test key file handling
       block:
@@ -186,6 +345,7 @@
           include_role:
             name: linux-system-roles.storage
           vars:
+            storage_safe_mode: false
             storage_pools:
               - name: foo
                 type: partition
@@ -216,6 +376,7 @@
           include_role:
             name: linux-system-roles.storage
           vars:
+            storage_safe_mode: false
             storage_pools:
               - name: foo
                 type: lvm
@@ -248,6 +409,7 @@
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: lvm
@@ -264,10 +426,52 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Remove the encryption layer
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: false
+                    encryption_password: 'yabbadabbadoo'
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to encryption removal')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing volume in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Remove the encryption layer
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: lvm
@@ -281,10 +485,52 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Add encryption to the volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_password: 'yabbadabbadoo'
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove existing
+                   formatting.*in safe mode due to adding encryption')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing volume in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Add encryption to the volume
       include_role:
         name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: lvm
