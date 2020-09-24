@@ -19,4 +19,3 @@
   loop: "{{ _storage_pool_tests }}"
   loop_control:
     loop_var: storage_test_pool_subset
-
