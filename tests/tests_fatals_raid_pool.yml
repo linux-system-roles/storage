@@ -32,15 +32,15 @@
                 raid_level: "fail"
                 state: present
                 volumes:
-                - name: lv1
-                  size: "{{ volume1_size }}"
-                  mount_point: "{{ mount_location1 }}"
-                - name: lv2
-                  size: "{{ volume2_size }}"
-                  mount_point: "{{ mount_location2 }}"
-                - name: lv3
-                  size: "{{ volume3_size }}"
-                  mount_point: "{{ mount_location3 }}"
+                  - name: lv1
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
+                  - name: lv2
+                    size: "{{ volume2_size }}"
+                    mount_point: "{{ mount_location2 }}"
+                  - name: lv3
+                    size: "{{ volume3_size }}"
+                    mount_point: "{{ mount_location3 }}"
 
         - name: unreachable task
           fail:
