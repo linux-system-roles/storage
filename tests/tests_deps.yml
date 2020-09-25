@@ -65,4 +65,3 @@
           - blivet_output.packages == []
           - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
-

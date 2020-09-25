@@ -4,19 +4,18 @@
 #
 - set_fact:
     _storage_pool_tests: ['members', 'volumes']
-  # future:
-  #   name
-  #   type
-  #   size
-  #   members:
-  #     disks
-  #     raid
-  #     compression
-  #     deduplication
+    # future:
+    #   name
+    #   type
+    #   size
+    #   members:
+    #     disks
+    #     raid
+    #     compression
+    #     deduplication
 
 - name:
   include_tasks: "test-verify-pool-{{ storage_test_pool_subset }}.yml"
   loop: "{{ _storage_pool_tests }}"
   loop_control:
     loop_var: storage_test_pool_subset
-
