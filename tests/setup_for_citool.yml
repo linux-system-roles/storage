@@ -1,0 +1,38 @@
+- name: Perform extra setup for citool environment
+  when: "'provision.fmf' is file"
+  block:
+    - name: Ensure targetcli is present
+      package:
+        name: targetcli
+        state: present
+
+    - name: Read provision.fmf and set vars
+      set_fact:
+        storage_provision_data: "{{ lookup('file', 'provision.fmf') | from_yaml }}"
+        storage_disk_basename: disk
+        storage_path_prefix: /tmp/disk
+        storage_targetclicmd: |
+          set global auto_cd_after_create=true
+          /loopback create
+          set global auto_cd_after_create=false
+
+    - name: Create disk device files
+      command: truncate -s {{ item.size }} {{ storage_path_prefix }}{{ idx }}
+      loop: "{{ storage_provision_data['standard-inventory-qcow2']['qemu']['drive'] }}"
+      loop_control:
+        index_var: idx
+
+    - name: Create targetcli cmd
+      set_fact:
+        storage_targetclicmd: |
+          {{ storage_targetclicmd }}/backstores/fileio create {{ storage_disk_basename }}{{ idx }} {{ storage_path_prefix }}{{ idx }}
+          luns/ create /backstores/fileio/{{ storage_disk_basename }}{{ idx }}
+      loop: "{{ storage_provision_data['standard-inventory-qcow2']['qemu']['drive'] }}"
+      loop_control:
+        index_var: idx
+
+    - name: Configure disk device files
+      shell: targetcli <<< "{{ storage_targetclicmd }}"
+
+    - name: debug
+      command: lsblk
