@@ -557,8 +557,8 @@ class BlivetLVMVolume(BlivetVolume):
         try:
             device = self._blivet.new_lv(name=self._volume['name'],
                                          parents=[parent], size=size, fmt=fmt)
-        except Exception:
-            raise BlivetAnsibleError("failed to set up volume '%s'" % self._volume['name'])
+        except Exception as e:
+            raise BlivetAnsibleError("failed to set up volume '%s': %s" % (self._volume['name'], str(e)))
 
         self._blivet.create_device(device)
         self._device = device
