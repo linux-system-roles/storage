@@ -172,6 +172,21 @@ function lsr_venv_python_matches_system_python() {
   lsr_compare_pythons "${1:-python}" -eq "$syspython"
 }
 
+function run_setup_module_utils() {
+  local srcdir
+  srcdir="$1"
+  local destdir
+  destdir="$2"
+  if [ -x "$TOPDIR/tests/setup_module_utils.sh" ]; then
+    bash "$TOPDIR/tests/setup_module_utils.sh" "$srcdir" "$destdir"
+  else
+    setup_module_util=$( find "$TOPDIR"/tests -name "setup_module_utils.sh" | head -n 1 )
+    if [ "$setup_module_util" != "" ]; then
+      bash "$setup_module_util" "$srcdir" "$destdir"
+    fi
+  fi
+}
+
 ##
 # lsr_setup_module_utils [$1] [$2]
 #
@@ -189,7 +204,16 @@ function lsr_setup_module_utils() {
   local destdir
   destdir="${2:-$DEST_MODULE_UTILS_DIR}"
   if [ -n "$srcdir" ] && [ -d "$srcdir" ] && [ -n "$destdir" ] && [ -d "$destdir" ]; then
-    bash "$TOPDIR/tests/setup_module_utils.sh" "$srcdir" "$destdir"
+    run_setup_module_utils "$srcdir" "$destdir"
+  else
+    srcdir="${SRC_COLL_MODULE_UTILS_DIR}"
+    destdir="${DEST_COLL_MODULE_UTILS_DIR}"
+    if [ -n "$destdir" ] && [ -d "$destdir" ]; then
+      if [ -n "$srcdir" ] && [ ! -d "$srcdir" ]; then
+        mkdir -p "$srcdir"
+      fi
+      run_setup_module_utils "$srcdir" "$destdir"
+    fi
   fi
 }
 
