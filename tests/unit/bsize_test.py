@@ -1,6 +1,6 @@
 import pytest
 
-from size import Size
+from storage_lsr.size import Size
 
 def test_bsize():
     # check failure on incorrect string
