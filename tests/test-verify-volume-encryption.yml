@@ -16,7 +16,7 @@
 - name: Verify the presence/absence of the LUKS device node
   assert:
     that: "{{ storage_test_luks_dev.stat.exists and storage_test_luks_dev.stat.isblk
-              if _storage_test_volume_present or storage_test_volume.type == 'disk'
+              if _storage_test_volume_present
               else
               not storage_test_luks_dev.stat.exists }}"
     msg: "Incorrect device node presence for volume {{ storage_test_volume.name }}"
