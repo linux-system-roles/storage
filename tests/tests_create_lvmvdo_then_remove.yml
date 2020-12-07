@@ -1,0 +1,115 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    mount_location: '/opt/test1'
+    volume_group_size: '10g'
+    volume_size: '12g'
+    pool_size: '9g'
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - package_facts:
+        # gather information about packages
+
+    - set_fact:
+        blivet_pkg_name: "{{ ansible_facts.packages | select('search','blivet') | select('search', 'python') | list }}"
+
+    - set_fact:
+        blivet_pkg_version: "{{ ansible_facts.packages[blivet_pkg_name[0]][0]['version'] + '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+
+    - block:
+        - include_tasks: get_unused_disk.yml
+          vars:
+            min_size: "{{ volume_group_size }}"
+            max_return: 1
+
+        - name: Create LVM VDO volume under volume group 'pool1'
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    vdo_pool_size: "{{ pool_size }}"
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - include_tasks: verify-role-results.yml
+
+        - name: Repeat the previous invocation to verify idempotence
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    vdo_pool_size: "{{ pool_size }}"
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - include_tasks: verify-role-results.yml
+
+        - name: Remove LVM VDO volume in 'pool1' created above
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                state: "absent"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    vdo_pool_size: "{{ pool_size }}"
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - include_tasks: verify-role-results.yml
+
+        - name: Create LVM VDO volume under volume group 'pool1' (this time default size)
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - include_tasks: verify-role-results.yml
+
+        - name: Remove LVM VDO volume in 'pool1' created above
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                state: "absent"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - include_tasks: verify-role-results.yml
+
+      when: blivet_pkg_version is version("3.2.2-10", ">=") and ansible_facts["distribution"] != "Fedora"

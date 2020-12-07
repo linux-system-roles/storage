@@ -56,3 +56,8 @@ storage_volume_defaults:
   encryption_cipher: null
   encryption_key_size: null
   encryption_luks_version: null
+
+  compression: null
+  deduplication: null
+  vdo_pool_size: null
+

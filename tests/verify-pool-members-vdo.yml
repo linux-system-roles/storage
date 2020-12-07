@@ -1,0 +1,6 @@
+- name: Validate pool member VDO settings
+  include_tasks: verify-pool-member-vdo.yml
+  loop: "{{ storage_test_pool.volumes }}"
+  loop_control:
+    loop_var: storage_test_vdo_volume
+  when: storage_test_pool.type == 'lvm'

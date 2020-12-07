@@ -26,6 +26,11 @@
     packages_only: true
   register: package_info
 
+- name: enable copr repositories if needed
+  include_tasks: "enable_coprs.yml"
+  vars:
+    copr_packages: "{{ package_info.packages }}"
+
 - name: make sure required packages are installed
   package:
     name: "{{ package_info.packages }}"

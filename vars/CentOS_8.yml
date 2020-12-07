@@ -5,3 +5,5 @@ blivet_package_list:
   - libblockdev-lvm
   - libblockdev-mdraid
   - libblockdev-swap
+  - vdo
+  - kmod-kvdo

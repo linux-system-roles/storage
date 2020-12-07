@@ -94,6 +94,8 @@ must contain only a single item.
 ##### `size`
 The `size` specifies the size of the file system. The format for this is intended to
 be human-readable, e.g.: "10g", "50 GiB".
+When using `compression` or `deduplication`, `size` can be set higher than actual available space,
+e.g.: 3 times the size of the volume, based on duplicity and/or compressibility of stored data.
 
 __NOTE__: The requested volume size may be reduced as necessary so the volume can
           fit in the available pool space, but only if the required reduction is
@@ -156,6 +158,30 @@ This integer specifies the LUKS key size (in bits).
 
 ##### `encryption_luks_version`
 This integer specifies the LUKS version to use.
+
+##### `deduplication`
+This specifies whether or not the Virtual Data Optimizer (VDO) will be used.
+When set, duplicate data stored on storage volume will be
+deduplicated resulting in more storage capacity.
+Can be used together with `compression` and `vdo_pool_size`.
+Volume has to be part of the LVM `storage_pool`.
+Limit one VDO `storage_volume` per `storage_pool`.
+Underlying volume has to be at least 9 GB (bare minimum is around 5 GiB).
+
+##### `compression`
+This specifies whether or not the Virtual Data Optimizer (VDO) will be used.
+When set, data stored on storage volume will be
+compressed resulting in more storage capacity.
+Volume has to be part of the LVM `storage_pool`.
+Can be used together with `deduplication` and `vdo_pool_size`.
+Limit one VDO `storage_volume` per `storage_pool`.
+
+##### `vdo_pool_size`
+When Virtual Data Optimizer (VDO) is used, this specifies the actual size the volume
+will take on the device. Virtual size of VDO volume is set by `size` parameter.
+`vdo_pool_size` format is intended to be human-readable,
+e.g.: "30g", "50GiB".
+Default value is equal to the size of the volume.
 
 #### `storage_safe_mode`
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.
