@@ -1,0 +1,42 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    storage_use_partitions: true
+    mount_location1: '/opt/test1'
+
+  # This tests the issue when removing nonexistent pool (with listed volumes)
+  # caused crash
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 1
+
+    - name: Removing nonexistent pool (with listed volumes)
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+            volumes:
+              - name: test1
+                mount_point: '/opt/test1'
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Removing nonexistent pool
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml
