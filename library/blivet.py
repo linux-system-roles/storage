@@ -104,6 +104,7 @@ try:
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
     from blivet3.size import Size
+    from blivet3.udev import trigger
     from blivet3.util import set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
@@ -116,6 +117,7 @@ except ImportError:
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
         from blivet.size import Size
+        from blivet.udev import trigger
         from blivet.util import set_up_logging
         BLIVET_PACKAGE = 'blivet'
     except ImportError:
@@ -1358,6 +1360,13 @@ def run_module():
 
         actions.append(action)
 
+    def ensure_udev_update(action):
+        if action.is_create:
+            sys_path = action.device.path
+            if os.path.islink(sys_path):
+                sys_path = os.readlink(action.device.path)
+            trigger(action='change', subsystem='block', name=os.path.basename(sys_path))
+
     def action_dict(action):
         return dict(action=action.type_desc_str,
                     fs_type=action.format.type if action.is_format else None,
@@ -1399,6 +1408,7 @@ def run_module():
     if scheduled:
         # execute the scheduled actions, committing changes to disk
         callbacks.action_executed.add(record_action)
+        callbacks.action_executed.add(ensure_udev_update)
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         except Exception as e:
