@@ -6,6 +6,7 @@ driver:
   name: docker
 lint:
   name: yamllint
+  enabled: false
   options:
     config-file: .yamllint.yml
 platforms:
@@ -18,6 +19,7 @@ provisioner:
   name: ansible
   log: true
   lint:
+    enabled: false
     name: ansible-lint
   playbooks:
     converge: ../../tests/tests_default.yml
@@ -34,3 +36,4 @@ verifier:
   name: testinfra
   lint:
     name: flake8
+    enabled: false
