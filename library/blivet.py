@@ -118,6 +118,7 @@ try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
     from blivet3 import devices
+    from blivet3.deviceaction import ActionConfigureFormat
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -131,6 +132,7 @@ except ImportError:
         from blivet import Blivet
         from blivet.callbacks import callbacks
         from blivet import devices
+        from blivet.deviceaction import ActionConfigureFormat
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -494,7 +496,14 @@ class BlivetVolume(BlivetBase):
     def _reformat(self):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
         fmt = self._get_format()
+
         if self._device.format.type == fmt.type:
+            # format is the same, no need to run reformatting
+            dev_label = '' if self._device.format.label is None else self._device.format.label
+            if dev_label != fmt.label:
+                # ...but the label has changed - schedule modification action
+                conf_fmt_action = ActionConfigureFormat(self._device, 'label', fmt.label)
+                self._blivet.devicetree.actions.add(conf_fmt_action)
             return
 
         if safe_mode and (self._device.format.type is not None or self._device.format.name != get_format(None).name):
@@ -1444,7 +1453,7 @@ def run_module():
         actions.append(action)
 
     def ensure_udev_update(action):
-        if action.is_create:
+        if action.is_create or action.is_configure:
             sys_path = action.device.path
             if os.path.islink(sys_path):
                 sys_path = os.readlink(action.device.path)
