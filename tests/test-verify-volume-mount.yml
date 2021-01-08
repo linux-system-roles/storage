@@ -11,8 +11,8 @@
   set_fact:
     # json_query(...) used instead of "|selectattr('device', 'equalto', storage_test_volume._device)|list"
     # as that expression wouldn't work with Jinja versions <2.8
-    storage_test_mount_device_matches: "{{ ansible_mounts|json_query('[?device==`\"{}\"`]'.format(storage_test_device_path))}}"
-    storage_test_mount_point_matches: "{{ ansible_mounts|json_query('[?mount==`\"{}\"`]'.format(storage_test_volume.mount_point))}}"
+    storage_test_mount_device_matches: "{{ ansible_mounts|json_query('[?device==`\"{}\"`]'.format(storage_test_device_path)) }}"
+    storage_test_mount_point_matches: "{{ ansible_mounts|json_query('[?mount==`\"{}\"`]'.format(storage_test_volume.mount_point)) }}"
     storage_test_mount_expected_match_count: "{{ 1 if _storage_test_volume_present and storage_test_volume.mount_point and storage_test_volume.mount_point.startswith('/') else 0 }}"
     storage_test_swap_expected_matches: "{{ 1 if _storage_test_volume_present and storage_test_volume.fs_type == 'swap' else 0 }}"
 
