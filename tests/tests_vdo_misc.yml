@@ -1,0 +1,481 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    mount_location: '/opt/test1'
+    volume_group_size: '10g'
+    pool_size: '9g'
+    small_pool_size: '8g'
+    volume_size: '12g'
+    too_large_volume_size: '2286g'
+    too_large_volume_size1: '2287g'
+    invalid_size: 'xyz GiB'
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+        max_return: 1
+# case1
+    - name: Create LVM VDO volume under volume group 'pool1' and mount with ext4 fs
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: true
+                vdo_pool_size: "{{ pool_size }}"
+                fs_type: 'ext4'
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove LVM VDO volume in 'pool1' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: false
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+# case2
+    - name: Create LVM VDO volume under volume group 'pool1' with 'compression:true, deduplication:false'
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: false
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove LVM VDO volume in 'pool1' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: false
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+# case3
+    - name: Create LVM VDO volume under volume group 'pool1' with 'compression:false, deduplication:true'
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: false
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove LVM VDO volume in 'pool1' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: false
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+# case4
+    - name: Create LVM VDO volume under volume group 'pool1' with 'compression:false, deduplication:false'
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: false
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove LVM VDO volume in 'pool1' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: false
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+# case5: https://github.com/linux-system-roles/storage/issues/191
+    - name: Test for correct handling of invalid parameter when creating LVM VDO volume
+      block:
+        - name: Try to create LVM VDO with invalid paramerters "compression:trued, deduplication:falsed"
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: 'trued'
+                    deduplication: 'falsed'
+                    vdo_pool_size: "{{ pool_size }}"
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - name: Unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output when createing LVM VDO with invalied parameters "compression:trued, deduplication:falsed"
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('TBD') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior when creating LVM VDO with invalied parameter"
+      when: false
+
+# case6: https://github.com/linux-system-roles/storage/issues/191
+    - name: Test for correct handling of invalid parameter when creating LVM VDO volume
+      block:
+        - name: Try to create LVM VDO with invalid paramerters "compression:None, deduplication:false"
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: 'None'
+                    deduplication: 'false'
+                    vdo_pool_size: "{{ pool_size }}"
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - name: Unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output when createing LVM VDO with invalied parameters "compression:None, deduplication:false"
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('Failed to commit changes to disk: Argument.*does not allow None.*') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior when creating LVM VDO with invalied parameter"
+      when: false
+
+    - name: Remove LVM VDO volume pool:pool1 created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+      when: false
+
+    - include_tasks: verify-role-results.yml
+      when: false
+
+# case7: https://github.com/linux-system-roles/storage/issues/192
+    - name: Test for correct handling of invalid parameter when creating LVM VDO volume
+      block:
+        - name: Try to create LVM VDO with invalid size of vdo_pool_size
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    vdo_pool_size: "{{ invalid_size }}"
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - name: Unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output when createing LVM VDO with invalid size of vdo_pool_size
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('TBD') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior when creating LVM VDO with invalied parameter"
+      when: false
+
+# case8
+    - name: Test for correct handling of invalid parameter when creating LVM VDO volume
+      block:
+        - name: Try to create LVM VDO with invalid size
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    vdo_pool_size: "{{ pool_size }}"
+                    size: "{{ invalid_size }}"
+                    mount_point: "{{ mount_location }}"
+
+        - name: Unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output when createing LVM VDO with invalid size of physical size
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('invalid size.*specified for volume') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior when creating LVM VDO with invalied parameter"
+
+# case9
+    - name: Test for correct handling of swap fs_type when creating LVM VDO volume
+      block:
+        - name: Try to create LVM VDO with swap fs
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: pool1
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: volume1
+                    compression: true
+                    deduplication: true
+                    vdo_pool_size: "{{ pool_size }}"
+                    size: "{{ volume_size }}"
+                    fs_type: 'swap'
+                    mount_point: "{{ mount_location }}"
+
+        - name: Unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output when createing LVM VDO with swap fs
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg|regex_search('volume.*has a mount point but no mountable file system') and
+                   not blivet_output.changed"
+            msg: "Unexpected behavior when creating LVM VDO with invalied parameter"
+
+# case10
+    - name: Create LVM VDO volume under volume group 'pool1' with 254 times the size of the physical volume
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: true
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ too_large_volume_size }}"
+                fs_create_options: "-K"
+                mount_point: "{{ mount_location }}"
+      when: false
+
+# https://github.com/linux-system-roles/storage/issues/193
+    - include_tasks: verify-role-results.yml
+      when: false
+
+    - name: Remove LVM VDO volume in 'pool1' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: true
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ too_large_volume_size }}"
+                fs_create_options: "-K"
+                mount_point: "{{ mount_location }}"
+      when: false
+
+    - include_tasks: verify-role-results.yml
+      when: false
+
+# case11
+    - name: Create LVM VDO volume under volume group 'pool1' with large than 254 times the size of the physical volume
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: true
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ too_large_volume_size1 }}"
+                fs_create_options: "-K"
+                mount_point: "{{ mount_location }}"
+      when: false
+
+# https://github.com/linux-system-roles/storage/issues/193
+    - include_tasks: verify-role-results.yml
+      when: false
+
+    - name: Remove LVM VDO volume in 'pool1' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: true
+                vdo_pool_size: "{{ poll_size }}"
+                size: "{{ too_large_volume_size1 }}"
+                mount_point: "{{ mount_location }}"
+      when: false
+
+    - include_tasks: verify-role-results.yml
+      when: false
+
+# case12
+    - name: Create LVM VDO volume under volume group 'pool1' with the size of less than the vdo_pool_size
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: true
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ small_pool_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove LVM VDO volume in 'pool1' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: pool1
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: volume1
+                compression: true
+                deduplication: true
+                vdo_pool_size: "{{ pool_size }}"
+                size: "{{ small_pool_size }}"
+                mount_point: "{{ mount_location }}"
