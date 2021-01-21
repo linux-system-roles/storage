@@ -1,0 +1,89 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: true
+    mount_location1: '/opt/test1'
+    mount_location2: '/opt/test2'
+    volume_group_size: '10g'
+    volume1_size: '5g'
+    volume2_size: '4g'
+  tags:
+    - tests::lvm
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - name: Mark tasks to be skipped
+      set_fact:
+        storage_skip_checks:
+          - blivet_available
+          - packages_installed
+          - service_facts
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+        max_return: 1
+
+    - name: Try to install nilfs2 support
+      block:
+        - name: Install package
+          package:
+            name:
+              - nilfs-utils
+            state: present
+      rescue:
+        - set_fact:
+            storage_test_skip_rest: True
+
+    - block:
+        - name: Create nilfs2 partition (1/2)
+          command:
+            cmd: "parted -s /dev/{{ unused_disks[0] }} mklabel gpt"
+
+        - name: Create nilfs2 partition (1/2)
+          command:
+            cmd: "parted -s /dev/{{ unused_disks[0] }} mkpart primary 0% 100%"
+
+        - name: create nilfs2 partition (2/2)
+          command:
+            cmd: "mkfs -t nilfs2 -f /dev/{{ unused_disks[0] }}1"
+
+        - name: Verify that the play fails with expected error message
+          block:
+            - name: Create two LVM logical volumes under volume group 'foo'
+              include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_pools:
+                  - name: foo
+                    disks: "{{ unused_disks }}"
+                    volumes:
+                      - name: test1
+                        size: "{{ volume1_size }}"
+                      - name: test2
+                        size: "{{ volume2_size }}"
+
+            - name: unreachable task
+              fail:
+                msg: UNREACH
+          rescue:
+            - name: Check that we failed in the role
+              assert:
+                that:
+                  - ansible_failed_result.msg != 'UNREACH'
+                msg: "Role has not failed when it should have"
+
+        - name: Cleanup - remove nilfs2 partition
+          command:
+            cmd: "wipefs -a /dev/{{ unused_disks[0] }}"
+      when: storage_test_skip_rest is not defined or not storage_test_skip_rest
+
+    #
+    # Clean up.
+    #
+    - name: Clean up variable namespace
+      set_fact:
+        storage_test_skip_rest: null
