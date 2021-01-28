@@ -95,6 +95,10 @@ must contain only a single item.
 The `size` specifies the size of the file system. The format for this is intended to
 be human-readable, e.g.: "10g", "50 GiB".
 
+__NOTE__: The requested volume size may be reduced as necessary so the volume can
+          fit in the available pool space, but only if the required reduction is
+          not more than 2% of the requested volume size.
+
 ##### `fs_type`
 This indicates the desired file system type to use, e.g.: "xfs", "ext4", "swap".
 The default is determined according to the OS and release
