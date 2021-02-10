@@ -32,6 +32,27 @@
 
     - include_tasks: verify-role-results.yml
 
+    - name: Re-run the same invocation without the RAID params"
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: raid
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: present
+
+    - assert:
+        that: not blivet_output.changed and
+              blivet_output.volumes[0].raid_level == 'raid1' and
+              blivet_output.volumes[0].raid_device_count == 2 and
+              blivet_output.volumes[0].raid_spare_count == 1 and
+              blivet_output.volumes[0].raid_metadata_version == '1.0'
+        msg: "Failure to preserve RAID settings for preexisting volume."
+
+    - include_tasks: verify-role-results.yml
+
     - name: Remove the disk device created above
       include_role:
         name: linux-system-roles.storage

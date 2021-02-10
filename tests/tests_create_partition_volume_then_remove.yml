@@ -24,11 +24,12 @@
             volumes:
               - name: test1
                 type: partition
+                fs_type: ext4
                 mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous invocation to verify idempotence
+    - name: Repeat the previous invocation minus fs_type to verify idempotence
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -40,6 +41,10 @@
               - name: test1
                 type: partition
                 mount_point: "{{ mount_location }}"
+
+    - assert:
+        that: not blivet_output.changed and blivet_output.pools[0].volumes[0].fs_type == 'ext4'
+        msg: "File system not preserved on existing partition volume."
 
     - include_tasks: verify-role-results.yml
 

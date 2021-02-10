@@ -45,6 +45,25 @@
 
     - include_tasks: verify-role-results.yml
 
+    - name: Re-run the role on the same volume without specifying fs_type
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - name: Verify the output of the duplicate volumes test
+      assert:
+        that: not blivet_output.changed and blivet_output.pools[0].volumes[0].fs_type == fs_after
+        msg: "Failed to preserve omitted fs_type on existing lvm volume"
+
+    - include_tasks: verify-role-results.yml
+
     - name: Repeat the previous invocation to verify idempotence
       include_role:
         name: linux-system-roles.storage

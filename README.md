@@ -13,6 +13,14 @@ As of now, the role supports managing file systems and mount entries on
 Role Variables
 --------------
 
+__NOTE__: Beginning with version 1.3.0, unspecified parameters are interpreted
+differently for existing and non-existing pools/volumes. For new/non-existent
+pools and volumes, any omitted omitted parameters will use the default value as
+described in `defaults/main.yml`. For existing pools and volumes, omitted
+parameters will inherit whatever setting the pool or volume already has.
+This means that to change/override role defaults in an existing pool or volume,
+you must explicitly specify the new values/settings in the role variables.
+
 #### `storage_pools`
 The `storage_pools` variable is a list of pools to manage. Each pool contains a
 nested list of `volume` dicts as described below, as well as the following

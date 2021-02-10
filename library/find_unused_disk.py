@@ -109,7 +109,7 @@ def get_partitions(disk_path):
     sys_name = get_sys_name(disk_path)
     partitions = list()
     for filename in os.listdir(SYS_CLASS_BLOCK + sys_name):
-        if re.match(sys_name + 'p?\d+$', filename):
+        if re.match(sys_name + r'p?\d+$', filename):
             partitions.append(filename)
 
     return partitions
