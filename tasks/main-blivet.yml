@@ -39,23 +39,23 @@
     storage_cryptsetup_services: "{{ ansible_facts.services|to_json|from_json|json_query('*.name')|json_query('[?starts_with(@, `\"systemd-cryptsetup@\"`)]') }}"
 
 - block:
-  - name: Mask the systemd cryptsetup services
-    systemd:
-      name: "{{ item }}"
-      masked: yes
-    loop: "{{ storage_cryptsetup_services }}"
+    - name: Mask the systemd cryptsetup services
+      systemd:
+        name: "{{ item }}"
+        masked: yes
+      loop: "{{ storage_cryptsetup_services }}"
 
-  - name: manage the pools and volumes to match the specified state
-    blivet:
-      pools: "{{ storage_pools|default([]) }}"
-      volumes: "{{ storage_volumes|default([]) }}"
-      use_partitions: "{{ storage_use_partitions }}"
-      disklabel_type: "{{ storage_disklabel_type }}"
-      pool_defaults: "{{ storage_pool_defaults }}"
-      volume_defaults: "{{ storage_volume_defaults }}"
-      safe_mode: "{{ storage_safe_mode }}"
-      diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map|d(omit) }}"
-    register: blivet_output
+    - name: manage the pools and volumes to match the specified state
+      blivet:
+        pools: "{{ storage_pools|default([]) }}"
+        volumes: "{{ storage_volumes|default([]) }}"
+        use_partitions: "{{ storage_use_partitions }}"
+        disklabel_type: "{{ storage_disklabel_type }}"
+        pool_defaults: "{{ storage_pool_defaults }}"
+        volume_defaults: "{{ storage_volume_defaults }}"
+        safe_mode: "{{ storage_safe_mode }}"
+        diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map|d(omit) }}"
+      register: blivet_output
   rescue:
     - fail:
         msg: "{{ ansible_failed_result }}"
