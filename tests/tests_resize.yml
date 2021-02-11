@@ -9,7 +9,7 @@
     invalid_size1: 'xyz GiB'
     invalid_size2: 'none'
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
-    too_large_size: '{{ (unused_disk_subfact.sectors|int + 1) *
+    too_large_size: '{{ unused_disk_subfact.sectors|int * 1.2 *
                         unused_disk_subfact.sectorsize|int }}'
     disk_size: '{{ unused_disk_subfact.sectors|int *
                    unused_disk_subfact.sectorsize|int }}'
@@ -122,23 +122,7 @@
                     size: "{{ disk_size }}"
                     mount_point: "{{ mount_location }}"
 
-        - name: Unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output
-          assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('volume.+cannot be resized to.+') and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ invalid volume size"
+    - include_tasks: verify-role-results.yml
 
     - name: Test for correct handling of invalid size specification
       block:

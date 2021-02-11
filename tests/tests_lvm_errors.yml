@@ -11,8 +11,6 @@
       - '/non/existent/disk'
     invalid_size: 'xyz GiB'
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
-    too_large_size: '{{ (unused_disk_subfact.sectors|int + 1) *
-                        unused_disk_subfact.sectorsize|int }}'
 
   tasks:
     - include_role:
@@ -90,39 +88,6 @@
     # - name: Verify the output
     #   assert:
     #     that: "{{ blivet_output.failed and
-    #               blivet_output.msg|regex_search('invalid size.+for volume') and
-    #               not blivet_output.changed }}"
-    #     msg: "Unexpected behavior w/ invalid volume size"
-
-    - name: Test for correct handling of too-large volume size.
-      block:
-        - name: Try to create LVM with a too-large volume size.
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    size: "{{ too_large_size }}"
-                    mount_point: "{{ mount_location1 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    # the following does not work properly
-    # - name: Verify the output
-    #   assert:
-    #     that: "{{ blivet_output.failed and
     #               blivet_output.msg|regex_search('size.+exceeds.+space in pool') and
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ too-large volume size"
@@ -138,7 +103,7 @@
                 disks: "{{ unused_disks[0] }}"
                 volumes:
                   - name: test1
-                    size: "{{ too_large_size }}"
+                    size: "{{ volume_size }}"
                     mount_point: "{{ mount_location1 }}"
 
         - name: unreachable task
@@ -171,7 +136,7 @@
                 disks: []
                 volumes:
                   - name: test1
-                    size: "{{ too_large_size }}"
+                    size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
 
         - name: unreachable task
