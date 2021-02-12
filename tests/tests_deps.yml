@@ -5,6 +5,7 @@
   tasks:
     - include_role:
         name: linux-system-roles.storage
+        public: true
 
     - name: test lvm and xfs package deps
       include_tasks: run_blivet.yml
