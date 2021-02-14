@@ -1,7 +1,4 @@
 ---
-- include_vars:
-    file: roles/linux-system-roles.storage/defaults/main.yml
-
 - name: test lvm and xfs package deps
   blivet:
     packages_only: "{{ packages_only }}"
