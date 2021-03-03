@@ -20,12 +20,12 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: "{{ pool_name }}"
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ volume_size }}"
+        storage_pools:
+          - name: "{{ pool_name }}"
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
 
     - include_tasks: verify-role-results.yml
 

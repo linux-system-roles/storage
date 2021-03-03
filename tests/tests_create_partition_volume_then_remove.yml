@@ -53,7 +53,7 @@
         name: linux-system-roles.storage
       vars:
         storage_pools:
-          - name:  "{{ unused_disks[0] }}"
+          - name: "{{ unused_disks[0] }}"
             type: partition
             disks: "{{ unused_disks }}"
             state: absent
@@ -70,7 +70,7 @@
         name: linux-system-roles.storage
       vars:
         storage_pools:
-          - name:  "{{ unused_disks[0] }}"
+          - name: "{{ unused_disks[0] }}"
             type: partition
             disks: "{{ unused_disks }}"
             state: absent

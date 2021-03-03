@@ -197,7 +197,7 @@
       block:
         - name: Try to mount swap filesystem to "{{  mount_location }}"
           include_role:
-              name: linux-system-roles.storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1

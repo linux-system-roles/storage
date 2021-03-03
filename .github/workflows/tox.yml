@@ -3,7 +3,7 @@ name: tox
 on:  # yamllint disable-line rule:truthy
   - pull_request
 env:
-  TOX_LSR: "git+https://github.com/linux-system-roles/tox-lsr@2.2.0"
+  TOX_LSR: "git+https://github.com/linux-system-roles/tox-lsr@2.3.0"
   LSR_ANSIBLES: 'ansible==2.8.* ansible==2.9.*'
   LSR_MSCENARIOS: default
   # LSR_EXTRA_PACKAGES: libdbus-1-dev
@@ -36,7 +36,7 @@ jobs:
           toxenvs="py${toxpyver}"
           case "$toxpyver" in
           27) toxenvs="${toxenvs},coveralls,flake8,pylint,custom" ;;
-          36) toxenvs="${toxenvs},coveralls,black,yamllint,ansible-lint,shellcheck,custom,collection" ;;
+          36) toxenvs="${toxenvs},coveralls,black,yamllint,ansible-lint,shellcheck,custom,collection,ansible-test" ;;
           37) toxenvs="${toxenvs},coveralls,custom" ;;
           38) toxenvs="${toxenvs},coveralls,custom" ;;
           esac

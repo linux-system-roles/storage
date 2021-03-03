@@ -31,9 +31,9 @@
             raid_level: "null"
             state: present
             volumes:
-            - name: lv1
-              size: "{{ volume1_size }}"
-              mount_point: "{{ mount_location1 }}"
+              - name: lv1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
 
     - name: get existing raids (after run)
       command: "cat /proc/mdstat"
@@ -52,12 +52,12 @@
             raid_level: "null"
             state: absent
             volumes:
-            - name: lv1
-              size: "{{ volume1_size }}"
-              mount_point: "{{ mount_location1 }}"
+              - name: lv1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
 
     - name: compare mdstat results
       assert:
         that:
-            - storage_test_mdstat1.stdout == storage_test_mdstat2.stdout
+          - storage_test_mdstat1.stdout == storage_test_mdstat2.stdout
         msg: "Raid created when it should not be"

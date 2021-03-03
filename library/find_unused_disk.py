@@ -1,10 +1,15 @@
 #!/usr/bin/python
 
-DOCUMENTATION = '''
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
+DOCUMENTATION = """
 ---
 module: find_unused_disk
 short_description: Gets unused disks
 description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
     - Disks are considered in ascending alphanumeric sorted order.
     - Disks that meet all conditions are considered 'empty' and returned (using kernel device name) in a list.
         - 1. No known signatures exist on the disk, with the exception of partition tables.
@@ -15,18 +20,18 @@ description:
     - Number of returned disks defaults to first 10, but can be specified with 'max_return' argument.
 author: Eda Zhou (@edamamez)
 options:
-    option-name: max_return
-    description: Sets the maximum number of unused disks to return.
-    default: 10
-    type: int
+    max_return:
+        description: Sets the maximum number of unused disks to return.
+        default: 10
+        type: int
 
-    option-name: min_size
-    description: Specifies the minimum disk size to return an unused disk.
-    default: 0
-    type: str
-'''
+    min_size:
+        description: Specifies the minimum disk size to return an unused disk.
+        default: 0
+        type: str
+"""
 
-EXAMPLES = '''
+EXAMPLES = """
 - name: test finding first unused device module
   hosts: localhost
   tasks:
@@ -38,9 +43,9 @@ EXAMPLES = '''
     - name: dump test output
       debug:
         msg: '{{ testout }}'
-'''
+"""
 
-RETURN = '''
+RETURN = """
 disk_name:
     description: Information about unused disks
     returned: On success
@@ -50,14 +55,15 @@ disk_name:
             description: Unused disk(s) that have been found
             returned: On success
             type: list
-            samples: ["sda1", "dm-0", "dm-3"]
-                     ["sda"]
+            samples: |
+              ["sda1", "dm-0", "dm-3"]
+              ["sda"]
         none:
             description: No unused disks were found
             returned: On success
             type: string
             sample: "Unable to find unused disk"
-'''
+"""
 
 
 import os
@@ -68,7 +74,7 @@ from ansible.module_utils.storage_lsr.size import Size
 
 
 SYS_CLASS_BLOCK = "/sys/class/block/"
-IGNORED_DEVICES = [re.compile(r'^/dev/nullb\d+$')]
+IGNORED_DEVICES = [re.compile(r"^/dev/nullb\d+$")]
 
 
 def is_ignored(disk_path):
@@ -78,13 +84,13 @@ def is_ignored(disk_path):
 
 def no_signature(run_command, disk_path):
     """Return true if no known signatures exist on the disk."""
-    signatures = run_command(['blkid', '-p', disk_path])
-    return not 'UUID' in signatures[1]
+    signatures = run_command(["blkid", "-p", disk_path])
+    return "UUID" not in signatures[1]
 
 
 def no_holders(disk_path):
     """Return true if the disk has no holders."""
-    holders = os.listdir(SYS_CLASS_BLOCK + get_sys_name(disk_path) + '/holders/')
+    holders = os.listdir(SYS_CLASS_BLOCK + get_sys_name(disk_path) + "/holders/")
     return len(holders) == 0
 
 
@@ -101,36 +107,45 @@ def get_sys_name(disk_path):
     if not os.path.islink(disk_path):
         return os.path.basename(disk_path)
 
-    node_dir = '/'.join(disk_path.split('/')[-1])
-    return os.path.normpath(node_dir + '/' + os.readlink(disk_path))
+    node_dir = "/".join(disk_path.split("/")[-1])
+    return os.path.normpath(node_dir + "/" + os.readlink(disk_path))
 
 
 def get_partitions(disk_path):
     sys_name = get_sys_name(disk_path)
     partitions = list()
     for filename in os.listdir(SYS_CLASS_BLOCK + sys_name):
-        if re.match(sys_name + r'p?\d+$', filename):
+        if re.match(sys_name + r"p?\d+$", filename):
             partitions.append(filename)
 
     return partitions
 
 
 def get_disks(run_command):
-    buf = run_command(["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE"])[1]
+    buf = run_command(
+        ["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE"]
+    )[1]
     disks = dict()
     for line in buf.splitlines():
         if not line:
             continue
 
-        m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)"', line)
+        m = re.search(
+            r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)"',
+            line,
+        )
         if m is None:
             print(line)
             continue
 
-        if m.group('type') != "disk":
+        if m.group("type") != "disk":
             continue
 
-        disks[m.group('path')] = {"type": m.group('type'), "size": m.group('size'), "fstype": m.group('fstype')}
+        disks[m.group("path")] = {
+            "type": m.group("type"),
+            "size": m.group("size"),
+            "fstype": m.group("fstype"),
+        }
 
     return disks
 
@@ -138,19 +153,13 @@ def get_disks(run_command):
 def run_module():
     """Create the module"""
     module_args = dict(
-        max_return=dict(type='int', required=False, default=10),
-        min_size=dict(type='str', required=False, default=0)
+        max_return=dict(type="int", required=False, default=10),
+        min_size=dict(type="str", required=False, default=0),
     )
 
-    result = dict(
-        changed=False,
-        disks=[]
-    )
+    result = dict(changed=False, disks=[])
 
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=True
-    )
+    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
     run_command = module.run_command
 
@@ -161,7 +170,7 @@ def run_module():
         if attrs["fstype"]:
             continue
 
-        if Size(attrs["size"]).bytes < Size(module.params['min_size']).bytes:
+        if Size(attrs["size"]).bytes < Size(module.params["min_size"]).bytes:
             continue
 
         if get_partitions(path):
@@ -173,14 +182,14 @@ def run_module():
         if not can_open(path):
             continue
 
-        result['disks'].append(os.path.basename(path))
-        if len(result['disks']) >= module.params['max_return']:
+        result["disks"].append(os.path.basename(path))
+        if len(result["disks"]) >= module.params["max_return"]:
             break
 
-    if not result['disks']:
-        result['disks'] = "Unable to find unused disk"
+    if not result["disks"]:
+        result["disks"] = "Unable to find unused disk"
     else:
-        result['disks'].sort()
+        result["disks"].sort()
 
     module.exit_json(**result)
 
@@ -190,5 +199,5 @@ def main():
     run_module()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

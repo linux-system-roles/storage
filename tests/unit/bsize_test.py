@@ -1,6 +1,11 @@
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
 import pytest
 
 from storage_lsr.size import Size
+
 
 def test_bsize():
     # check failure on incorrect string

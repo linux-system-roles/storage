@@ -1,35 +1,41 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
 ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
+    "metadata_version": "1.1",
+    "status": ["preview"],
+    "supported_by": "community",
 }
 
-DOCUMENTATION = '''
+DOCUMENTATION = """
 ---
 module: blockdev_info
 short_description: Collect info about block devices in the system.
 version_added: "2.5"
 description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
     - "This module collects information about block devices"
-options:
+options: {}
 author:
-    - David Lehman (dlehman@redhat.com)
-'''
+    - David Lehman (@dwlehman)
+"""
 
-EXAMPLES = '''
+EXAMPLES = """
 - name: Get info about block devices
   blockdev_info:
   register: blk_info
 
-'''
+"""
 
-RETURN = '''
+RETURN = """
 info:
     description: dict w/ device path keys and device info dict values
+    returned: success
     type: dict
-'''
+"""
 
 import os
 import shlex
@@ -38,7 +44,7 @@ from ansible.module_utils.basic import AnsibleModule
 
 
 LSBLK_DEVICE_TYPES = {"part": "partition"}
-DEV_MD_DIR = '/dev/md'
+DEV_MD_DIR = "/dev/md"
 
 
 def fixup_md_path(path):
@@ -59,7 +65,9 @@ def fixup_md_path(path):
 
 
 def get_block_info(run_cmd):
-    buf = run_cmd(["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE,SIZE", "-p", "-P", "-a"])[1]
+    buf = run_cmd(
+        ["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE,SIZE", "-p", "-P", "-a"]
+    )[1]
     info = dict()
     for line in buf.splitlines():
         dev = dict()
@@ -75,7 +83,7 @@ def get_block_info(run_cmd):
 
                 dev[key.lower()] = LSBLK_DEVICE_TYPES.get(value, value)
         if dev:
-            info[dev['name']] = dev
+            info[dev["name"]] = dev
 
     return info
 
@@ -87,13 +95,10 @@ def run_module():
         info=None,
     )
 
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=True
-    )
+    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
     try:
-        result['info'] = get_block_info(module.run_command)
+        result["info"] = get_block_info(module.run_command)
     except Exception:
         module.fail_json(msg="Failed to collect block device info.")
 
@@ -104,5 +109,5 @@ def main():
     run_module()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -16,7 +16,7 @@
               mount_point: '/opt/test1'
         - name: bar
           disks: ['vdc']
-          #state: "absent"
+          # state: "absent"
           volumes:
             - name: test2
               size: 8g
