@@ -7,7 +7,7 @@
     volume_group_size: '5g'
     volume1_size: '4g'
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
-    too_large_size: '{{ (unused_disk_subfact.sectors|int + 1) *
+    too_large_size: '{{ (unused_disk_subfact.sectors|int * 1.2) *
                         unused_disk_subfact.sectorsize|int }}'
 
   tasks:

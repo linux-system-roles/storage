@@ -1,0 +1,91 @@
+---
+- hosts: all
+  become: true
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: 10g
+        max_return: 1
+
+    - command: lsblk -b -l --noheadings -o NAME,SIZE
+      register: storage_test_lsblk
+      changed_when: false
+
+    - set_fact:
+        test_disk_size: "{{ storage_test_lsblk.stdout_lines|map('regex_search', '^' + unused_disks[0] + '\\s+\\d+$')|select('string')|first|regex_replace('^\\w+\\s+', '') }}"
+
+    - package:
+        name: bc
+        state: installed
+
+    - command:
+        cmd: bc
+        stdin: "{{ test_disk_size }} *2"
+      register: doubled_size
+      changed_when: false
+
+    - name: Test handling of too-large LVM volume size
+      block:
+        - name: Try to create a pool containing one volume twice the size of the backing disk
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      size: "{{ doubled_size.stdout|trim }}"
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+              - blivet_output.failed and
+                blivet_output.msg|regex_search('specified size for volume.+exceeds available')
+            msg: "Role has not failed when it should have"
+
+    - name: Create a pool containing one volume the same size as the backing disk
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  size: "{{ test_disk_size }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+            - name: foo
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  size: "{{ test_disk_size }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              state: absent
+              volumes: []

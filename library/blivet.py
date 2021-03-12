@@ -130,6 +130,9 @@ if BLIVET_PACKAGE:
     set_up_logging()
     log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
 
+
+MAX_TRIM_PERCENT = 2
+
 use_partitions = None  # create partitions on pool backing device disks?
 disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
@@ -445,8 +448,16 @@ class BlivetVolume(BlivetBase):
             if not self._device.resizable:
                 return
 
-            if self._device.format.resizable:
-                self._device.format.update_size_info()
+            trim_percent = (1.0 - float(self._device.max_size / size))*100
+            log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
+            if size > self._device.max_size and trim_percent <= MAX_TRIM_PERCENT:
+                log.info("adjusting %s resize target from %s to %s to fit in free space",
+                         self._volume['name'],
+                         size,
+                         self._device.max_size)
+                size = self._device.max_size
+                if size == self._device.size:
+                    return
 
             if not self._device.min_size <= size <= self._device.max_size:
                 raise BlivetAnsibleError("volume '%s' cannot be resized to '%s'" % (self._volume['name'], size))
@@ -610,10 +621,18 @@ class BlivetLVMVolume(BlivetVolume):
             raise BlivetAnsibleError("invalid size '%s' specified for volume '%s'" % (self._volume['size'], self._volume['name']))
 
         fmt = self._get_format()
+        trim_percent = (1.0 - float(parent.free_space / size))*100
+        log.debug("size: %s ; %s", size, trim_percent)
         if size > parent.free_space:
-            raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)" % (size,
-                                                                                                                   parent.name,
-                                                                                                                   parent.free_space))
+            if trim_percent > MAX_TRIM_PERCENT:
+                raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)"
+                                         % (size, parent.name, parent.free_space))
+            else:
+                log.info("adjusting %s size from %s to %s to fit in %s free space", self._volume['name'],
+                                                                                    size,
+                                                                                    parent.free_space,
+                                                                                    parent.name)
+                size = parent.free_space
 
         try:
             device = self._blivet.new_lv(name=self._volume['name'],
