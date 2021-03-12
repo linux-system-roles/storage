@@ -104,6 +104,7 @@ try:
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
     from blivet3.size import Size
+    from blivet3.udev import trigger
     from blivet3.util import set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
@@ -116,6 +117,7 @@ except ImportError:
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
         from blivet.size import Size
+        from blivet.udev import trigger
         from blivet.util import set_up_logging
         BLIVET_PACKAGE = 'blivet'
     except ImportError:
@@ -821,7 +823,10 @@ class BlivetPool(BlivetBase):
 
     def _look_up_disks(self):
         """ Look up the pool's disks in blivet's device tree. """
-        if not self._pool['disks']:
+        if self._disks:
+            return
+
+        if not self._device and not self._pool['disks']:
             raise BlivetAnsibleError("no disks specified for pool '%s'" % self._pool['name'])
         elif not isinstance(self._pool['disks'], list):
             raise BlivetAnsibleError("pool disks must be specified as a list")
@@ -832,7 +837,7 @@ class BlivetPool(BlivetBase):
             if device is not None:  # XXX fail if any disk isn't resolved?
                 disks.append(device)
 
-        if self._pool['disks'] and not disks:
+        if self._pool['disks'] and not self._device and not disks:
             raise BlivetAnsibleError("unable to resolve any disks specified for pool '%s' (%s)" % (self._pool['name'], self._pool['disks']))
 
         self._disks = disks
@@ -974,9 +979,9 @@ class BlivetPool(BlivetBase):
         """ Schedule actions to configure this pool according to the yaml input. """
         global safe_mode
         # look up the device
-        self._look_up_disks()
         self._look_up_device()
         self._apply_defaults()
+        self._look_up_disks()
 
         # schedule destroy if appropriate, including member type change
         if not self.ultimately_present:
@@ -999,6 +1004,7 @@ class BlivetPartitionPool(BlivetPool):
         return self._device.partitionable
 
     def _look_up_device(self):
+        self._look_up_disks()
         self._device = self._disks[0]
 
     def _create(self):
@@ -1354,6 +1360,13 @@ def run_module():
 
         actions.append(action)
 
+    def ensure_udev_update(action):
+        if action.is_create:
+            sys_path = action.device.path
+            if os.path.islink(sys_path):
+                sys_path = os.readlink(action.device.path)
+            trigger(action='change', subsystem='block', name=os.path.basename(sys_path))
+
     def action_dict(action):
         return dict(action=action.type_desc_str,
                     fs_type=action.format.type if action.is_format else None,
@@ -1395,6 +1408,7 @@ def run_module():
     if scheduled:
         # execute the scheduled actions, committing changes to disk
         callbacks.action_executed.add(record_action)
+        callbacks.action_executed.add(ensure_udev_update)
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         except Exception as e:
