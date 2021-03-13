@@ -567,7 +567,11 @@ class BlivetPartitionVolume(BlivetVolume):
         return self._device.raw_device.type == 'partition'
 
     def _get_device_id(self):
-        return self._blivet_pool._disks[0].name + '1'
+        device_id = None
+        if self._blivet_pool._disks[0].partitioned and len(self._blivet_pool._disks[0].children) == 1:
+            device_id = self._blivet_pool._disks[0].children[0].name
+
+        return device_id
 
     def _resize(self):
         pass
