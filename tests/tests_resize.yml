@@ -29,16 +29,16 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              type: lvm
-              volumes:
-                - name: test1
-                  # resizing is currently supported only for ext2/3/4
-                  fs_type: 'ext4'
-                  size: "{{ volume_size_before }}"
-                  mount_point: "{{ mount_location }}"
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: lvm
+            volumes:
+              - name: test1
+                # resizing is currently supported only for ext2/3/4
+                fs_type: 'ext4'
+                size: "{{ volume_size_before }}"
+                mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -46,15 +46,15 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  fs_type: 'ext4'
-                  size: "{{ volume_size_after }}"
-                  mount_point: "{{ mount_location }}"
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                fs_type: 'ext4'
+                size: "{{ volume_size_after }}"
+                mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -194,14 +194,14 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              state: absent
-              volumes:
-                - name: test1
-                  size: "{{ volume_size_before }}"
-                  mount_point: "{{ mount_location }}"
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+            volumes:
+              - name: test1
+                size: "{{ volume_size_before }}"
+                mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -259,14 +259,14 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              state: absent
-              volumes:
-                - name: test1
-                  size: "{{ volume_size_before }}"
-                  mount_point: "{{ mount_location }}"
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+            volumes:
+              - name: test1
+                size: "{{ volume_size_before }}"
+                mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -324,13 +324,13 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              state: absent
-              volumes:
-                - name: test1
-                  size: "{{ volume_size_before }}"
-                  mount_point: "{{ mount_location }}"
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+            volumes:
+              - name: test1
+                size: "{{ volume_size_before }}"
+                mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
