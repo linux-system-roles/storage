@@ -2,7 +2,8 @@
 #
 # Verify the pool configuration.
 #
-- set_fact:
+- name: Set _storage_pool_tests
+  set_fact:
     _storage_pool_tests: ['members', 'volumes']
     # future:
     #   name

@@ -42,7 +42,8 @@
                 type: partition
                 mount_point: "{{ mount_location }}"
 
-    - assert:
+    - name: Assert file system is preserved on existing partition volume
+      assert:
         that: not blivet_output.changed and blivet_output.pools[0].volumes[0].fs_type == 'ext4'
         msg: "File system not preserved on existing partition volume."
 

@@ -11,3 +11,4 @@
   file:
     path: "{{ testfile }}"
     state: touch
+    mode: "0644"

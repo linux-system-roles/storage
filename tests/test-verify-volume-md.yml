@@ -40,4 +40,4 @@
         msg: "Expected {{ storage_test_volume.raid_metadata_version }} RAID metadata version."
       when: storage_test_volume.raid_metadata_version is not none
 
-  when: storage_test_volume.type == 'raid' and storage_test_volume._device != ""
+  when: storage_test_volume.type == 'raid' and storage_test_volume._device | length > 0

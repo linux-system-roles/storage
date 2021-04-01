@@ -32,7 +32,7 @@
 
     - include_tasks: verify-role-results.yml
 
-    - name: Re-run the same invocation without the RAID params"
+    - name: Re-run the same invocation without the RAID params
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -43,7 +43,8 @@
             mount_point: "{{ mount_location }}"
             state: present
 
-    - assert:
+    - name: Assert to preserve RAID settings for preexisting volume
+      assert:
         that: not blivet_output.changed and
               blivet_output.volumes[0].raid_level == 'raid1' and
               blivet_output.volumes[0].raid_device_count == 2 and

@@ -339,6 +339,7 @@
           copy:
             dest: "{{ storage_test_key_file.path }}"
             content: veryveryveryveryverysecureindeed
+            mode: "0600"
           changed_when: false
 
         - name: Add encryption to the volume
@@ -440,7 +441,8 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
 
-    - assert:
+    - name: Assert preservation of encryption settings on existing LVM volume
+      assert:
         that: not blivet_output.changed and
               blivet_output.pools[0].volumes[0].encryption and
               blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks1'
