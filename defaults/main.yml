@@ -2,8 +2,11 @@
 # defaults file for template
 storage_provider: "blivet"
 storage_use_partitions: null
+# yamllint disable-line rule:line-length
 storage_disklabel_type: null  # leave unset to allow the role to select an appropriate label type
+# yamllint disable-line rule:line-length
 storage_safe_mode: true  # fail instead of implicitly/automatically removing devices or formatting
+# yamllint enable-line rule:line-length
 
 storage_pool_defaults:
   state: "present"
