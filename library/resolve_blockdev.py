@@ -61,6 +61,7 @@ def resolve_blockdev(spec, run_cmd):
     if "=" in spec:
         device = run_cmd("blkid -t %s -o device" % spec)[1].strip()
     elif not spec.startswith('/'):
+        print("resolve_blockdev devs {0}".format(run_cmd("ls -alrtF /dev/disk")))
         for devdir in SEARCH_DIRS:
             device = "%s/%s" % (devdir, spec)
             if os.path.exists(device):
