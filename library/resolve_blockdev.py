@@ -57,19 +57,23 @@ MD_KERNEL_DEV = re.compile(r'/dev/md\d+(p\d+)?$')
 
 
 def resolve_blockdev(spec, run_cmd):
+    print("resolve_blockdev start {0}".format(spec))
     if "=" in spec:
         device = run_cmd("blkid -t %s -o device" % spec)[1].strip()
     elif not spec.startswith('/'):
         for devdir in SEARCH_DIRS:
             device = "%s/%s" % (devdir, spec)
             if os.path.exists(device):
+                print("resolve_blockdev device exists {0}".format(device))
                 break
             else:
+                print("resolve_blockdev device does not exist {0}".format(device))
                 device = ''
     else:
         device = spec
 
     if not device or not os.path.exists(device):
+        print("resolve_blockdev end device does not exist {0}".format(device))
         return ''
 
     return canonical_device(os.path.realpath(device))
@@ -90,6 +94,9 @@ def canonical_device(device):
         device = "%s/%s" % (DEV_MAPPER, _get_dm_name_from_kernel_dev(device))
     elif MD_KERNEL_DEV.match(device):
         device = "%s/%s" % (DEV_MD, _get_md_name_from_kernel_dev(device))
+    else:
+        print("canonical_device device {0} does not match".format(device))
+
     return device
 
 
