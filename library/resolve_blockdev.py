@@ -62,7 +62,7 @@ def resolve_blockdev(spec, run_cmd):
         device = run_cmd("blkid -t %s -o device" % spec)[1].strip()
     elif not spec.startswith('/'):
         import subprocess
-        output = subprocess.check_output(["ls", "-alrtF", "/dev/disk"], stderr=subprocess.STDOUT)
+        _ = subprocess.call(["ls", "-alrtF", "/dev/disk"], stderr=subprocess.STDOUT)
         print("resolve_blockdev devs {0}".format(output))
         for devdir in SEARCH_DIRS:
             device = "%s/%s" % (devdir, spec)
