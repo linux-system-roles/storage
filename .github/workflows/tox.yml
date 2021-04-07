@@ -47,4 +47,4 @@ jobs:
       - name: checkout PR
         uses: actions/checkout@v2
       - name: Install python, dependencies
-        uses: linux-system-roles/lsr-gh-action-py26@1.0.0
+        uses: richm/lsr-gh-action-py26@setuptools
