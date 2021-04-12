@@ -3,6 +3,7 @@
   find_unused_disk:
     min_size: "{{ min_size | default(omit) }}"
     max_return: "{{ max_return|default(omit) }}"
+    with_interface: "{{ storage_test_use_interface | default(omit) }}"
   register: unused_disks_return
 
 - name: Set unused_disks if necessary
