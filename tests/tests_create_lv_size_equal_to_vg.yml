@@ -23,13 +23,13 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ lv_size }}"
-                  mount_point: "{{ mount_location }}"
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ lv_size }}"
+                mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -37,12 +37,12 @@
       include_role:
         name: linux-system-roles.storage
       vars:
-          storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              state: "absent"
-              volumes:
-                - name: test1
-                  mount_point: "{{ mount_location }}"
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml

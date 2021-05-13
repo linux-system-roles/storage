@@ -23,11 +23,11 @@
 
 - name: (1/2) Process volume type (set initial value)
   set_fact:
-      st_volume_type: "{{ storage_test_volume.type }}"
+    st_volume_type: "{{ storage_test_volume.type }}"
 
 - name: (2/2) Process volume type (get RAID value)
   set_fact:
-      st_volume_type: "{{ storage_test_volume.raid_level }}"
+    st_volume_type: "{{ storage_test_volume.raid_level }}"
   when: storage_test_volume.type == "raid"
 
 - name: Verify the volume's device type

@@ -1,4 +1,6 @@
-#!/bin/python2
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
 
 import re
 
@@ -7,11 +9,13 @@ BINARY_FACTOR = 2 ** 10
 
 # index of the item in the list determines the exponent for size computation
 # e.g. size_in_bytes = value * (DECIMAL_FACTOR ** (index(mega)+1)) = value * (1000 ** (1+1))
-PREFIXES_DECIMAL = [["k",    "M",    "G",    "T",    "P",    "E",    "Z",     "Y"],
-                    ["kilo", "mega", "giga", "tera", "peta", "exa",  "zetta", "yotta"]]
-PREFIXES_BINARY  = [["Ki",   "Mi",   "Gi",   "Ti",   "Pi",   "Ei",   "Zi",    "Yi"],
-                    ["kibi", "mebi", "gibi", "tebi", "pebi", "exbi", "zebi",  "yobi"]]
+# pylint: disable=bad-whitespace
+PREFIXES_DECIMAL = [["k",    "M",    "G",    "T",    "P",    "E",    "Z",     "Y"],  # noqa: E241
+                    ["kilo", "mega", "giga", "tera", "peta", "exa",  "zetta", "yotta"]]  # noqa: E241
+PREFIXES_BINARY  = [["Ki",   "Mi",   "Gi",   "Ti",   "Pi",   "Ei",   "Zi",    "Yi"],  # noqa: E221,E241
+                    ["kibi", "mebi", "gibi", "tebi", "pebi", "exbi", "zebi",  "yobi"]]  # noqa: E241
 SUFFIXES = ["bytes", "byte", "B"]
+
 
 class Size(object):
     ''' Class for basic manipulation of the sizes in *bytes
@@ -87,7 +91,7 @@ class Size(object):
         if idx < 0 or not valid_suffix:
             raise ValueError("Unable to identify unit '%s'" % raw_units)
 
-        return used_factor, idx+1
+        return used_factor, idx + 1
 
     def _parse_number(self, raw_number):
         ''' parse input string containing number
@@ -112,7 +116,7 @@ class Size(object):
             prefix_lst = PREFIXES_DECIMAL[unit_type]
         else:
             prefix_lst = PREFIXES_BINARY[unit_type]
-        return prefix_lst[exponent-1] + suffix
+        return prefix_lst[exponent - 1] + suffix
 
     @property
     def bytes(self):

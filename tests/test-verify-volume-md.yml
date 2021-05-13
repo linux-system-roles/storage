@@ -9,7 +9,7 @@
       register: storage_test_mdadm
       changed_when: false
 
-    # pre-chew regex search patterns 
+    # pre-chew regex search patterns
     - set_fact:
         storage_test_md_active_devices_re: "{{ ('Active Devices : ' ~ storage_test_volume.raid_device_count ~ '\n')|regex_escape() }}"
       when: storage_test_volume.raid_device_count is defined

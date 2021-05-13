@@ -35,12 +35,12 @@
             name: linux-system-roles.storage
           vars:
             storage_pools:
-                - name: foo
-                  type: lvm
-                  disks: "{{ unused_disks }}"
-                  volumes:
-                    - name: test1
-                      size: "{{ doubled_size.stdout|trim }}"
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    size: "{{ doubled_size.stdout|trim }}"
         - name: unreachable task
           fail:
             msg: UNREACH
@@ -58,11 +58,11 @@
         name: linux-system-roles.storage
       vars:
         storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ test_disk_size }}"
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ test_disk_size }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -71,12 +71,12 @@
         name: linux-system-roles.storage
       vars:
         storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  size: "{{ test_disk_size }}"
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ test_disk_size }}"
 
     - include_tasks: verify-role-results.yml
 
@@ -85,7 +85,7 @@
         name: linux-system-roles.storage
       vars:
         storage_pools:
-            - name: foo
-              disks: "{{ unused_disks }}"
-              state: absent
-              volumes: []
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+            volumes: []

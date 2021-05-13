@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
@@ -12,10 +16,11 @@ module: blockdev_info
 short_description: Collect info about block devices in the system.
 version_added: "2.5"
 description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
     - "This module collects information about block devices"
-options:
+options: {}
 author:
-    - David Lehman (dlehman@redhat.com)
+    - David Lehman (@dwlehman)
 '''
 
 EXAMPLES = '''
@@ -28,6 +33,7 @@ EXAMPLES = '''
 RETURN = '''
 info:
     description: dict w/ device path keys and device info dict values
+    returned: success
     type: dict
 '''
 
@@ -58,8 +64,8 @@ def fixup_md_path(path):
     return ret
 
 
-def get_block_info(run_cmd):
-    buf = run_cmd(["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE,SIZE", "-p", "-P", "-a"])[1]
+def get_block_info(module):
+    buf = module.run_command(["lsblk", "-o", "NAME,FSTYPE,LABEL,UUID,TYPE,SIZE", "-p", "-P", "-a"])[1]
     info = dict()
     for line in buf.splitlines():
         dev = dict()
@@ -67,7 +73,7 @@ def get_block_info(run_cmd):
             try:
                 key, _eq, value = pair.partition("=")
             except ValueError:
-                print(pair)
+                module.log(pair)
                 raise
             if key:
                 if key.lower() == "name":
@@ -93,7 +99,7 @@ def run_module():
     )
 
     try:
-        result['info'] = get_block_info(module.run_command)
+        result['info'] = get_block_info(module)
     except Exception:
         module.fail_json(msg="Failed to collect block device info.")
 

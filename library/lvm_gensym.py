@@ -1,8 +1,9 @@
 #!/usr/bin/python
 """Generates unique, default names for a volume group and logical volume"""
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils import facts
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
 
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
@@ -15,24 +16,27 @@ DOCUMENTATION = '''
 module: lvm_gensym
 short_description: Generate default names for lvm variables
 version_added: "2.4"
-description: 
-    - "Module accepts two input strings consisting of a file system type and 
+description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
+    - "Module accepts two input strings consisting of a file system type and
        a mount point path, and outputs names based on system information"
 options:
     fs_type:
         description:
-            - String describing the desired file system type 
-        required: true 
+            - String describing the desired file system type
+        required: true
+        type: str
     mount:
         description:
-            - String describing the mount point path 
+            - String describing the mount point path
         required: true
-author: 
-    - Tim Flannagan (tflannag@redhat.com)
+        type: str
+author:
+    - Tim Flannagan (@timflannagan)
 '''
 
 EXAMPLES = '''
-- name: Generate names 
+- name: Generate names
   lvm_gensym:
     fs_type: "{{ fs_type }}"
     mount: "{{ mount_point }}"
@@ -44,11 +48,15 @@ RETURN = '''
 vg_name:
     description: The default generated name for an unspecified volume group
     type: str
-
+    returned: success
 lv_name:
     description: The default generated name for an unspecified logical volume
     type: str
+    returned: success
 '''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils import facts
 
 
 def get_os_name():
@@ -61,12 +69,14 @@ def get_os_name():
     os_name = os_name.replace('\n', '').replace('"', '')
     return os_name
 
+
 def name_is_unique(name, used_names):
     """Check if name is contained in the used_names list and return boolean value"""
     if name not in used_names:
         return True
 
     return False
+
 
 def get_unique_name_from_base(base_name, used_names):
     """Generate a unique name given a base name and a list of used names, and return that unique name"""
@@ -83,7 +93,7 @@ def get_unique_name_from_base(base_name, used_names):
 
 def get_vg_name_base(host_name, os_name):
     """Return a base name for a volume group based on the host and os names"""
-    if host_name != None and len(host_name) != 0:
+    if host_name is not None and len(host_name) != 0:
         vg_default = os_name + '_' + host_name
     else:
         vg_default = os_name
@@ -98,6 +108,7 @@ def get_vg_name(host_name, lvm_facts):
     name = get_vg_name_base(host_name, os_name)
 
     return get_unique_name_from_base(name, used_vg_names)
+
 
 def get_lv_name_base(fs_type, mount_point):
     """Return a logical volume base name using given parameters"""
@@ -120,6 +131,7 @@ def get_lv_name(fs_type, mount_point, lvm_facts):
     name = get_lv_name_base(fs_type, mount_point)
 
     return get_unique_name_from_base(name, used_lv_names)
+
 
 def run_module():
     """Setup and initialize all relevant ansible module data"""
@@ -150,8 +162,10 @@ def run_module():
     else:
         module.fail_json(msg="Unable to initialize both group and volume names")
 
+
 def main():
     run_module()
+
 
 if __name__ == '__main__':
     main()
