@@ -24,8 +24,10 @@
 
 - name: Verify that the raw device is the same as the device if not encrypted
   assert:
-    that: "{{ (storage_test_volume._device != storage_test_volume._raw_device)|bool == (storage_test_volume.encryption|bool) }}"
-    msg: "Encryption not managed correctly for volume {{ storage_test_volume.name }}: {{ (storage_test_volume._device != storage_test_volume._raw_device) }}  {{ storage_test_volume.encryption|bool }}"
+    that: (storage_test_volume._device != storage_test_volume._raw_device)|bool == (storage_test_volume.encryption|bool)
+    msg: "Encryption not managed correctly for volume {{ storage_test_volume.name }}:
+          {{ (storage_test_volume._device != storage_test_volume._raw_device) }}
+          {{ storage_test_volume.encryption|bool }}"
   when: _storage_test_volume_present
 
 - name: Make sure we got info about the LUKS volume if encrypted
@@ -59,7 +61,9 @@
 
 - set_fact:
     _storage_test_expected_crypttab_entries: "{{ (storage_test_volume.encryption and _storage_test_volume_present)|ternary(1, 0) }}"
-    _storage_test_crypttab_entries: "{{ storage_test_crypttab.stdout_lines|map('regex_search', '^' + storage_test_volume._device|basename + ' .*$')|select('string')|list }}"
+    _storage_test_crypttab_entries: "{{ storage_test_crypttab.stdout_lines |
+      map('regex_search', '^' + storage_test_volume._device|basename + ' .*$') |
+      select('string')|list }}"
     _storage_test_expected_crypttab_key_file: "{{ storage_test_volume.encryption_key or '-' }}"
 
 - name: Check for /etc/crypttab entry

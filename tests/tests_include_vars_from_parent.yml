@@ -10,6 +10,7 @@
         # XXX ugly, self-modifying code - changes the "caller" role on
         # the controller
         dest: "{{ playbook_dir }}/roles/caller/vars/{{ item }}.yml"
+        mode: preserve
       loop: "{{ varfiles | unique }}"
       # In case the playbook is executed against multiple hosts, use
       # only the first one. Otherwise the hosts would stomp on each

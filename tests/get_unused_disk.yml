@@ -5,7 +5,8 @@
     max_return: "{{ max_return|default(omit) }}"
   register: unused_disks_return
 
-- set_fact:
+- name: Set unused_disks if necessary
+  set_fact:
     unused_disks: "{{ unused_disks_return.disks }}"
   when: "'Unable to find unused disk' not in unused_disks_return.disks"
 

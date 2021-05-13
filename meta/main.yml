@@ -1,7 +1,8 @@
 galaxy_info:
   author: David Lehman <dlehman@redhat.com>
   description: Configure volumes and filesystems
-  galaxy_tags: ['system', 'lvm', 'storage', 'redhat', 'rhel', 'fedora', 'centos']
+  galaxy_tags: ['system', 'lvm', 'storage', 'redhat',
+                'rhel', 'fedora', 'centos']
   company: Red Hat, Inc.
   license: MIT
   min_ansible_version: 2.5

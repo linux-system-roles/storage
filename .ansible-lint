@@ -1,9 +1,2 @@
 ---
-skip_list:
-- '106'
-- '204'  # Lines should be no longer than 160 chars
-- '208'
-- '306'
-- '403'
-- '502'
-- '602'
+skip_list: []

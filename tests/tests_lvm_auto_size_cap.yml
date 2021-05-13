@@ -11,18 +11,24 @@
         min_size: 10g
         max_return: 1
 
-    - command: lsblk -b -l --noheadings -o NAME,SIZE
+    - name: "lsblk -b -l --noheadings -o NAME,SIZE"
+      command: lsblk -b -l --noheadings -o NAME,SIZE
       register: storage_test_lsblk
       changed_when: false
 
-    - set_fact:
-        test_disk_size: "{{ storage_test_lsblk.stdout_lines|map('regex_search', '^' + unused_disks[0] + '\\s+\\d+$')|select('string')|first|regex_replace('^\\w+\\s+', '') }}"
+    - name: Set test_disk_size
+      set_fact:
+        test_disk_size: "{{ storage_test_lsblk.stdout_lines |
+          map('regex_search', '^' + unused_disks[0] + '\\s+\\d+$') |
+          select('string')|first|regex_replace('^\\w+\\s+', '') }}"
 
-    - package:
+    - name: "Ensure bc is installed"
+      package:
         name: bc
         state: installed
 
-    - command:
+    - name: "bc {{ test_disk_size }} *2"
+      command:
         cmd: bc
         stdin: "{{ test_disk_size }} *2"
       register: doubled_size

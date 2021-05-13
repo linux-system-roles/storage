@@ -13,5 +13,3 @@ ignore: |
 # skip checking line length
 # NOTE: the above does not apply to `rules` - you do not
 # have to copy all of the rules from the base config
-rules:
-  line-length: disable

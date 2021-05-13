@@ -95,6 +95,7 @@
       file:
         path: "{{ testfile }}"
         state: touch
+        mode: "0644"
 
     - name: Test for correct handling of safe_mode
       block:

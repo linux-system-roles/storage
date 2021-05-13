@@ -31,12 +31,16 @@
     name: "{{ package_info.packages }}"
     state: present
 
-- service_facts:
+- name: get service facts
+  service_facts:
 
-- set_fact:
+- name: Set storage_cryptsetup_services
+  set_fact:
     # For an explanation of the to_json|from_json silliness, see
     # https://github.com/ansible-collections/community.general/issues/320
-    storage_cryptsetup_services: "{{ ansible_facts.services|to_json|from_json|json_query('*.name')|json_query('[?starts_with(@, `\"systemd-cryptsetup@\"`)]') }}"
+    storage_cryptsetup_services: "{{ ansible_facts.services|to_json|
+      from_json|json_query('*.name')|
+      json_query('[?starts_with(@, `\"systemd-cryptsetup@\"`)]') }}"
 
 - block:
     - name: Mask the systemd cryptsetup services
@@ -54,10 +58,13 @@
         pool_defaults: "{{ storage_pool_defaults }}"
         volume_defaults: "{{ storage_volume_defaults }}"
         safe_mode: "{{ storage_safe_mode }}"
+        # yamllint disable-line rule:line-length
         diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map|d(omit) }}"
+        # yamllint enable rule:line-length
       register: blivet_output
   rescue:
-    - fail:
+    - name: failed message
+      fail:
         msg: "{{ ansible_failed_result }}"
   always:
     - name: Unmask the systemd cryptsetup services

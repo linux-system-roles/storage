@@ -1,5 +1,7 @@
 - set_fact:
-    _storage_test_crypttab_entries: "{{ storage_test_crypttab.stdout_lines|map('regex_search', '^' + _storage_test_pool_member_path|basename + ' .*$')|select('string')|list }}"
+    _storage_test_crypttab_entries: "{{ storage_test_crypttab.stdout_lines |
+      map('regex_search', '^' + _storage_test_pool_member_path|basename + ' .*$') |
+      select('string')|list }}"
 
 - name: Check for /etc/crypttab entry
   assert:

@@ -66,7 +66,8 @@
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
-    - assert:
+    - name: Assert to preserve RAID settings for preexisting pool
+      assert:
         that: not blivet_output.changed and
               blivet_output.pools[0].raid_level == 'raid1' and
               blivet_output.pools[0].raid_device_count == 2 and
