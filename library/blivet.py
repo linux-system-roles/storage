@@ -794,6 +794,7 @@ def _get_blivet_volume(blivet_obj, volume, bpool=None):
     if volume_type not in _BLIVET_VOLUME_TYPES:
         raise BlivetAnsibleError("Volume '%s' has unknown type '%s'" % (volume['name'], volume_type))
 
+    volume['type'] = volume_type
     return _BLIVET_VOLUME_TYPES[volume_type](blivet_obj, volume, bpool=bpool)
 
 
