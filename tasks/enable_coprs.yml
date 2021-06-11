@@ -5,7 +5,10 @@
   loop: "{{ _storage_copr_packages|default([]) }}"
   loop_control:
     loop_var: repo
-  when: _storage_copr_packages is defined and copr_packages is defined and repo.packages|intersect(copr_packages)|length
+  when:
+    - _storage_copr_packages is defined
+    - copr_packages is defined
+    - repo.packages|intersect(copr_packages)|length
 
 - name: make sure COPR support packages are present
   package:
@@ -17,4 +20,7 @@
   loop: "{{ _storage_copr_packages|default([]) }}"
   loop_control:
     loop_var: repo
-  when: _storage_copr_packages is defined and copr_packages is defined and repo.packages|intersect(copr_packages)|length
+  when:
+    - _storage_copr_packages is defined
+    - copr_packages is defined
+    - repo.packages|intersect(copr_packages)|length
