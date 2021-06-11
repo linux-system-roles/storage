@@ -31,8 +31,10 @@
         msg: "VDO compression is off but it should not"
       when: storage_test_vdo_volume.compression | bool
 
-  when: (storage_test_vdo_volume.deduplication != none or storage_test_vdo_volume.compression != none) and (storage_test_pool.state != "absent" and storage_test_vdo_volume.state != "absent")
+  when:
+    - storage_test_vdo_volume.deduplication != none or storage_test_vdo_volume.compression != none
+    - storage_test_pool.state != "absent"
+    - storage_test_vdo_volume.state != "absent"
 
 - set_fact:
     storage_test_vdo_status: null
-
