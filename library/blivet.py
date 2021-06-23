@@ -320,6 +320,8 @@ class BlivetVolume(BlivetBase):
         packages.extend(fmt.packages)
         if self._volume.get('encryption'):
             packages.extend(get_format('luks').packages)
+        if self._volume.get('compression') or self._volume.get('deduplication'):
+            packages.extend(['vdo', 'kmod-kvdo'])
         return packages
 
     @property
@@ -645,10 +647,41 @@ class BlivetLVMVolume(BlivetVolume):
         fmt = self._get_format()
         trim_percent = (1.0 - float(parent.free_space / size)) * 100
         log.debug("size: %s ; %s", size, trim_percent)
-        if size > parent.free_space:
+
+        create_vdo = self._volume['deduplication'] or self._volume['compression']
+
+        if create_vdo:
+            pool_size = parent.free_space if size > parent.free_space else size
+            if self._volume['vdo_pool_size']:
+                pool_size = Size(self._volume['vdo_pool_size'])
+                if pool_size > parent.free_space:
+                    if trim_percent > MAX_TRIM_PERCENT:
+                        raise BlivetAnsibleError("specified 'vdo_pool_size' for volume '%s' "
+                                                 "exceeds available space in pool '%s' (%s)" % (pool_size,
+                                                                                                parent.name,
+                                                                                                parent.free_space))
+                    else:
+                        log.info("adjusting %s size from %s to %s to fit in %s free space",
+                                 self._volume['name'],
+                                 size,
+                                 parent.free_space,
+                                 parent.name)
+                        pool_size = parent.free_space
+
+            try:
+                vdopool = self._blivet.new_lv(name='vdopool', vdo_pool=True,
+                                              parents=[parent], compression=self._volume['compression'],
+                                              deduplication=self._volume['deduplication'],
+                                              size=pool_size)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to set up VDO pool '%s': %s" % (self._volume['name'], str(e)))
+
+            self._blivet.create_device(vdopool)
+        elif size > parent.free_space:
             if trim_percent > MAX_TRIM_PERCENT:
-                raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)"
-                                         % (size, parent.name, parent.free_space))
+                raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)" % (size,
+                                                                                                                       parent.name,
+                                                                                                                       parent.free_space))
             else:
                 log.info("adjusting %s size from %s to %s to fit in %s free space",
                          self._volume['name'],
@@ -658,8 +691,16 @@ class BlivetLVMVolume(BlivetVolume):
                 size = parent.free_space
 
         try:
-            device = self._blivet.new_lv(name=self._volume['name'],
-                                         parents=[parent], size=size, fmt=fmt)
+            if create_vdo:
+                device = self._blivet.new_lv(name=self._volume['name'], vdo_lv=create_vdo,
+                                             parents=[vdopool if create_vdo else parent],
+                                             size=size, fmt=fmt)
+            else:
+                # This is here for backwards compatibility. Until 8.4 blivet does not support
+                # vdo_lv optional parameter
+                device = self._blivet.new_lv(name=self._volume['name'],
+                                             parents=[vdopool if create_vdo else parent],
+                                             size=size, fmt=fmt)
         except Exception as e:
             raise BlivetAnsibleError("failed to set up volume '%s': %s" % (self._volume['name'], str(e)))
 
@@ -818,7 +859,6 @@ class BlivetPool(BlivetBase):
 
         if self._pool.get('encryption'):
             packages.extend(get_format('luks').packages)
-
         return packages
 
     @property

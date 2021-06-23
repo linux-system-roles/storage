@@ -1,0 +1,16 @@
+---
+- name: make sure COPR is not already enabled
+  shell: |
+    set -euo pipefail
+    {{ ansible_pkg_mgr }} repolist | \
+    grep -c `echo {{ repo.repository }} | tr / :` || true
+  args:
+    warn: false
+  register: copr_present
+  changed_when: false
+
+- name: get list of COPRs to be enabled
+  command:
+    cmd: "{{ ansible_pkg_mgr }} -y copr enable {{ repo.repository }}"
+    warn: false
+  when: copr_present.stdout == "0"

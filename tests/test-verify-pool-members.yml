@@ -57,6 +57,9 @@
 - name: Check member encryption
   include_tasks: verify-pool-members-encryption.yml
 
+- name: Check VDO
+  include_tasks: verify-pool-members-vdo.yml
+
 - set_fact:
     _storage_test_expected_pv_type: null
     _storage_test_expected_pv_count: null
