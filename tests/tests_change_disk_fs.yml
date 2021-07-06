@@ -9,7 +9,7 @@
     pat: "{{ '^([^#\\s]+)\\s+' + mount_location + '\\s.*' }}"
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -18,7 +18,7 @@
 
     - name: Create a disk device with the default file system type
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
@@ -34,20 +34,20 @@
 
     - name: print fstab device
       debug:
-        msg: "device is: {{ ( _test_change_disk_fs_fstab1.stdout_lines|select('search', pat)
-        | map('regex_replace', pat, '\\1') | list )[0] }}"
+        msg: device is: {{ ( _test_change_disk_fs_fstab1.stdout_lines|select('search', pat)
+          | map('regex_replace', pat, '\\1') | list )[0] }}
 
     - name: verify that we mount by UUID
       assert:
         that: "{{ _test_change_disk_fs_fstab1.stdout_lines|select('search', pat)
-        | map('regex_replace', pat, '\\1') | select('match', 'UUID=')
-      | list | length > 0 }}"
+          | map('regex_replace', pat, '\\1') | select('match', 'UUID=')
+          | list | length > 0 }}"
 
     - include_tasks: verify-role-results.yml
 
     - name: Change the disk device file system type to "{{ fs_type_after }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
@@ -64,20 +64,20 @@
 
     - name: print fstab device
       debug:
-        msg: "device is: {{ (_test_change_disk_fs_fstab2.stdout_lines|select('search', pat)
-        | map('regex_replace', pat, '\\1') | list)[0] }}"
+        msg: device is: {{ (_test_change_disk_fs_fstab2.stdout_lines|select('search', pat)
+          | map('regex_replace', pat, '\\1') | list)[0] }}
 
     - name: verify that we mount by UUID
       assert:
         that: "{{_test_change_disk_fs_fstab2.stdout_lines|select('search', pat)
-        | map('regex_replace', pat, '\\1') | select('match', 'UUID=')
-      | list | length > 0 }}"
+          | map('regex_replace', pat, '\\1') | select('match', 'UUID=')
+          | list | length > 0 }}"
 
     - include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
@@ -94,20 +94,20 @@
 
     - name: print fstab device
       debug:
-        msg: "device is: {{ (_test_change_disk_fs_fstab3.stdout_lines|select('search', pat)
-        | map('regex_replace', pat, '\\1') | list)[0] }}"
+        msg: device is: {{ (_test_change_disk_fs_fstab3.stdout_lines|select('search', pat)
+          | map('regex_replace', pat, '\\1') | list)[0] }}
 
     - name: verify that we mount by UUID
       assert:
         that: "{{ _test_change_disk_fs_fstab3.stdout_lines|select('search', pat)
-        | map('regex_replace', pat, '\\1') | select('match', 'UUID=' )
-      | list | length > 0 }}"
+          | map('regex_replace', pat, '\\1') | select('match', 'UUID=' )
+          | list | length > 0 }}"
 
     - include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
