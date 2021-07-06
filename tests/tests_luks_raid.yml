@@ -51,9 +51,10 @@
 
         - name: Verify the output of the keyless luks test
           assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('encrypted volume.*missing key') and
-                   not blivet_output.changed"
+            that:
+              - blivet_output.failed
+              - blivet_output.msg|regex_search('encrypted volume.*missing key')
+              - not blivet_output.changed
             msg: "Unexpected behavior w/ encrypted raid pool w/ no key"
 
     - name: Create an encrypted raid volume w/ default fs
