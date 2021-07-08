@@ -1,10 +1,15 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
 DOCUMENTATION = '''
 ---
 module: find_unused_disk
 short_description: Gets unused disks
 description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
     - Disks are considered in ascending alphanumeric sorted order.
     - Disks that meet all conditions are considered 'empty' and returned (using kernel device name) in a list.
         - 1. No known signatures exist on the disk, with the exception of partition tables.
@@ -15,15 +20,15 @@ description:
     - Number of returned disks defaults to first 10, but can be specified with 'max_return' argument.
 author: Eda Zhou (@edamamez)
 options:
-    option-name: max_return
-    description: Sets the maximum number of unused disks to return.
-    default: 10
-    type: int
+    max_return:
+        description: Sets the maximum number of unused disks to return.
+        default: 10
+        type: int
 
-    option-name: min_size
-    description: Specifies the minimum disk size to return an unused disk.
-    default: 0
-    type: str
+    min_size:
+        description: Specifies the minimum disk size to return an unused disk.
+        default: 0
+        type: str
 '''
 
 EXAMPLES = '''
@@ -50,8 +55,8 @@ disk_name:
             description: Unused disk(s) that have been found
             returned: On success
             type: list
-            samples: ["sda1", "dm-0", "dm-3"]
-                     ["sda"]
+            samples: |
+              ["sda1", "dm-0", "dm-3"]
         none:
             description: No unused disks were found
             returned: On success
@@ -64,7 +69,7 @@ import os
 import re
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.size import Size
+from ansible.module_utils.storage_lsr.size import Size
 
 
 SYS_CLASS_BLOCK = "/sys/class/block/"
@@ -79,7 +84,7 @@ def is_ignored(disk_path):
 def no_signature(run_command, disk_path):
     """Return true if no known signatures exist on the disk."""
     signatures = run_command(['blkid', '-p', disk_path])
-    return not 'UUID' in signatures[1]
+    return 'UUID' not in signatures[1]
 
 
 def no_holders(disk_path):
@@ -109,14 +114,14 @@ def get_partitions(disk_path):
     sys_name = get_sys_name(disk_path)
     partitions = list()
     for filename in os.listdir(SYS_CLASS_BLOCK + sys_name):
-        if re.match(sys_name + 'p?\d+$', filename):
+        if re.match(sys_name + r'p?\d+$', filename):
             partitions.append(filename)
 
     return partitions
 
 
-def get_disks(run_command):
-    buf = run_command(["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE"])[1]
+def get_disks(module):
+    buf = module.run_command(["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE"])[1]
     disks = dict()
     for line in buf.splitlines():
         if not line:
@@ -124,7 +129,7 @@ def get_disks(run_command):
 
         m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)"', line)
         if m is None:
-            print(line)
+            module.log(line)
             continue
 
         if m.group('type') != "disk":
@@ -152,9 +157,7 @@ def run_module():
         supports_check_mode=True
     )
 
-    run_command = module.run_command
-
-    for path, attrs in get_disks(run_command).items():
+    for path, attrs in get_disks(module).items():
         if is_ignored(path):
             continue
 

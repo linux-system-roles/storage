@@ -1,10 +1,11 @@
 ---
-- hosts: all localhost
+- hosts: all
   become: true
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
+        public: true
 
     - name: test lvm and xfs package deps
       include_tasks: run_blivet.yml
@@ -24,10 +25,11 @@
                 mountpoint: '/foo'
                 encryption: false
 
-    - assert:
+    - name: Assert unexpected required package list is empty
+      assert:
         that:
-          - "{{ blivet_output.packages }} == ['lvm2', 'xfsprogs']"
-          - "{{ not blivet_output.changed }}"
+          - blivet_output.packages == ['lvm2', 'xfsprogs']
+          - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
     - name: test disk and ext4 package deps
@@ -42,10 +44,11 @@
             fs_type: ext4
             encryption: false
 
-    - assert:
+    - name: Assert unexpected required package list is empty
+      assert:
         that:
-          - "{{ blivet_output.packages}} == ['e2fsprogs']"
-          - "{{ not blivet_output.changed }}"
+          - blivet_output.packages == ['e2fsprogs']
+          - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
     - name: test disk and swap package deps
@@ -60,9 +63,9 @@
             fs_type: swap
             encryption: false
 
-    - assert:
+    - name: Assert unexpected required package list is empty
+      assert:
         that:
-          - "{{ blivet_output.packages}} == []"
-          - "{{ not blivet_output.changed }}"
+          - blivet_output.packages == []
+          - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
-

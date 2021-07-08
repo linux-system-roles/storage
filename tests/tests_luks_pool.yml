@@ -2,14 +2,15 @@
 - hosts: all
   become: true
   vars:
-    storage_safe_mode: false
     mount_location: '/opt/test1'
     mount_location_2: '/opt/test2'
+    testfile: "{{ mount_location }}/quux"
+    testfile_location_2: "{{ mount_location_2 }}/quux"
     volume_size: '5g'
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -24,7 +25,7 @@
       block:
         - name: Create an encrypted lvm pool
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -67,18 +68,19 @@
           copy:
             dest: "{{ storage_test_key_file.path }}"
             content: veryveryveryveryverysecureindeed
+            mode: "0600"
           changed_when: false
 
         - name: Create an encrypted lvm pool using a key file
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
                 type: lvm
                 disks: "{{ unused_disks }}"
                 encryption: true
-                encryption_key_file: "{{ storage_test_key_file.path }}"
+                encryption_key: "{{ storage_test_key_file.path }}"
                 volumes:
                   - name: test1
                     mount_point: "{{ mount_location }}"
@@ -92,16 +94,56 @@
             state: absent
           changed_when: false
 
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Remove the encryption layer
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                encryption: false
+                encryption_password: 'yabbadabbadoo'
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove and recreate existing
+                   pool.*in safe mode')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing pool in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
+
     - name: Remove the encryption layer
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: lvm
             disks: "{{ unused_disks }}"
             encryption: false
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
             volumes:
               - name: test1
                 mount_point: "{{ mount_location }}"
@@ -109,16 +151,59 @@
 
     - include_tasks: verify-role-results.yml
 
-    - name: Add encryption to the volume
+    - import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      block:
+        - name: Add encryption to the pool
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                encryption: true
+                encryption_password: 'yabbadabbadoo'
+                encryption_luks_version: luks1
+                encryption_key_size: 512
+                encryption_cipher: 'serpent-xts-plain64'
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+        - name: Verify the output of the safe_mode test
+          assert:
+            that: "blivet_output.failed and
+                   blivet_output.msg
+                   |regex_search('cannot remove and recreate existing
+                   pool.*in safe mode')
+                   and not blivet_output.changed"
+            msg: "Unexpected behavior w/ existing pool in safe mode"
+
+    - import_tasks: verify-data-preservation.yml
+
+    - name: Add encryption to the pool
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
+        storage_safe_mode: false
         storage_pools:
           - name: foo
             type: lvm
             disks: "{{ unused_disks }}"
             encryption: true
-            encryption_passphrase: 'yabbadabbadoo'
+            encryption_password: 'yabbadabbadoo'
             encryption_luks_version: luks1
             encryption_key_size: 512
             encryption_cipher: 'serpent-xts-plain64'
@@ -129,26 +214,34 @@
 
     - include_tasks: verify-role-results.yml
 
+    - import_tasks: create-test-file.yml
+
     - name: Change the mountpoint, leaving encryption in place
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: foo
             type: lvm
             disks: "{{ unused_disks }}"
-            encryption: true
-            encryption_passphrase: 'yabbadabbadoo'
             volumes:
               - name: test1
                 mount_point: "{{ mount_location_2 }}"
-                size: 4g
+
+    - name: Assert to implicitly preserve encryption on existing pool
+      assert:
+        that: blivet_output.pools[0].encryption
+        msg: "Failed to implicitly preserve encryption on existing pool."
+
+    - import_tasks: verify-data-preservation.yml
+      vars:
+        testfile: "{{ testfile_location_2 }}"
 
     - include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: foo

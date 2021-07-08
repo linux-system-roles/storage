@@ -1,5 +1,7 @@
 Linux Storage Role
 ==================
+![CI Testing](https://github.com/linux-system-roles/storage/workflows/tox/badge.svg)
+
 
 This role allows users to configure local storage with minimal input.
 
@@ -10,6 +12,14 @@ As of now, the role supports managing file systems and mount entries on
 
 Role Variables
 --------------
+
+__NOTE__: Beginning with version 1.3.0, unspecified parameters are interpreted
+differently for existing and non-existing pools/volumes. For new/non-existent
+pools and volumes, any omitted omitted parameters will use the default value as
+described in `defaults/main.yml`. For existing pools and volumes, omitted
+parameters will inherit whatever setting the pool or volume already has.
+This means that to change/override role defaults in an existing pool or volume,
+you must explicitly specify the new values/settings in the role variables.
 
 #### `storage_pools`
 The `storage_pools` variable is a list of pools to manage. Each pool contains a
@@ -45,11 +55,14 @@ __WARNING__: Toggling encryption for a pool is a destructive operation, meaning
              the pool itself will be removed as part of the process of
              adding/removing the encryption layer.
 
-##### `encryption_passphrase`
-This string specifies a passphrase used to unlock/open the LUKS volume(s).
+##### `encryption_password`
+This string specifies a password or passphrase used to unlock/open the LUKS volume(s).
 
-##### `encryption_key_file`
-This string specifies the full path to the key file used to unlock the LUKS volume(s).
+##### `encryption_key`
+This string specifies the full path to the key file on the managed nodes used to unlock
+the LUKS volume(s).  It is the responsibility of the user of this role to securely copy
+this file to the managed nodes, or otherwise ensure that the file is on the managed
+nodes.
 
 ##### `encryption_cipher`
 This string specifies a non-default cipher to be used by LUKS.
@@ -81,6 +94,12 @@ must contain only a single item.
 ##### `size`
 The `size` specifies the size of the file system. The format for this is intended to
 be human-readable, e.g.: "10g", "50 GiB".
+When using `compression` or `deduplication`, `size` can be set higher than actual available space,
+e.g.: 3 times the size of the volume, based on duplicity and/or compressibility of stored data.
+
+__NOTE__: The requested volume size may be reduced as necessary so the volume can
+          fit in the available pool space, but only if the required reduction is
+          not more than 2% of the requested volume size.
 
 ##### `fs_type`
 This indicates the desired file system type to use, e.g.: "xfs", "ext4", "swap".
@@ -122,11 +141,14 @@ __WARNING__: Toggling encryption for a volume is a destructive operation, meanin
              all data on that volume will be removed as part of the process of
              adding/removing the encryption layer.
 
-##### `encryption_passphrase`
-This string specifies a passphrase used to unlock/open the LUKS volume.
+##### `encryption_password`
+This string specifies a password or passphrase used to unlock/open the LUKS volume.
 
-##### `encryption_key_file`
-This string specifies the full path to the key file used to unlock the LUKS volume.
+##### `encryption_key`
+This string specifies the full path to the key file on the managed nodes used to unlock
+the LUKS volume(s).  It is the responsibility of the user of this role to securely copy
+this file to the managed nodes, or otherwise ensure that the file is on the managed
+nodes.
 
 ##### `encryption_cipher`
 This string specifies a non-default cipher to be used by LUKS.
@@ -136,6 +158,30 @@ This integer specifies the LUKS key size (in bits).
 
 ##### `encryption_luks_version`
 This integer specifies the LUKS version to use.
+
+##### `deduplication`
+This specifies whether or not the Virtual Data Optimizer (VDO) will be used.
+When set, duplicate data stored on storage volume will be
+deduplicated resulting in more storage capacity.
+Can be used together with `compression` and `vdo_pool_size`.
+Volume has to be part of the LVM `storage_pool`.
+Limit one VDO `storage_volume` per `storage_pool`.
+Underlying volume has to be at least 9 GB (bare minimum is around 5 GiB).
+
+##### `compression`
+This specifies whether or not the Virtual Data Optimizer (VDO) will be used.
+When set, data stored on storage volume will be
+compressed resulting in more storage capacity.
+Volume has to be part of the LVM `storage_pool`.
+Can be used together with `deduplication` and `vdo_pool_size`.
+Limit one VDO `storage_volume` per `storage_pool`.
+
+##### `vdo_pool_size`
+When Virtual Data Optimizer (VDO) is used, this specifies the actual size the volume
+will take on the device. Virtual size of VDO volume is set by `size` parameter.
+`vdo_pool_size` format is intended to be human-readable,
+e.g.: "30g", "50GiB".
+Default value is equal to the size of the volume.
 
 #### `storage_safe_mode`
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.

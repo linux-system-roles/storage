@@ -1,0 +1,48 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    mount_location: '/opt/test1'
+    volume_group_size: '10g'
+    lv_size: '10g'
+    unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
+    disk_size: '{{ unused_disk_subfact.sectors|int *
+                   unused_disk_subfact.sectorsize|int }}'
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+        max_return: 1
+
+    - name: Create one lv which size is equal to vg size
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ lv_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: "absent"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+
+    - include_tasks: verify-role-results.yml

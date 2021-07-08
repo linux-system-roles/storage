@@ -5,15 +5,21 @@
 #
 - name: Get expected mount device based on device type
   set_fact:
-    storage_test_device_path: "{{ storage_test_volume._kernel_device if _storage_test_volume_present and not storage_test_volume.encryption and storage_test_volume.raid_level else storage_test_volume._device }}"
+    storage_test_device_path: "{{ storage_test_volume._kernel_device
+      if _storage_test_volume_present and not storage_test_volume.encryption and storage_test_volume.raid_level
+      else storage_test_volume._device }}"
 
 - name: Set some facts
   set_fact:
     # json_query(...) used instead of "|selectattr('device', 'equalto', storage_test_volume._device)|list"
     # as that expression wouldn't work with Jinja versions <2.8
-    storage_test_mount_device_matches: "{{ ansible_mounts|json_query('[?device==`\"{}\"`]'.format(storage_test_device_path))}}"
-    storage_test_mount_point_matches: "{{ ansible_mounts|json_query('[?mount==`\"{}\"`]'.format(storage_test_volume.mount_point))}}"
-    storage_test_mount_expected_match_count: "{{ 1 if _storage_test_volume_present and storage_test_volume.mount_point and storage_test_volume.mount_point.startswith('/') else 0 }}"
+    storage_test_mount_device_matches: "{{ ansible_mounts |
+      json_query('[?device==`\"{}\"`]'.format(storage_test_device_path)) }}"
+    storage_test_mount_point_matches: "{{ ansible_mounts |
+      json_query('[?mount==`\"{}\"`]'.format(storage_test_volume.mount_point)) }}"
+    storage_test_mount_expected_match_count: "{{ 1
+      if _storage_test_volume_present and storage_test_volume.mount_point and storage_test_volume.mount_point.startswith('/')
+      else 0 }}"
     storage_test_swap_expected_matches: "{{ 1 if _storage_test_volume_present and storage_test_volume.fs_type == 'swap' else 0 }}"
 
 #
@@ -56,7 +62,9 @@
 
 - name: Verify swap status
   assert:
-    that: "{{ storage_test_swaps.stdout|regex_findall('^' + storage_test_sys_node.stdout + ' ', multiline=True)|list|length|int == storage_test_swap_expected_matches|int }}"
+    that: "{{ storage_test_swaps.stdout |
+      regex_findall('^' + storage_test_sys_node.stdout + ' ', multiline=True) |
+      list|length|int == storage_test_swap_expected_matches|int }}"
     msg: "Unexpected number of matching active swaps"
   when: storage_test_volume.fs_type == "swap"
 

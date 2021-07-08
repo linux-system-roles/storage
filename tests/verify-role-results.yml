@@ -25,6 +25,7 @@
   command: cat /etc/crypttab
   register: storage_test_crypttab
   changed_when: false
+  failed_when: false
 
 #
 # Verify pools and the volumes they contain.

@@ -9,17 +9,17 @@
       register: storage_test_mdadm
       changed_when: false
 
-    # pre-chew regex search patterns 
+    # pre-chew regex search patterns
     - set_fact:
-        storage_test_md_active_devices_re: "{{('Active Devices : ' ~ storage_test_volume.raid_device_count ~ '\n')|regex_escape()}}"
+        storage_test_md_active_devices_re: "{{ ('Active Devices : ' ~ storage_test_volume.raid_device_count ~ '\n')|regex_escape() }}"
       when: storage_test_volume.raid_device_count is defined
 
     - set_fact:
-        storage_test_md_spare_devices_re: "{{('Spare Devices : ' ~ storage_test_volume.raid_spare_count ~ '\n')|regex_escape()}}"
+        storage_test_md_spare_devices_re: "{{ ('Spare Devices : ' ~ storage_test_volume.raid_spare_count ~ '\n')|regex_escape() }}"
       when: storage_test_volume.raid_spare_count is defined
 
     - set_fact:
-        storage_test_md_metadata_version_re: "{{('Version : ' ~ storage_test_volume.raid_metadata_version ~ '\n')|regex_escape()}}"
+        storage_test_md_metadata_version_re: "{{ ('Version : ' ~ storage_test_volume.raid_metadata_version ~ '\n')|regex_escape() }}"
       when: storage_test_volume.raid_metadata_version is defined
 
     - name: check RAID active devices count
@@ -40,4 +40,4 @@
         msg: "Expected {{ storage_test_volume.raid_metadata_version }} RAID metadata version."
       when: storage_test_volume.raid_metadata_version is not none
 
-  when: storage_test_volume.type == 'raid' and storage_test_volume._device != ""
+  when: storage_test_volume.type == 'raid' and storage_test_volume._device | length > 0

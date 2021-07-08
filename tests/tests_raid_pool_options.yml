@@ -13,7 +13,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -22,7 +22,7 @@
 
     - name: Create a RAID1 device
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1
@@ -46,9 +46,40 @@
 
     - include_tasks: verify-role-results.yml
 
+    - name: Repeat the previous invocation minus the pool raid options
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: present
+            volumes:
+              - name: lv1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+              - name: lv2
+                size: "{{ volume2_size }}"
+                mount_point: "{{ mount_location2 }}"
+              - name: lv3
+                size: "{{ volume3_size }}"
+                mount_point: "{{ mount_location3 }}"
+
+    - name: Assert to preserve RAID settings for preexisting pool
+      assert:
+        that: not blivet_output.changed and
+              blivet_output.pools[0].raid_level == 'raid1' and
+              blivet_output.pools[0].raid_device_count == 2 and
+              blivet_output.pools[0].raid_spare_count == 1 and
+              blivet_output.pools[0].raid_metadata_version == '1.0'
+        msg: "Failure to preserve RAID settings for preexisting pool."
+
+    - include_tasks: verify-role-results.yml
+
     - name: Remove the pool created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: vg1

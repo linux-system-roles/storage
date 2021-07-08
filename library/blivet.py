@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
@@ -15,6 +19,7 @@ short_description: Module for management of linux block device stacks
 version_added: "2.5"
 
 description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
     - "Module configures storage pools and volumes to match the state specified
        in input parameters. It does not do any management of /etc/fstab entries."
 
@@ -30,14 +35,19 @@ options:
             - boolean indicating whether to create partitions on disks for pool backing devices
     disklabel_type:
         description:
-            - disklabel type string (eg: 'gpt') to use, overriding the built-in logic in blivet
+            - |
+              disklabel type string (eg: 'gpt') to use, overriding the built-in logic in blivet
     safe_mode:
         description:
             - boolean indicating that we should fail rather than implicitly/automatically
               removing devices or formatting
+    diskvolume_mkfs_option_map:
+        description:
+            - dict which maps filesystem names to additional mkfs options that should be used
+              when creating a disk volume (that is, a whole disk filesystem)
 
 author:
-    - David Lehman (dlehman@redhat.com)
+    - David Lehman (@dwlehman)
 '''
 
 EXAMPLES = '''
@@ -65,22 +75,34 @@ EXAMPLES = '''
 RETURN = '''
 actions:
     description: list of dicts describing actions taken
-    type: list of dict
+    returned: success
+    type: list
+    elements: dict
 leaves:
     description: list of paths to leaf devices
-    type: list of str
+    returned: success
+    type: list
+    elements: dict
 mounts:
     description: list of dicts describing mounts to set up
-    type: list of dict
+    returned: success
+    type: list
+    elements: dict
 crypts:
     description: list of dicts describing crypttab entries to set up
-    type: list of dict
+    returned: success
+    type: list
+    elements: dict
 pools:
     description: list of dicts describing the pools w/ device path for each volume
-    type: list of dict
+    returned: success
+    type: list
+    elements: dict
 volumes:
     description: list of dicts describing the volumes w/ device path for each
-    type: list of dict
+    returned: success
+    type: list
+    elements: dict
 '''
 
 import logging
@@ -100,6 +122,7 @@ try:
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
     from blivet3.size import Size
+    from blivet3.udev import trigger
     from blivet3.util import set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
@@ -112,6 +135,7 @@ except ImportError:
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
         from blivet.size import Size
+        from blivet.udev import trigger
         from blivet.util import set_up_logging
         BLIVET_PACKAGE = 'blivet'
     except ImportError:
@@ -124,9 +148,14 @@ if BLIVET_PACKAGE:
     set_up_logging()
     log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
 
+
+MAX_TRIM_PERCENT = 2
+
 use_partitions = None  # create partitions on pool backing device disks?
 disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
+pool_defaults = dict()
+volume_defaults = dict()
 
 
 def find_duplicate_names(dicts):
@@ -163,11 +192,16 @@ class BlivetBase(object):
         raise NotImplementedError()
 
     def _manage_one_encryption(self, device):
+        global safe_mode
         ret = device
         # Make sure to handle adjusting both existing stacks and future stacks.
         if device == device.raw_device and self._spec_dict['encryption']:
             # add luks
             luks_name = "luks-%s" % device._name
+            if safe_mode and (device.original_format.type is not None
+                              or device.original_format.name != get_format(None).name):
+                raise BlivetAnsibleError("cannot remove existing formatting on device '%s' in safe mode due to adding encryption" %
+                                         device._name)
             if not device.format.exists:
                 fmt = device.format
             else:
@@ -179,11 +213,11 @@ class BlivetBase(object):
                                                   cipher=self._spec_dict.get('encryption_cipher'),
                                                   key_size=self._spec_dict.get('encryption_key_size'),
                                                   luks_version=self._spec_dict.get('encryption_luks_version'),
-                                                  passphrase=self._spec_dict.get('encryption_passphrase') or None,
-                                                  key_file=self._spec_dict.get('encryption_key_file') or None))
+                                                  passphrase=self._spec_dict.get('encryption_password') or None,
+                                                  key_file=self._spec_dict.get('encryption_key') or None))
 
             if not device.format.has_key:
-                raise BlivetAnsibleError("encrypted %s '%s' missing key/passphrase" % (self._type, self._spec_dict['name']))
+                raise BlivetAnsibleError("encrypted %s '%s' missing key/password" % (self._type, self._spec_dict['name']))
 
             luks_device = devices.LUKSDevice(luks_name,
                                              fmt=fmt,
@@ -192,6 +226,10 @@ class BlivetBase(object):
             ret = luks_device
         elif device != device.raw_device and not self._spec_dict['encryption']:
             # remove luks
+            if safe_mode and (device.original_format.type is not None
+                              or device.original_format.name != get_format(None).name):
+                raise BlivetAnsibleError("cannot remove existing formatting on device '%s' in safe mode due to encryption removal" %
+                                         device._name)
             if not device.format.exists:
                 fmt = device.format
             else:
@@ -220,11 +258,11 @@ class BlivetBase(object):
         requested_spares = self._spec_dict.get("raid_spare_count")
 
         if requested_actives is not None and requested_spares is not None:
-            if (requested_actives + requested_spares != len(members) or
-                    requested_actives < 0 or requested_spares < 0):
+            if (requested_actives + requested_spares != len(members)
+                or requested_actives < 0 or requested_spares < 0):  # noqa: E129
                 raise BlivetAnsibleError("failed to set up '%s': cannot create RAID "
-                                        "with %s members (%s active and %s spare)"
-                                        % (self._spec_dict["name"], len(members),
+                                         "with %s members (%s active and %s spare)"
+                                         % (self._spec_dict["name"], len(members),
                                             requested_actives, requested_spares))
 
         if requested_actives is not None:
@@ -278,17 +316,19 @@ class BlivetVolume(BlivetBase):
         if self.__class__.blivet_device_class is not None:
             packages.extend(self.__class__.blivet_device_class._packages)
 
-        fmt = get_format(self._volume['fs_type'])
+        fmt = get_format(self._volume.get('fs_type'))
         packages.extend(fmt.packages)
-        if self._volume['encryption']:
+        if self._volume.get('encryption'):
             packages.extend(get_format('luks').packages)
+        if self._volume.get('compression') or self._volume.get('deduplication'):
+            packages.extend(['vdo', 'kmod-kvdo'])
         return packages
 
     @property
     def ultimately_present(self):
         """ Should this volume be present when we are finished? """
-        return (self._volume['state'] == 'present' and
-                (self._blivet_pool is None or self._blivet_pool.ultimately_present))
+        return (self._volume.get('state', 'present') == 'present'
+                and (self._blivet_pool is None or self._blivet_pool.ultimately_present))
 
     def _type_check(self):  # pylint: disable=no-self-use
         """ Is self._device of the correct type? """
@@ -303,18 +343,22 @@ class BlivetVolume(BlivetBase):
         if self._device:
             return
 
-        device = self._blivet.devicetree.resolve_device(self._get_device_id())
+        device_id = self._get_device_id()
+        if device_id is None:
+            return
+
+        device = self._blivet.devicetree.resolve_device(device_id)
         if device is None:
             return
 
         if device.format.type == 'luks':
             # XXX If we have no key we will always re-encrypt.
-            device.format._key_file = self._volume.get('encryption_key_file')
-            device.format.passphrase = self._volume.get('encryption_passphrase')
+            device.format._key_file = self._volume.get('encryption_key')
+            device.format.passphrase = self._volume.get('encryption_password')
 
             # set up the original format as well since it'll get used for processing
-            device.original_format._key_file = self._volume.get('encryption_key_file')
-            device.original_format.passphrase = self._volume.get('encryption_passphrase')
+            device.original_format._key_file = self._volume.get('encryption_key')
+            device.original_format.passphrase = self._volume.get('encryption_password')
             if device.isleaf:
                 self._blivet.populate()
 
@@ -328,12 +372,61 @@ class BlivetVolume(BlivetBase):
             self._device = None
             return  # TODO: see if we can create this device w/ the specified name
 
+    def _update_from_device(self, param_name):
+        """ Return True if param_name's value was retrieved from a looked-up device. """
+        log.debug("Updating volume settings from device: %r", self._device)
+        encrypted = "luks" in self._device.type or self._device.format.type == "luks"
+        if encrypted and "luks" in self._device.type:
+            luks_fmt = self._device.parents[0].format
+        elif encrypted:
+            luks_fmt = self._device.format
+
+        if param_name == 'size':
+            self._volume['size'] = int(self._device.size.convert_to())
+        elif param_name == 'fs_type' and (self._device.format.type or self._device.format.name != get_format(None).name):
+            self._volume['fs_type'] = self._device.format.type
+        elif param_name == 'fs_label':
+            self._volume['fs_label'] = getattr(self._device.format, 'label', "") or ""
+        elif param_name == 'mount_point':
+            self._volume['mount_point'] = getattr(self._device.format, 'mountpoint', None)
+        elif param_name == 'disks':
+            self._volume['disks'] = [d.name for d in self._device.disks]
+        elif param_name == 'encryption':
+            self._volume['encryption'] = encrypted
+        elif param_name == 'encryption_key_size' and encrypted:
+            self._volume['encryption_key_size'] = luks_fmt.key_size
+        elif param_name == 'encryption_key_file' and encrypted:
+            self._volume['encryption_key_file'] = luks_fmt.key_file
+        elif param_name == 'encryption_cipher' and encrypted:
+            self._volume['encryption_cipher'] = luks_fmt.cipher
+        elif param_name == 'encryption_luks_version' and encrypted:
+            self._volume['encryption_luks_version'] = luks_fmt.luks_version
+        else:
+            return False
+
+        return True
+
+    def _apply_defaults(self):
+        global volume_defaults
+        for name, default in volume_defaults.items():
+            if name in self._volume:
+                continue
+
+            default = None if default in ('none', 'None', 'null') else default
+
+            if self._device:
+                # Apply values from the device if it already exists.
+                if not self._update_from_device(name):
+                    self._volume[name] = default
+            else:
+                self._volume.setdefault(name, default)
+
     def _get_format(self):
         """ Return a blivet.formats.DeviceFormat instance for this volume. """
         fmt = get_format(self._volume['fs_type'],
                          mountpoint=self._volume.get('mount_point'),
                          label=self._volume['fs_label'],
-                         options=self._volume['fs_create_options'])
+                         create_options=self._volume['fs_create_options'])
         if not fmt.supported or not fmt.formattable:
             raise BlivetAnsibleError("required tools for file system '%s' are missing" % self._volume['fs_type'])
 
@@ -366,9 +459,25 @@ class BlivetVolume(BlivetBase):
         except Exception:
             raise BlivetAnsibleError("invalid size specification for volume '%s': '%s'" % (self._volume['name'], self._volume['size']))
 
-        if size and self._device.resizable and self._device.size != size:
-            if self._device.format.resizable:
+        if size and self._device.size != size:
+            try:
                 self._device.format.update_size_info()
+            except AttributeError:
+                pass
+
+            if not self._device.resizable:
+                return
+
+            trim_percent = (1.0 - float(self._device.max_size / size)) * 100
+            log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
+            if size > self._device.max_size and trim_percent <= MAX_TRIM_PERCENT:
+                log.info("adjusting %s resize target from %s to %s to fit in free space",
+                         self._volume['name'],
+                         size,
+                         self._device.max_size)
+                size = self._device.max_size
+                if size == self._device.size:
+                    return
 
             if not self._device.min_size <= size <= self._device.max_size:
                 raise BlivetAnsibleError("volume '%s' cannot be resized to '%s'" % (self._volume['name'], size))
@@ -379,6 +488,8 @@ class BlivetVolume(BlivetBase):
                 raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" % (self._device.name,
                                                                                               self._device.size,
                                                                                               size, str(e)))
+        elif size and self._device.exists and self._device.size != size and not self._device.resizable:
+            raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" % (self._device.name, self._device.size, size))
 
     def _reformat(self):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
@@ -391,12 +502,16 @@ class BlivetVolume(BlivetBase):
 
         if self._device.format.status and (self._device.format.mountable or self._device.format.type == "swap"):
             self._device.format.teardown()
+        if not self._device.isleaf:
+            self._blivet.devicetree.recursive_remove(self._device, remove_device=False)
         self._blivet.format_device(self._device, fmt)
 
     def manage(self):
         """ Schedule actions to configure this volume according to the yaml input. """
         # look up the device
         self._look_up_device()
+
+        self._apply_defaults()
 
         # schedule destroy if appropriate
         if not self.ultimately_present:
@@ -416,6 +531,9 @@ class BlivetVolume(BlivetBase):
         if self._device.raw_device.exists:
             self._reformat()
 
+        if self.ultimately_present and self._volume['mount_point'] and not self._device.format.mountable:
+            raise BlivetAnsibleError("volume '%s' has a mount point but no mountable file system" % self._volume['name'])
+
         # schedule resize if appropriate
         if self._device.raw_device.exists and self._volume['size']:
             self._resize()
@@ -434,6 +552,19 @@ class BlivetDiskVolume(BlivetVolume):
 
     def _type_check(self):
         return self._device.raw_device.is_disk
+
+    def _get_format(self):
+        fmt = super(BlivetDiskVolume, self)._get_format()
+        # pass -F to mke2fs on whole disks in RHEL7
+        mkfs_options = diskvolume_mkfs_option_map.get(self._volume['fs_type'])
+        if mkfs_options:
+            if fmt.create_options:
+                fmt.create_options += " "
+            else:
+                fmt.create_options = ""
+            fmt.create_options += mkfs_options
+
+        return fmt
 
     def _create(self):
         self._reformat()
@@ -456,7 +587,14 @@ class BlivetPartitionVolume(BlivetVolume):
         return self._device.raw_device.type == 'partition'
 
     def _get_device_id(self):
-        return self._blivet_pool._disks[0].name + '1'
+        device_id = None
+        if self._blivet_pool._disks[0].partitioned and len(self._blivet_pool._disks[0].children) == 1:
+            device_id = self._blivet_pool._disks[0].children[0].name
+
+        return device_id
+
+    def _resize(self):
+        pass
 
     def _create(self):
         if self._device:
@@ -489,6 +627,8 @@ class BlivetLVMVolume(BlivetVolume):
     blivet_device_class = devices.LVMLogicalVolumeDevice
 
     def _get_device_id(self):
+        if not self._blivet_pool._device:
+            return None
         return "%s-%s" % (self._blivet_pool._device.name, self._volume['name'])
 
     def _create(self):
@@ -505,16 +645,64 @@ class BlivetLVMVolume(BlivetVolume):
             raise BlivetAnsibleError("invalid size '%s' specified for volume '%s'" % (self._volume['size'], self._volume['name']))
 
         fmt = self._get_format()
-        if size > parent.free_space:
-            raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)" % (size,
-                                                                                                                   parent.name,
-                                                                                                                   parent.free_space))
+        trim_percent = (1.0 - float(parent.free_space / size)) * 100
+        log.debug("size: %s ; %s", size, trim_percent)
+
+        create_vdo = self._volume['deduplication'] or self._volume['compression']
+
+        if create_vdo:
+            pool_size = parent.free_space if size > parent.free_space else size
+            if self._volume['vdo_pool_size']:
+                pool_size = Size(self._volume['vdo_pool_size'])
+                if pool_size > parent.free_space:
+                    if trim_percent > MAX_TRIM_PERCENT:
+                        raise BlivetAnsibleError("specified 'vdo_pool_size' for volume '%s' "
+                                                 "exceeds available space in pool '%s' (%s)" % (pool_size,
+                                                                                                parent.name,
+                                                                                                parent.free_space))
+                    else:
+                        log.info("adjusting %s size from %s to %s to fit in %s free space",
+                                 self._volume['name'],
+                                 size,
+                                 parent.free_space,
+                                 parent.name)
+                        pool_size = parent.free_space
+
+            try:
+                vdopool = self._blivet.new_lv(name='vdopool', vdo_pool=True,
+                                              parents=[parent], compression=self._volume['compression'],
+                                              deduplication=self._volume['deduplication'],
+                                              size=pool_size)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to set up VDO pool '%s': %s" % (self._volume['name'], str(e)))
+
+            self._blivet.create_device(vdopool)
+        elif size > parent.free_space:
+            if trim_percent > MAX_TRIM_PERCENT:
+                raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)" % (size,
+                                                                                                                       parent.name,
+                                                                                                                       parent.free_space))
+            else:
+                log.info("adjusting %s size from %s to %s to fit in %s free space",
+                         self._volume['name'],
+                         size,
+                         parent.free_space,
+                         parent.name)
+                size = parent.free_space
 
         try:
-            device = self._blivet.new_lv(name=self._volume['name'],
-                                         parents=[parent], size=size, fmt=fmt)
-        except Exception:
-            raise BlivetAnsibleError("failed to set up volume '%s'" % self._volume['name'])
+            if create_vdo:
+                device = self._blivet.new_lv(name=self._volume['name'], vdo_lv=create_vdo,
+                                             parents=[vdopool if create_vdo else parent],
+                                             size=size, fmt=fmt)
+            else:
+                # This is here for backwards compatibility. Until 8.4 blivet does not support
+                # vdo_lv optional parameter
+                device = self._blivet.new_lv(name=self._volume['name'],
+                                             parents=[vdopool if create_vdo else parent],
+                                             size=size, fmt=fmt)
+        except Exception as e:
+            raise BlivetAnsibleError("failed to set up volume '%s': %s" % (self._volume['name'], str(e)))
 
         self._blivet.create_device(device)
         self._device = device
@@ -528,8 +716,8 @@ class BlivetMDRaidVolume(BlivetVolume):
         spare_count = 0
 
         if requested_actives is not None and requested_spares is not None:
-            if (requested_actives + requested_spares != members_count or
-                    requested_actives < 0 or requested_spares < 0):
+            if (requested_actives + requested_spares != members_count
+                or requested_actives < 0 or requested_spares < 0):  # noqa: E129
                 raise BlivetAnsibleError("failed to set up volume '%s': cannot create RAID "
                                          "with %s members (%s active and %s spare)"
                                          % (self._volume['name'], members_count,
@@ -566,6 +754,23 @@ class BlivetMDRaidVolume(BlivetVolume):
                     members.append(member_disk)
 
         return members
+
+    def _update_from_device(self, param_name):
+        """ Return True if param_name's value was retrieved from a looked-up device. """
+        if param_name == 'raid_level':
+            self._volume['raid_level'] = self._device.level.name
+        elif param_name == 'raid_chunk_size':
+            self._volume['raid_chunk_size'] = str(self._device.chunk_size)
+        elif param_name == 'raid_device_count':
+            self._volume['raid_device_count'] = self._device.member_devices
+        elif param_name == 'raid_spare_count':
+            self._volume['raid_spare_count'] = self._device.spares
+        elif param_name == 'raid_metadata_version':
+            self._volume['raid_metadata_version'] = self._device.metadata_version
+        else:
+            return super(BlivetMDRaidVolume, self)._update_from_device(param_name)
+
+        return True
 
     def _create(self):
         global safe_mode
@@ -625,10 +830,12 @@ _BLIVET_VOLUME_TYPES = {
 
 def _get_blivet_volume(blivet_obj, volume, bpool=None):
     """ Return a BlivetVolume instance appropriate for the volume dict. """
-    volume_type = volume.get('type', bpool._pool['type'] if bpool else None)
+    global volume_defaults
+    volume_type = volume.get('type', bpool._pool['type'] if bpool else volume_defaults['type'])
     if volume_type not in _BLIVET_VOLUME_TYPES:
         raise BlivetAnsibleError("Volume '%s' has unknown type '%s'" % (volume['name'], volume_type))
 
+    volume['type'] = volume_type
     return _BLIVET_VOLUME_TYPES[volume_type](blivet_obj, volume, bpool=bpool)
 
 
@@ -650,15 +857,14 @@ class BlivetPool(BlivetBase):
         if self.ultimately_present and self.__class__.blivet_device_class is not None:
             packages.extend(self.__class__.blivet_device_class._packages)
 
-        if self._pool['encryption']:
+        if self._pool.get('encryption'):
             packages.extend(get_format('luks').packages)
-
         return packages
 
     @property
     def ultimately_present(self):
         """ Should this pool be present when we are finished? """
-        return self._pool['state'] == 'present'
+        return self._pool.get('state', 'present') == 'present'
 
     @property
     def _is_raid(self):
@@ -700,7 +906,10 @@ class BlivetPool(BlivetBase):
 
     def _look_up_disks(self):
         """ Look up the pool's disks in blivet's device tree. """
-        if not self._pool['disks']:
+        if self._disks:
+            return
+
+        if not self._device and not self._pool['disks']:
             raise BlivetAnsibleError("no disks specified for pool '%s'" % self._pool['name'])
         elif not isinstance(self._pool['disks'], list):
             raise BlivetAnsibleError("pool disks must be specified as a list")
@@ -711,7 +920,7 @@ class BlivetPool(BlivetBase):
             if device is not None:  # XXX fail if any disk isn't resolved?
                 disks.append(device)
 
-        if self._pool['disks'] and not disks:
+        if self._pool['disks'] and not self._device and not disks:
             raise BlivetAnsibleError("unable to resolve any disks specified for pool '%s' (%s)" % (self._pool['name'], self._pool['disks']))
 
         self._disks = disks
@@ -729,6 +938,68 @@ class BlivetPool(BlivetBase):
             self._device = None
             return  # TODO: see if we can create this device w/ the specified name
 
+        # Apply encryption keys as appropriate
+        if any(d.encrypted for d in self._device.parents):
+            passphrase = self._pool.get("encryption_passphrase")
+            key_file = self._pool.get("encryption_key_file")
+            for member in self._device.parents:
+                if member.parents[0].format.type == "luks":
+                    if passphrase:
+                        member.parents[0].format.passphrase = passphrase
+                        member.parents[0].original_format.passphrase = passphrase
+                    if key_file:
+                        member.parents[0].format.key_file = key_file
+                        member.parents[0].original_format.key_file = key_file
+
+    def _update_from_device(self, param_name):
+        """ Return True if param_name's value was retrieved from a looked-up device. """
+        # We wouldn't have the pool device if the member devices weren't unlocked, so we do not
+        # have to consider the case where the devices are unlocked like we do for volumes.
+        encrypted = bool(self._device.parents) and all("luks" in d.type for d in self._device.parents)
+        raid = len(self._device.parents) == 1 and hasattr(self._device.parents[0].raw_device, 'level')
+        log.debug("BlivetPool._update_from_device: %s", self._device)
+
+        if param_name == 'disks':
+            self._pool['disks'] = [d.name for d in self._device.disks]
+        elif param_name == 'encryption':
+            self._pool['encryption'] = encrypted
+        elif param_name == 'encryption_key_size' and encrypted:
+            self._pool['encryption_key_size'] = self._device.parents[0].parents[0].format.key_size
+        elif param_name == 'encryption_key_file' and encrypted:
+            self._pool['encryption_key_file'] = self._device.parents[0].parents[0].format.key_file
+        elif param_name == 'encryption_cipher' and encrypted:
+            self._pool['encryption_cipher'] = self._device.parents[0].parents[0].format.cipher
+        elif param_name == 'encryption_luks_version' and encrypted:
+            self._pool['encryption_luks_version'] = self._device.parents[0].parents[0].format.luks_version
+        elif param_name == 'raid_level' and raid:
+            self._pool['raid_level'] = self._device.parents[0].raw_device.level.name
+        elif param_name == 'raid_chunk_size' and raid:
+            self._pool['raid_chunk_size'] = str(self._device.parents[0].raw_device.chunk_size)
+        elif param_name == 'raid_device_count' and raid:
+            self._pool['raid_device_count'] = self._device.parents[0].raw_device.member_devices
+        elif param_name == 'raid_spare_count' and raid:
+            self._pool['raid_spare_count'] = self._device.parents[0].raw_device.spares
+        elif param_name == 'raid_metadata_version' and raid:
+            self._pool['raid_metadata_version'] = self._device.parents[0].raw_device.metadata_version
+        else:
+            return False
+
+        return True
+
+    def _apply_defaults(self):
+        global pool_defaults
+        for name, default in pool_defaults.items():
+            if name in self._pool:
+                continue
+
+            default = None if default in ('none', 'None', 'null') else default
+
+            if self._device:
+                if not self._update_from_device(name):
+                    self._pool[name] = default
+            else:
+                self._pool.setdefault(name, default)
+
     def _create_members(self):
         """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
@@ -736,7 +1007,10 @@ class BlivetPool(BlivetBase):
         for disk in self._disks:
             if not disk.isleaf or disk.format.type is not None:
                 if safe_mode:
-                    raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" % (disk.name, self._pool['name']))
+                    raise BlivetAnsibleError(
+                        "cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" %
+                        (disk.name, self._pool['name'])
+                    )
                 else:
                     self._blivet.devicetree.recursive_remove(disk)
 
@@ -753,7 +1027,6 @@ class BlivetPool(BlivetBase):
             else:
                 self._blivet.format_device(member, self._get_format())
             members.append(member)
-
 
         if self._is_raid:
             raid_name = "%s-1" % self._pool['name']
@@ -773,10 +1046,9 @@ class BlivetPool(BlivetBase):
 
         return result
 
-
     def _get_volumes(self):
         """ Set up BlivetVolume instances for this pool's volumes. """
-        for volume in self._pool['volumes']:
+        for volume in self._pool.get('volumes', []):
             bvolume = _get_blivet_volume(self._blivet, volume, self)
             self._blivet_volumes.append(bvolume)
 
@@ -788,17 +1060,22 @@ class BlivetPool(BlivetBase):
 
     def manage(self):
         """ Schedule actions to configure this pool according to the yaml input. """
+        global safe_mode
         # look up the device
-        self._look_up_disks()
         self._look_up_device()
+        self._apply_defaults()
+        self._look_up_disks()
 
         # schedule destroy if appropriate, including member type change
-        if not self.ultimately_present or self._member_management_is_destructive():
-            if not self.ultimately_present:
-                self._manage_volumes()
+        if not self.ultimately_present:
+            self._manage_volumes()
             self._destroy()
-            if not self.ultimately_present:
-                return
+            return
+        elif self._member_management_is_destructive():
+            if safe_mode:
+                raise BlivetAnsibleError("cannot remove and recreate existing pool '%s' in safe mode" % self._pool['name'])
+            else:
+                self._destroy()
 
         # schedule create if appropriate
         self._create()
@@ -810,6 +1087,7 @@ class BlivetPartitionPool(BlivetPool):
         return self._device.partitionable
 
     def _look_up_device(self):
+        self._look_up_disks()
         self._device = self._disks[0]
 
     def _create(self):
@@ -878,6 +1156,10 @@ _BLIVET_POOL_TYPES = {
 
 def _get_blivet_pool(blivet_obj, pool):
     """ Return an appropriate BlivetPool instance for the pool dict. """
+    if 'type' not in pool:
+        global pool_defaults
+        pool['type'] = pool_defaults['type']
+
     if pool['type'] not in _BLIVET_POOL_TYPES:
         raise BlivetAnsibleError("Pool '%s' has unknown type '%s'" % (pool['name'], pool['type']))
 
@@ -1093,7 +1375,10 @@ def run_module():
         packages_only=dict(type='bool', required=False, default=False),
         disklabel_type=dict(type='str', required=False, default=None),
         safe_mode=dict(type='bool', required=False, default=True),
-        use_partitions=dict(type='bool', required=False, default=True))
+        pool_defaults=dict(type='dict', required=False),
+        volume_defaults=dict(type='dict', required=False),
+        use_partitions=dict(type='bool', required=False, default=True),
+        diskvolume_mkfs_option_map=dict(type='dict', required=False, default={}))
 
     # seed the result dict in the object
     result = dict(
@@ -1129,13 +1414,27 @@ def run_module():
     global safe_mode
     safe_mode = module.params['safe_mode']
 
+    global diskvolume_mkfs_option_map
+    diskvolume_mkfs_option_map = module.params['diskvolume_mkfs_option_map']
+
+    global pool_defaults
+    if 'pool_defaults' in module.params:
+        pool_defaults = module.params['pool_defaults']
+
+    global volume_defaults
+    if 'volume_defaults' in module.params:
+        volume_defaults = module.params['volume_defaults']
+
     b = Blivet()
     b.reset()
     fstab = FSTab(b)
     actions = list()
 
     if module.params['packages_only']:
-        result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        try:
+            result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        except BlivetAnsibleError as e:
+            module.fail_json(msg=str(e), **result)
         module.exit_json(**result)
 
     def record_action(action):
@@ -1143,6 +1442,13 @@ def run_module():
             return
 
         actions.append(action)
+
+    def ensure_udev_update(action):
+        if action.is_create:
+            sys_path = action.device.path
+            if os.path.islink(sys_path):
+                sys_path = os.readlink(action.device.path)
+            trigger(action='change', subsystem='block', name=os.path.basename(sys_path))
 
     def action_dict(action):
         return dict(action=action.type_desc_str,
@@ -1154,7 +1460,7 @@ def run_module():
         module.fail_json(msg="multiple pools with the same name: {0}".format(",".join(duplicates)),
                          **result)
     for pool in module.params['pools']:
-        duplicates = find_duplicate_names(pool['volumes'])
+        duplicates = find_duplicate_names(pool.get('volumes', list()))
         if duplicates:
             module.fail_json(msg="multiple volumes in pool '{0}' with the "
                                  "same name: {1}".format(pool['name'], ",".join(duplicates)),
@@ -1178,13 +1484,14 @@ def run_module():
     result['packages'] = b.packages[:]
 
     for action in scheduled:
-        if action.is_destroy and action.is_format and action.format.exists and \
+        if (action.is_destroy or action.is_resize) and action.is_format and action.format.exists and \
            (action.format.mountable or action.format.type == "swap"):
             action.format.teardown()
 
     if scheduled:
         # execute the scheduled actions, committing changes to disk
         callbacks.action_executed.add(record_action)
+        callbacks.action_executed.add(ensure_udev_update)
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         except Exception as e:
@@ -1208,6 +1515,7 @@ def run_module():
 
 def main():
     run_module()
+
 
 if __name__ == '__main__':
     main()

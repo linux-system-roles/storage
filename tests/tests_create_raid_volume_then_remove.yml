@@ -10,9 +10,6 @@
     - include_role:
         name: linux-system-roles.storage
 
-    ##
-    ## RAID0
-    ##
 
     - include_tasks: get_unused_disk.yml
       vars:

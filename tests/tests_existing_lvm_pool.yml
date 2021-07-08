@@ -1,0 +1,54 @@
+---
+- hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test1'
+    volume_group_size: '5g'
+    volume_size: '4g'
+    pool_name: foo
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+        max_return: 1
+
+    - name: Create one LVM logical volume under one volume group
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ pool_name }}"
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Create another volume in the existing pool, identified only by name.
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ pool_name }}"
+            volumes:
+              - name: newvol
+                size: '2 GiB'
+                fs_type: ext4
+                fs_label: newvol
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Clean up.
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ pool_name }}"
+            state: absent
+
+    - include_tasks: verify-role-results.yml

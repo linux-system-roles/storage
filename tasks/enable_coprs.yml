@@ -1,0 +1,26 @@
+---
+- name: check if the COPR support packages should be installed
+  set_fact:
+    install_copr: yes
+  loop: "{{ _storage_copr_packages|default([]) }}"
+  loop_control:
+    loop_var: repo
+  when:
+    - _storage_copr_packages is defined
+    - copr_packages is defined
+    - repo.packages|intersect(copr_packages)|length
+
+- name: make sure COPR support packages are present
+  package:
+    name: "{{ _storage_copr_support_packages }}"
+  when: install_copr is defined and install_copr | bool
+
+- name: enable COPRs
+  include_tasks: "enable_copr.yml"
+  loop: "{{ _storage_copr_packages|default([]) }}"
+  loop_control:
+    loop_var: repo
+  when:
+    - _storage_copr_packages is defined
+    - copr_packages is defined
+    - repo.packages|intersect(copr_packages)|length

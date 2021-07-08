@@ -7,7 +7,7 @@
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -15,7 +15,7 @@
 
     - name: Create a partition device mounted on "{{ mount_location }}"
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -24,13 +24,14 @@
             volumes:
               - name: test1
                 type: partition
+                fs_type: ext4
                 mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous invocation to verify idempotence
+    - name: Repeat the previous invocation minus fs_type to verify idempotence
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -40,15 +41,20 @@
               - name: test1
                 type: partition
                 mount_point: "{{ mount_location }}"
+
+    - name: Assert file system is preserved on existing partition volume
+      assert:
+        that: not blivet_output.changed and blivet_output.pools[0].volumes[0].fs_type == 'ext4'
+        msg: "File system not preserved on existing partition volume."
 
     - include_tasks: verify-role-results.yml
 
     - name: Remove the partition created above
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
-          - name:  "{{ unused_disks[0] }}"
+          - name: "{{ unused_disks[0] }}"
             type: partition
             disks: "{{ unused_disks }}"
             state: absent
@@ -62,10 +68,10 @@
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
-          - name:  "{{ unused_disks[0] }}"
+          - name: "{{ unused_disks[0] }}"
             type: partition
             disks: "{{ unused_disks }}"
             state: absent

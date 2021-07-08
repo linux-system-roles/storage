@@ -1,6 +1,6 @@
 ---
 - set_fact:
-    _storage_volume_tests: ['mount', 'fstab', 'fs', 'device', 'encryption', 'md'] # fs: type, label  device: name, size, type, disks
+    _storage_volume_tests: ['mount', 'fstab', 'fs', 'device', 'encryption', 'md', 'size'] # fs: type, label  device: name, type, disks
   # future:
   #   device:
   #     compression

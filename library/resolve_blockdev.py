@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
@@ -12,6 +16,7 @@ module: resolve_blockdev
 short_description: Resolve block device specification to device node path.
 version_added: "2.5"
 description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
     - "This module accepts various forms of block device identifiers and
        resolves them to the correct block device node path."
 options:
@@ -19,8 +24,9 @@ options:
         description:
             - String describing a block device
         required: true
+        type: str
 author:
-    - David Lehman (dlehman@redhat.com)
+    - David Lehman (@dwlehman)
 '''
 
 EXAMPLES = '''
@@ -41,6 +47,7 @@ RETURN = '''
 device:
     description: Path to block device node
     type: str
+    returned: success
 '''
 
 import glob
@@ -95,7 +102,7 @@ def canonical_device(device):
 
 def run_module():
     module_args = dict(
-        spec=dict(type='str')
+        spec=dict(type='str', required=True)
     )
 
     result = dict(
@@ -113,7 +120,7 @@ def run_module():
         pass
 
     if not result['device'] or not os.path.exists(result['device']):
-        module.fail_json(msg="The {} device spec could not be resolved".format(module.params['spec']))
+        module.fail_json(msg="The {0} device spec could not be resolved".format(module.params['spec']))
 
     module.exit_json(**result)
 

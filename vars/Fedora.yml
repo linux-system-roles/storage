@@ -5,3 +5,10 @@ blivet_package_list:
   - libblockdev-lvm
   - libblockdev-mdraid
   - libblockdev-swap
+_storage_copr_packages:
+  - repository: "rhawalsh/dm-vdo"
+    packages:
+      - vdo
+      - kmod-vdo
+_storage_copr_support_packages:
+  - dnf-plugins-core

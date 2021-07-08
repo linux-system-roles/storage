@@ -11,12 +11,10 @@
       - '/non/existent/disk'
     invalid_size: 'xyz GiB'
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
-    too_large_size: '{{ (unused_disk_subfact.sectors|int + 1) *
-                        unused_disk_subfact.sectorsize|int }}'
 
   tasks:
     - include_role:
-        name: storage
+        name: linux-system-roles.storage
 
     - include_tasks: get_unused_disk.yml
       vars:
@@ -27,7 +25,7 @@
       block:
         - name: Try to create LVM with an invalid disk specification.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -65,7 +63,7 @@
       block:
         - name: Try to create LVM with an invalid size specification.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -73,39 +71,6 @@
                 volumes:
                   - name: test1
                     size: "{{ invalid_size }}"
-                    mount_point: "{{ mount_location1 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    # the following does not work properly
-    # - name: Verify the output
-    #   assert:
-    #     that: "{{ blivet_output.failed and
-    #               blivet_output.msg|regex_search('invalid size.+for volume') and
-    #               not blivet_output.changed }}"
-    #     msg: "Unexpected behavior w/ invalid volume size"
-
-    - name: Test for correct handling of too-large volume size.
-      block:
-        - name: Try to create LVM with a too-large volume size.
-          include_role:
-            name: storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    size: "{{ too_large_size }}"
                     mount_point: "{{ mount_location1 }}"
 
         - name: unreachable task
@@ -131,14 +96,14 @@
       block:
         - name: Try to create LVM pool with disks specified as non-list.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
                 disks: "{{ unused_disks[0] }}"
                 volumes:
                   - name: test1
-                    size: "{{ too_large_size }}"
+                    size: "{{ volume_size }}"
                     mount_point: "{{ mount_location1 }}"
 
         - name: unreachable task
@@ -164,14 +129,14 @@
       block:
         - name: Try to create LVM pool with no disks specified.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
                 disks: []
                 volumes:
                   - name: test1
-                    size: "{{ too_large_size }}"
+                    size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
 
         - name: unreachable task
@@ -197,7 +162,7 @@
       block:
         - name: Try to create LVM volume from outside of any pool.
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1
@@ -229,7 +194,7 @@
       block:
         - name: Try to create two pools w/ the same name
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: pool1
@@ -261,7 +226,7 @@
       block:
         - name: Try to create two volumes w/ the same name
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: pool1
@@ -297,7 +262,7 @@
 
     - name: Create a pool
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_pools:
           - name: testpool1
@@ -312,7 +277,7 @@
       block:
         - name: Try to replace file system in safe mode
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: testpool1
@@ -341,33 +306,11 @@
                       not blivet_output.changed }}"
             msg: "Unexpected behavior w/ existing data on specified disks"
 
-    - name: Test for correct handling of safe_mode with resize
-      block:
-        - name: Try to resize in safe mode
-          include_role:
-            name: storage
-          vars:
-            storage_pools:
-              - name: testpool1
-                type: lvm
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: testvol1
-                    fs_type: 'ext4'
-                    size: '2g'
-
-        - name: Verify the output
-          assert:
-            that: "{{ not blivet_output.failed and blivet_output.changed }}"
-            msg: "Unexpected behavior w/ existing data on specified disks"
-
-      when: false
-
     - name: Test for correct handling of safe_mode with existing pool
       block:
         - name: Try to create LVM pool on disks that already belong to an existing pool
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_pools:
               - name: foo
@@ -396,7 +339,7 @@
       block:
         - name: Try to replace a pool by a file system on disk in safe mode
           include_role:
-            name: storage
+            name: linux-system-roles.storage
           vars:
             storage_volumes:
               - name: test1
@@ -425,7 +368,7 @@
 
     - name: Clean up
       include_role:
-        name: storage
+        name: linux-system-roles.storage
       vars:
         storage_safe_mode: false
         storage_pools:

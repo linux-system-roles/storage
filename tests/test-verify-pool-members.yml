@@ -1,7 +1,11 @@
 - set_fact:
-    _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs|dict2items(key_name='path', value_name='info')|json_query('[?info.vg==`\"{}\"`].path'.format(storage_test_pool.name))|list }}"
+    _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs |
+      dict2items(key_name='path', value_name='info') |
+      json_query('[?info.vg==`\"{}\"`].path'.format(storage_test_pool.name))|list }}"
     _storage_test_pool_pvs: []
-    _storage_test_expected_pv_count: "{{ 0 if storage_test_pool.state == 'absent' else (storage_test_pool.raid_level | ternary(1, storage_test_pool.disks|length)) }}"
+    _storage_test_expected_pv_count: "{{ 0
+      if storage_test_pool.state == 'absent'
+      else (storage_test_pool.raid_level | ternary(1, storage_test_pool.disks|length)) }}"
   when: storage_test_pool.type == 'lvm'
 
 - name: Get the canonical device path for each member device
@@ -52,6 +56,9 @@
 
 - name: Check member encryption
   include_tasks: verify-pool-members-encryption.yml
+
+- name: Check VDO
+  include_tasks: verify-pool-members-vdo.yml
 
 - set_fact:
     _storage_test_expected_pv_type: null
