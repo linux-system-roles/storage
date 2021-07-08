@@ -91,7 +91,7 @@
 
     ##
     ## RAID1
-    ## 
+    ##
 
     - include_tasks: get_unused_disk.yml
       vars:
