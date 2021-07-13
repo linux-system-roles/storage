@@ -99,33 +99,6 @@
     #               not blivet_output.changed }}"
     #     msg: "Unexpected behavior w/ too-large volume size"
 
-    - name: Test for correct handling of non-list disk specification.
-      block:
-        - name: Try to create LVM pool with disks specified as non-list.
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks[0] }}"
-                volumes:
-                  - name: test1
-                    size: "{{ volume1_size }}"
-                    mount_point: "{{ mount_location1 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Verify the output
-          assert:
-            that:
-              - blivet_output.failed
-              - blivet_output.msg | regex_search('disk.+list')
-              - not blivet_output.changed
-            msg: "Unexpected behavior w/ disks not in list form"
-
     - name: Test for correct handling of missing disk specification.
       block:
         - name: Try to create LVM pool with no disks specified.

@@ -18,6 +18,7 @@ plugins/modules/lvm_gensym.py validate-modules:missing-gplv3-license
 plugins/modules/lvm_gensym.py validate-modules:module-invalid-version-added
 plugins/modules/resolve_blockdev.py validate-modules:missing-gplv3-license
 plugins/modules/resolve_blockdev.py validate-modules:module-invalid-version-added
+plugins/module_utils/storage_lsr/argument_validator.py import-2.6!skip
 plugins/module_utils/storage_lsr/size.py pep8!skip
 plugins/module_utils/storage_lsr/size.py pylint!skip
 tests/storage/scripts/generate_tests.py metaclass-boilerplate!skip

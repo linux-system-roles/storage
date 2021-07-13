@@ -32,6 +32,7 @@ plugins/modules/resolve_blockdev.py validate-modules:module-invalid-version-adde
 plugins/module_utils/storage_lsr/__init__.py import-2.6!skip
 plugins/module_utils/storage_lsr/__init__.py import-2.7!skip
 plugins/module_utils/storage_lsr/__init__.py import-3.5!skip
+plugins/module_utils/storage_lsr/argument_validator.py import-2.6!skip
 plugins/module_utils/storage_lsr/size.py import-2.6!skip
 plugins/module_utils/storage_lsr/size.py import-2.7!skip
 plugins/module_utils/storage_lsr/size.py import-3.5!skip

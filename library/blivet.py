@@ -144,6 +144,7 @@ except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.storage_lsr.argument_validator import validate_parameters
 
 if BLIVET_PACKAGE:
     blivet_flags.debug = True
@@ -411,7 +412,7 @@ class BlivetVolume(BlivetBase):
     def _apply_defaults(self):
         global volume_defaults
         for name, default in volume_defaults.items():
-            if name in self._volume:
+            if name in self._volume and self._volume[name] not in [None, list(), dict()]:
                 continue
 
             default = None if default in ('none', 'None', 'null') else default
@@ -421,7 +422,8 @@ class BlivetVolume(BlivetBase):
                 if not self._update_from_device(name):
                     self._volume[name] = default
             else:
-                self._volume.setdefault(name, default)
+                if self._volume.get(name) is None:
+                    self._volume[name] = default
 
     def _get_format(self):
         """ Return a blivet.formats.DeviceFormat instance for this volume. """
@@ -862,7 +864,10 @@ _BLIVET_VOLUME_TYPES = {
 def _get_blivet_volume(blivet_obj, volume, bpool=None):
     """ Return a BlivetVolume instance appropriate for the volume dict. """
     global volume_defaults
-    volume_type = volume.get('type', bpool._pool['type'] if bpool else volume_defaults['type'])
+
+    volume_type = volume.get('type', None)
+    if volume_type is None:
+        volume_type = bpool._pool['type'] if bpool else volume_defaults['type']
     if volume_type not in _BLIVET_VOLUME_TYPES:
         raise BlivetAnsibleError("Volume '%s' has unknown type '%s'" % (volume['name'], volume_type))
 
@@ -1020,7 +1025,7 @@ class BlivetPool(BlivetBase):
     def _apply_defaults(self):
         global pool_defaults
         for name, default in pool_defaults.items():
-            if name in self._pool:
+            if name in self._pool and self._pool[name] not in [None, list(), dict()]:
                 continue
 
             default = None if default in ('none', 'None', 'null') else default
@@ -1029,7 +1034,8 @@ class BlivetPool(BlivetBase):
                 if not self._update_from_device(name):
                     self._pool[name] = default
             else:
-                self._pool.setdefault(name, default)
+                if self._pool.get(name) is None:
+                    self._pool[name] = default
 
     def _create_members(self):
         """ Schedule actions as needed to ensure pool member devices exist. """
@@ -1187,7 +1193,7 @@ _BLIVET_POOL_TYPES = {
 
 def _get_blivet_pool(blivet_obj, pool):
     """ Return an appropriate BlivetPool instance for the pool dict. """
-    if 'type' not in pool:
+    if 'type' not in pool or pool['type'] is None:
         global pool_defaults
         pool['type'] = pool_defaults['type']
 
@@ -1401,14 +1407,65 @@ def activate_swaps(b, pools, volumes):
 def run_module():
     # available arguments/parameters that a user can pass
     module_args = dict(
-        pools=dict(type='list'),
-        volumes=dict(type='list'),
+        pools=dict(type='list', elements='dict',
+                   options=dict(disks=dict(type='list', elements='str', default=list()),
+                                encryption=dict(type='bool'),
+                                encryption_cipher=dict(type='str'),
+                                encryption_key=dict(type='str'),
+                                encryption_key_size=dict(type='int'),
+                                encryption_luks_version=dict(type='str'),
+                                encryption_password=dict(type='str'),
+                                name=dict(type='str'),
+                                raid_level=dict(type='str'),
+                                raid_device_count=dict(type='int'),
+                                raid_spare_count=dict(type='int'),
+                                raid_metadata_version=dict(type='str'),
+                                state=dict(type='str', default='present', choices=['present', 'absent']),
+                                type=dict(type='str'),
+                                volumes=dict(type='list', elements='dict', default=list(),
+                                             options=dict(compression=dict(type='bool'),
+                                                          deduplication=dict(type='bool'),
+                                                          encryption=dict(type='bool'),
+                                                          encryption_cipher=dict(type='str'),
+                                                          encryption_key=dict(type='str'),
+                                                          encryption_key_size=dict(type='int'),
+                                                          encryption_luks_version=dict(type='str'),
+                                                          encryption_password=dict(type='str'),
+                                                          fs_create_options=dict(type='str'),
+                                                          fs_label=dict(type='str', default=''),
+                                                          fs_type=dict(type='str'),
+                                                          mount_point=dict(type='str'),
+                                                          name=dict(type='str'),
+                                                          size=dict(type='str'),
+                                                          state=dict(type='str', default='present', choices=['present', 'absent']),
+                                                          type=dict(type='str'),
+                                                          vdo_pool_size=dict(type='str'))))),
+        volumes=dict(type='list', elements='dict',
+                     options=dict(disks=dict(type='list'),
+                                  encryption=dict(type='bool'),
+                                  encryption_cipher=dict(type='str'),
+                                  encryption_key=dict(type='str'),
+                                  encryption_key_size=dict(type='int'),
+                                  encryption_luks_version=dict(type='str'),
+                                  encryption_password=dict(type='str'),
+                                  fs_create_options=dict(type='str'),
+                                  fs_label=dict(type='str', default=''),
+                                  fs_type=dict(type='str'),
+                                  mount_point=dict(type='str'),
+                                  name=dict(type='str'),
+                                  raid_level=dict(type='str'),
+                                  raid_device_count=dict(type='int'),
+                                  raid_spare_count=dict(type='int'),
+                                  raid_metadata_version=dict(type='str'),
+                                  size=dict(type='str'),
+                                  state=dict(type='str', default='present', choices=['present', 'absent']),
+                                  type=dict(type='str'))),
         packages_only=dict(type='bool', required=False, default=False),
         disklabel_type=dict(type='str', required=False, default=None),
         safe_mode=dict(type='bool', required=False, default=True),
         pool_defaults=dict(type='dict', required=False),
         volume_defaults=dict(type='dict', required=False),
-        use_partitions=dict(type='bool', required=False, default=True),
+        use_partitions=dict(type='bool', required=False),
         diskvolume_mkfs_option_map=dict(type='dict', required=False, default={}))
 
     # seed the result dict in the object
@@ -1425,6 +1482,13 @@ def run_module():
 
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
+
+    errors, updated_params = validate_parameters(module_args, module.params)
+    if errors:
+        module.fail_json(msg="Parameter check failed: %s" % errors)
+
+    module.params.update(updated_params)
+
     if not BLIVET_PACKAGE:
         module.fail_json(msg="Failed to import the blivet or blivet3 Python modules",
                          exception=inspect.cleandoc("""
