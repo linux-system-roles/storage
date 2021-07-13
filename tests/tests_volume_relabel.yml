@@ -55,7 +55,8 @@
             disks: "{{ unused_disks }}"
             fs_label: relabel
 
-    - assert:
+    - name: check for idempotency
+      assert:
         that: not blivet_output.changed
         msg: "Volume relabeling is not idempotent."
 
