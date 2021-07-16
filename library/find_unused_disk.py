@@ -27,7 +27,12 @@ options:
 
     min_size:
         description: Specifies the minimum disk size to return an unused disk.
-        default: 0
+        default: '0'
+        type: str
+
+    with_interface:
+        description: Specifies which disk interface will be accepted (scsi, virtio, nvme).
+        default: null
         type: str
 '''
 
@@ -79,6 +84,13 @@ IGNORED_DEVICES = [re.compile(r'^/dev/nullb\d+$')]
 def is_ignored(disk_path):
     sys_path = os.path.realpath(disk_path)
     return any(ignore.match(sys_path) is not None for ignore in IGNORED_DEVICES)
+
+
+def is_device_interface(module, path, interface):
+    device = path.split('dev/')[-1]
+    # command checks if the device uses given interface (virtio, scsi or nvme)
+    result = module.run_command(['readlink', '/sys/block/%s/device/device/driver' % device, '/sys/block/%s/device/driver' % device])
+    return interface in result[1]
 
 
 def no_signature(run_command, disk_path):
@@ -144,7 +156,8 @@ def run_module():
     """Create the module"""
     module_args = dict(
         max_return=dict(type='int', required=False, default=10),
-        min_size=dict(type='str', required=False, default=0)
+        min_size=dict(type='str', required=False, default='0'),
+        with_interface=dict(type='str', required=False, default=None)
     )
 
     result = dict(
@@ -159,6 +172,11 @@ def run_module():
 
     for path, attrs in get_disks(module).items():
         if is_ignored(path):
+            continue
+
+        interface = module.params['with_interface']
+
+        if interface is not None and not is_device_interface(module, path, interface):
             continue
 
         if attrs["fstype"]:
