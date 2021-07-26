@@ -93,7 +93,9 @@ must contain only a single item.
 
 ##### `size`
 The `size` specifies the size of the file system. The format for this is intended to
-be human-readable, e.g.: "10g", "50 GiB".
+be human-readable, e.g.: "10g", "50 GiB". The size of LVM volumes can be specified as a
+percentage of the pool/VG size, eg: "50%" as of v1.4.2.
+
 When using `compression` or `deduplication`, `size` can be set higher than actual available space,
 e.g.: 3 times the size of the volume, based on duplicity and/or compressibility of stored data.
 
