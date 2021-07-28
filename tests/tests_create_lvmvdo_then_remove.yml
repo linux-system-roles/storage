@@ -12,6 +12,13 @@
     - include_role:
         name: linux-system-roles.storage
 
+    - set_fact:
+        storage_skip_checks:
+          - blivet_available
+          - packages_installed
+          - service_facts
+          - required_packages
+
     - name: Gather package facts
       package_facts:
         # gather information about packages
