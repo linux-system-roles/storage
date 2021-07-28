@@ -724,13 +724,13 @@ class BlivetLVMVolume(BlivetVolume):
         try:
             if create_vdo:
                 device = self._blivet.new_lv(name=self._volume['name'], vdo_lv=create_vdo,
-                                             parents=[vdopool if create_vdo else parent],
+                                             parents=[vdopool],
                                              size=size, fmt=fmt)
             else:
                 # This is here for backwards compatibility. Until 8.4 blivet does not support
                 # vdo_lv optional parameter
                 device = self._blivet.new_lv(name=self._volume['name'],
-                                             parents=[vdopool if create_vdo else parent],
+                                             parents=[parent],
                                              size=size, fmt=fmt)
         except Exception as e:
             raise BlivetAnsibleError("failed to set up volume '%s': %s" % (self._volume['name'], str(e)))
