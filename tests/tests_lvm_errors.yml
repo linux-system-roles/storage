@@ -103,7 +103,7 @@
                 disks: "{{ unused_disks[0] }}"
                 volumes:
                   - name: test1
-                    size: "{{ volume_size }}"
+                    size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
 
         - name: unreachable task
@@ -111,19 +111,13 @@
             msg: UNREACH
 
       rescue:
-        - name: Check that we failed in the role
+        - name: Verify the output
           assert:
             that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    # the following does not work properly
-    # - name: Verify the output
-    #   assert:
-    #     that: "{{ blivet_output.failed and
-    #               blivet_output.msg|regex_search('disk.+list') and
-    #               not blivet_output.changed }}"
-    #     msg: "Unexpected behavior w/ disks not in list form"
+              - blivet_output.failed
+              - blivet_output.msg | regex_search('disk.+list')
+              - not blivet_output.changed
+            msg: "Unexpected behavior w/ disks not in list form"
 
     - name: Test for correct handling of missing disk specification.
       block:
