@@ -25,7 +25,9 @@
         blivet_pkg_version: "{{ ansible_facts.packages[blivet_pkg_name[0]][0]['version'] + '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
 
     - name: Check if kvdo is loadable
-      command: modprobe --dry-run kvdo
+      shell: |
+        set -euo pipefail
+        modprobe --dry-run kvdo && modprobe --dry-run dm-vdo
       ignore_errors: true
       changed_when: false
       register: __storage_kvdo_loadable
