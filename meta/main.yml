@@ -5,7 +5,7 @@ galaxy_info:
                 'rhel', 'fedora', 'centos']
   company: Red Hat, Inc.
   license: MIT
-  min_ansible_version: 2.5
+  min_ansible_version: 2.9
   platforms:
     - name: Fedora
       versions:
