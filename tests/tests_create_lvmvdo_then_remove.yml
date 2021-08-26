@@ -27,7 +27,7 @@
     - name: Check if kvdo is loadable
       shell: |
         set -euo pipefail
-        modprobe --dry-run kvdo && modprobe --dry-run dm-vdo
+        modprobe --dry-run kvdo
       ignore_errors: true
       changed_when: false
       register: __storage_kvdo_loadable
