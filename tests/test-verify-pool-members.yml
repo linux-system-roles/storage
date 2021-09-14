@@ -1,7 +1,7 @@
 - set_fact:
-    _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs |
-      dict2items(key_name='path', value_name='info') |
-      json_query('[?info.vg==`\"{}\"`].path'.format(storage_test_pool.name))|list }}"
+    _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs | dict2items |
+      selectattr('value.vg', 'match', '^' ~ storage_test_pool.name ~ '$') |
+      map(attribute='key') | list }}"
     _storage_test_pool_pvs: []
     _storage_test_expected_pv_count: "{{ 0
       if storage_test_pool.state == 'absent'
@@ -26,7 +26,7 @@
 
 - name: Verify PV count
   assert:
-    that: "{{ ansible_lvm.pvs|dict2items|json_query('[?value.vg==`\"{}\"`]'.format(storage_test_pool.name))|length == _storage_test_expected_pv_count|int }}"
+    that: "{{ _storage_test_pool_pvs_lvm|length == _storage_test_expected_pv_count|int }}"
     msg: "Unexpected PV count for pool {{ storage_test_pool.name }}"
   when: storage_test_pool.type == 'lvm'
 
