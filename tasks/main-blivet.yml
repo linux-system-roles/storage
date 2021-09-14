@@ -41,11 +41,10 @@
 
 - name: Set storage_cryptsetup_services
   set_fact:
-    # For an explanation of the to_json|from_json silliness, see
-    # https://github.com/ansible-collections/community.general/issues/320
-    storage_cryptsetup_services: "{{ ansible_facts.services|to_json|
-      from_json|json_query('*.name')|
-      json_query('[?starts_with(@, `\"systemd-cryptsetup@\"`)]') }}"
+    storage_cryptsetup_services: "{{
+      ansible_facts.services.values() | selectattr('name', 'defined') |
+      map(attribute='name') | select('match', '^systemd-cryptsetup@') |
+      list }}"
 
 - block:
     - name: Mask the systemd cryptsetup services
@@ -108,7 +107,8 @@
     fstype: "{{ mount_info['fstype']|default(omit) }}"
     opts: "{{ mount_info['opts']|default(omit) }}"
     state: "{{ mount_info['state'] }}"
-  loop: "{{ blivet_output.mounts|json_query('[?state==`absent`]') }}"
+  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
+            selectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
 
@@ -124,7 +124,8 @@
     fstype: "{{ mount_info['fstype']|default(omit) }}"
     opts: "{{ mount_info['opts']|default(omit) }}"
     state: "{{ mount_info['state'] }}"
-  loop: "{{ blivet_output.mounts|json_query('[?state!=`absent`]') }}"
+  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
+            rejectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
 
