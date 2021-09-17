@@ -138,10 +138,9 @@
 # Manage /etc/crypttab
 #
 - name: Manage /etc/crypttab to account for changes we just made
-  crypttab:
-    name: "{{ entry.name }}"
-    backing_device: "{{ entry.backing_device }}"
-    password: "{{ entry.password }}"
+  lineinfile:
+    path: /etc/crypttab
+    line: "{{ entry.name }} {{ entry.backing_device }} {{ entry.password }}"
     state: "{{ entry.state }}"
   loop: "{{ blivet_output.crypts }}"
   loop_control:
