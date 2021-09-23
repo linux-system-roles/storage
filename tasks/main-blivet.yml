@@ -137,11 +137,20 @@
 #
 # Manage /etc/crypttab
 #
-- name: Manage /etc/crypttab to account for changes we just made
+- name: retrieve facts for the /etc/crypttab file
+  stat:
+    path: /etc/crypttab
+  register: __storage_crypttab
+
+- name: manage /etc/crypttab to account for changes we just made
   lineinfile:
     path: /etc/crypttab
     line: "{{ entry.name }} {{ entry.backing_device }} {{ entry.password }}"
     state: "{{ entry.state }}"
+    create: true
+    mode: "{{ __storage_crypttab.stat.mode | d('0600') }}"
+    owner: "{{ __storage_crypttab.stat.owner | d('root') }}"
+    group: "{{ __storage_crypttab.stat.group | d('root') }}"
   loop: "{{ blivet_output.crypts }}"
   loop_control:
     loop_var: entry
