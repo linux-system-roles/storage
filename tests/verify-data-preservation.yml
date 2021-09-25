@@ -1,4 +1,4 @@
-# Verify that a file still exists and no data loss has occured.
+# Verify that a file still exists and no data loss has occurred.
 # To use:
 # - set testfile to a path under the mountpoint being tested
 # - include create-test-file.yml before executing the operation to be
