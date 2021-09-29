@@ -145,7 +145,11 @@
 - name: manage /etc/crypttab to account for changes we just made
   lineinfile:
     path: /etc/crypttab
+    # The line option is used when `state: present`
     line: "{{ entry.name }} {{ entry.backing_device }} {{ entry.password }}"
+    # The regexp option is used when `state: absent` to remove entries
+    # regardless of password
+    regexp: ^{{ entry.name }} {{ entry.backing_device }}
     state: "{{ entry.state }}"
     create: true
     mode: "{{ __storage_crypttab.stat.mode | d('0600') }}"
