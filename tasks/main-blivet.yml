@@ -137,12 +137,24 @@
 #
 # Manage /etc/crypttab
 #
-- name: Manage /etc/crypttab to account for changes we just made
-  crypttab:
-    name: "{{ entry.name }}"
-    backing_device: "{{ entry.backing_device }}"
-    password: "{{ entry.password }}"
+- name: retrieve facts for the /etc/crypttab file
+  stat:
+    path: /etc/crypttab
+  register: __storage_crypttab
+
+- name: manage /etc/crypttab to account for changes we just made
+  lineinfile:
+    path: /etc/crypttab
+    # The line option is used when `state: present`
+    line: "{{ entry.name }} {{ entry.backing_device }} {{ entry.password }}"
+    # The regexp option is used when `state: absent` to remove entries
+    # regardless of password
+    regexp: ^{{ entry.name }} {{ entry.backing_device }}
     state: "{{ entry.state }}"
+    create: true
+    mode: "{{ __storage_crypttab.stat.mode | d('0600') }}"
+    owner: "{{ __storage_crypttab.stat.owner | d('root') }}"
+    group: "{{ __storage_crypttab.stat.group | d('root') }}"
   loop: "{{ blivet_output.crypts }}"
   loop_control:
     loop_var: entry
