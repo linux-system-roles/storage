@@ -10,6 +10,13 @@
     - include_role:
         name: linux-system-roles.storage
 
+    - name: Mark tasks to be skipped
+      set_fact:
+        storage_skip_checks:
+          - blivet_available
+          - packages_installed
+          - service_facts
+
     - include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"

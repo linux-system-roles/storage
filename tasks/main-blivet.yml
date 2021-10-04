@@ -8,6 +8,8 @@
   package:
     name: "{{ blivet_package_list }}"
     state: present
+  when: storage_skip_checks is not defined or
+        not "blivet_available" in storage_skip_checks
 
 - debug:
     var: storage_pools
@@ -25,19 +27,27 @@
     volume_defaults: "{{ storage_volume_defaults }}"
     packages_only: true
   register: package_info
+  when: storage_skip_checks is not defined or
+        not "packages_installed" in storage_skip_checks
 
 - name: enable copr repositories if needed
   include_tasks: "enable_coprs.yml"
   vars:
     copr_packages: "{{ package_info.packages }}"
+  when: storage_skip_checks is not defined or
+        not "packages_installed" in storage_skip_checks
 
 - name: make sure required packages are installed
   package:
     name: "{{ package_info.packages }}"
     state: present
+  when: storage_skip_checks is not defined or
+        not "packages_installed" in storage_skip_checks
 
 - name: get service facts
   service_facts:
+  when: storage_skip_checks is not defined or
+        not "service_facts" in storage_skip_checks
 
 - name: Set storage_cryptsetup_services
   set_fact:
