@@ -11,8 +11,7 @@ how they want the storage to be layed out. There are two top-level lists:
 `storage_pools` is a list of pools, which contain volumes, and
 `storage_volumes`, which are volumes that are not associated with any pool.
 Examples of pools include LVM volume groups and disks with partition tables.
-Most volumes will exist within a pool, with the exception of whole-disk file-
-systems.
+Most volumes will exist within a pool, except for whole-disk file-systems.
 
 ### Tasks
 This is the ansible logic to take the user's specification and translate it

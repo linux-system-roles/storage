@@ -15,7 +15,7 @@ Role Variables
 
 __NOTE__: Beginning with version 1.3.0, unspecified parameters are interpreted
 differently for existing and non-existing pools/volumes. For new/non-existent
-pools and volumes, any omitted omitted parameters will use the default value as
+pools and volumes, any omitted parameters will use the default value as
 described in `defaults/main.yml`. For existing pools and volumes, omitted
 parameters will inherit whatever setting the pool or volume already has.
 This means that to change/override role defaults in an existing pool or volume,
@@ -50,7 +50,7 @@ This is a list of volumes that belong to the current pool. It follows the
 same pattern as the `storage_volumes` variable, explained below.
 
 ##### `encryption`
-This specifies whether or not the pool will be encrypted using LUKS.
+This specifies whether the pool will be encrypted using LUKS.
 __WARNING__: Toggling encryption for a pool is a destructive operation, meaning
              the pool itself will be removed as part of the process of
              adding/removing the encryption layer.
@@ -138,7 +138,7 @@ When type is `raid` specifies RAID chunk size as a string, e.g.: '512 KiB'.
 Chunk size has to be multiple of 4 KiB.
 
 ##### `encryption`
-This specifies whether or not the volume will be encrypted using LUKS.
+This specifies whether the volume will be encrypted using LUKS.
 __WARNING__: Toggling encryption for a volume is a destructive operation, meaning
              all data on that volume will be removed as part of the process of
              adding/removing the encryption layer.
@@ -162,7 +162,7 @@ This integer specifies the LUKS key size (in bits).
 This integer specifies the LUKS version to use.
 
 ##### `deduplication`
-This specifies whether or not the Virtual Data Optimizer (VDO) will be used.
+This specifies whether the Virtual Data Optimizer (VDO) will be used.
 When set, duplicate data stored on storage volume will be
 deduplicated resulting in more storage capacity.
 Can be used together with `compression` and `vdo_pool_size`.
@@ -171,7 +171,7 @@ Limit one VDO `storage_volume` per `storage_pool`.
 Underlying volume has to be at least 9 GB (bare minimum is around 5 GiB).
 
 ##### `compression`
-This specifies whether or not the Virtual Data Optimizer (VDO) will be used.
+This specifies whether the Virtual Data Optimizer (VDO) will be used.
 When set, data stored on storage volume will be
 compressed resulting in more storage capacity.
 Volume has to be part of the LVM `storage_pool`.
