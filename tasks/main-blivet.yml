@@ -11,10 +11,12 @@
   when: storage_skip_checks is not defined or
         not "blivet_available" in storage_skip_checks
 
-- debug:
+- name: show storage_pools
+  debug:
     var: storage_pools
 
-- debug:
+- name: show storage_volumes
+  debug:
     var: storage_volumes
 
 - name: get required packages
@@ -87,7 +89,8 @@
         masked: no
       loop: "{{ storage_cryptsetup_services }}"
 
-- debug:
+- name: show blivet_output
+  debug:
     var: blivet_output
 
 - name: set the list of pools for test verification
