@@ -1,2 +1,3 @@
 ---
-skip_list: []
+skip_list:
+- '701'  # ignore meta/requirements.yml

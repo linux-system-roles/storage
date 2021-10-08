@@ -9,6 +9,17 @@ As of now, the role supports managing file systems and mount entries on
 - unpartitioned disks
 - lvm (unpartitioned whole-disk physical volumes only)
 
+Requirements
+------------
+
+See `meta/requirements.yml` for the requirements.  You must install the
+requirements before using this role:
+```
+ansible-galaxy collection install -vv -r meta/requirements.yml
+```
+See
+https://docs.ansible.com/ansible/latest/galaxy/user_guide.html#using-meta-requirements-yml
+for more information.
 
 Role Variables
 --------------
