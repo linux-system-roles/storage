@@ -2,6 +2,7 @@ Linux Storage Role
 ==================
 ![CI Testing](https://github.com/linux-system-roles/storage/workflows/tox/badge.svg)
 
+This is for testing baseos ci.
 
 This role allows users to configure local storage with minimal input.
 
