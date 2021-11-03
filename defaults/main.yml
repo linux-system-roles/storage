@@ -60,3 +60,8 @@ storage_volume_defaults:
   compression: null
   deduplication: null
   vdo_pool_size: null
+
+  cached: false
+  cache_size: 0
+  cache_mode: null
+  cache_devices: []

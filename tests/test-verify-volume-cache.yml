@@ -1,0 +1,45 @@
+---
+
+- name: check cache options
+  block:
+
+    - name: Get information about the LV
+      command: >
+          lvs --noheadings --nameprefixes --units=b --nosuffix --unquoted
+          -o name,attr,cache_total_blocks,chunk_size,segtype
+          {{ storage_test_pool.name }}/{{ storage_test_volume.name }}
+      register: lvs
+      changed_when: false
+
+    - set_fact:
+        storage_test_lv_segtype: "{{ lvs.stdout|regex_search('LVM2_SEGTYPE=(\\S+)',  '\\1') }}"
+
+    - name: check segment type
+      assert:
+        that: storage_test_volume.cached | ternary(storage_test_lv_segtype[0] == 'cache', storage_test_lv_segtype[0] != 'cache')
+        msg: Unexpected segtype {{ storage_test_lv_segtype }} for {{ storage_test_volume.name }}
+
+    - set_fact:
+        storage_test_lv_cache_size: "{{ lvs.stdout|regex_search('LVM2_CACHE_TOTAL_BLOCKS=([0-9]*) LVM2_CHUNK_SIZE=([0-9]+)',  '\\1', '\\2') }}"
+      when: storage_test_volume.cached|bool
+
+    - name: parse the requested cache size
+      bsize:
+        size: "{{ storage_test_volume.cache_size }}"
+      register: storage_test_requested_cache_size
+      when: storage_test_volume.cached|bool
+
+    - set_fact:
+        storage_test_expected_cache_size: "{{ storage_test_requested_cache_size.bytes }}"
+      when: storage_test_volume.cached|bool
+
+    - name: Check cache size
+      assert:
+        that: (storage_test_expected_cache_size|int -
+               storage_test_lv_cache_size[0]|int * storage_test_lv_cache_size[1]|int)|abs / storage_test_expected_cache_size|int < 0.01
+        msg: >
+            Unexpected cache size, expected {{ storage_test_expected_cache_size }},
+            got {{ storage_test_lv_cache_size[0]|int * storage_test_lv_cache_size[1]|int }}
+      when: storage_test_volume.cached|bool
+
+  when: storage_test_volume.type == 'lvm' and _storage_test_volume_present
