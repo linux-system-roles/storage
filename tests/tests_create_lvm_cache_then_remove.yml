@@ -3,11 +3,12 @@
   become: true
   vars:
     storage_safe_mode: false
-    mount_location1: '/opt/test1'
-    mount_location2: '/opt/test2'
+    storage_use_partitions: true
     volume_group_size: '10g'
     volume_size: '5g'
     cache_size: '4g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

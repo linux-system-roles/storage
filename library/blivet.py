@@ -772,11 +772,17 @@ class BlivetLVMVolume(BlivetVolume):
             self._detach_cache()
 
     def _get_params_lvmcache(self):
+        parent = self._blivet_pool._device
         fast_pvs = []
-        for pv in self._volume['cache_devices']:
-            pv_device = self._blivet.devicetree.resolve_device(pv)
+        for cache_spec in self._volume['cache_devices']:
+            cache_device = self._blivet.devicetree.resolve_device(cache_spec)
+            if cache_device is None:
+                raise BlivetAnsibleError("cache device '%s' not found" % cache_spec)
+
+            pv_device = next((pv for pv in parent.pvs if cache_device.name in [an.name for an in pv.ancestors]),
+                             None)
             if pv_device is None:
-                raise BlivetAnsibleError("cache device '%s' not found" % pv)
+                raise BlivetAnsibleError("cache device '%s' doesn't seems to be a physical volume or its parent" % cache_spec)
             fast_pvs.append(pv_device)
 
         cache_request = devices.lvm.LVMCacheRequest(size=Size(self._volume['cache_size']),

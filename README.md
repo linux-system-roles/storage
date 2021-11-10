@@ -226,8 +226,9 @@ e.g.: "30g", "50GiB".
 Mode for the cache. Supported values include `writethrough` (default) and `writeback`.
 
 #### `cache_devices`
-List of devices (physical volumes) that will be used for the cache. These should be
-physical volumes on fast SSD or NVMe drives.
+List of devices that will be used for the cache. These should be either physical volumes or
+drives these physical volumes are allocated on. Generally you want to select fast devices like
+SSD or NVMe drives for cache.
 
 #### `storage_safe_mode`
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.

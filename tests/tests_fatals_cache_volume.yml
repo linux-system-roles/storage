@@ -3,6 +3,11 @@
   become: true
   vars:
     storage_safe_mode: false
+    volume_group_size: '10g'
+    volume_size: '5g'
+    cache_size: '4g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:
@@ -18,6 +23,7 @@
     - include_tasks: get_unused_disk.yml
       vars:
         max_return: 2
+        disks_needed: 2
 
     - name: Verify that creating a cached partition volume fails
       block:
@@ -33,6 +39,33 @@
                   - name: test1
                     type: partition
                     cached: true
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+    - name: Verify that creating cache on unused disk fails
+      block:
+        - name: Create cached volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: "foo"
+                disks: "{{ [unused_disks[0]] }}"
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    cached: true
+                    cache_size: "{{ cache_size }}"
+                    cache_devices: "{{ [unused_disks[1]] }}"
 
         - name: unreachable task
           fail:
