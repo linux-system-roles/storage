@@ -21,6 +21,10 @@
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Create three LVM logical volumes under one volume group
       include_role:
         name: linux-system-roles.storage

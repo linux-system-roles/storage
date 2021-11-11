@@ -24,6 +24,10 @@
         max_return: 2
         disks_needed: 2
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Create a logical volume spanning two physical volumes that changes its mount location
       include_role:
         name: linux-system-roles.storage

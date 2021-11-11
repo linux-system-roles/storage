@@ -57,6 +57,11 @@
 
     - name: Test for correct handling of duplicate volume names
       block:
+
+        - name: Workaround for udev issue on some platforms
+          command: udevadm trigger --subsystem-match=block
+          changed_when: false
+
         - name: Try to create two volumes w/ the same name
           include_role:
             name: linux-system-roles.storage

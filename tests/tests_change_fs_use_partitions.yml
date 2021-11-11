@@ -24,6 +24,10 @@
         min_size: "{{ volume_size }}"
         max_return: 2
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Create an LVM partition with the default file system type
       include_role:
         name: linux-system-roles.storage

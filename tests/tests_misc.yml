@@ -26,6 +26,10 @@
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Test creating ext4 filesystem with valid parameter "-Fb 4096"
       include_role:
         name: linux-system-roles.storage

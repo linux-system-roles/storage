@@ -26,6 +26,10 @@
       vars:
         max_return: 2
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Create a RAID0 device
       include_role:
         name: linux-system-roles.storage

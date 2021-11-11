@@ -20,6 +20,10 @@
     ##
     - name: Test for correct handling of new encrypted volume w/ no key
       block:
+        - name: Workaround for udev issue on some platforms
+          command: udevadm trigger --subsystem-match=block
+          changed_when: false
+
         - name: Create an encrypted disk volume w/ default fs
           include_role:
             name: linux-system-roles.storage

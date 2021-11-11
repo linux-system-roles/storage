@@ -7,6 +7,10 @@
         name: linux-system-roles.storage
         public: true
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: test lvm and xfs package deps
       include_tasks: run_blivet.yml
       vars:

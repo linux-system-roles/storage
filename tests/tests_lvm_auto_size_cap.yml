@@ -43,6 +43,10 @@
 
     - name: Test handling of too-large LVM volume size
       block:
+        - name: Workaround for udev issue on some platforms
+          command: udevadm trigger --subsystem-match=block
+          changed_when: false
+
         - name: Try to create a pool containing one volume twice the size of the backing disk
           include_role:
             name: linux-system-roles.storage

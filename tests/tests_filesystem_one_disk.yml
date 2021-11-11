@@ -19,6 +19,10 @@
       vars:
         max_return: 1
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Initialize a disk device with the default fs type
       include_role:
         name: linux-system-roles.storage

@@ -29,6 +29,10 @@
 
     - name: Test for correct handling of new encrypted pool w/ no key
       block:
+        - name: Workaround for udev issue on some platforms
+          command: udevadm trigger --subsystem-match=block
+          changed_when: false
+
         - name: Create an encrypted lvm pool
           include_role:
             name: linux-system-roles.storage

@@ -27,6 +27,10 @@
         max_return: 3
         disks_needed: 3
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Create a RAID1 device
       include_role:
         name: linux-system-roles.storage
@@ -52,6 +56,10 @@
                 mount_point: "{{ mount_location3 }}"
 
     - include_tasks: verify-role-results.yml
+
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
 
     - name: Repeat the previous invocation minus the pool raid options
       include_role:

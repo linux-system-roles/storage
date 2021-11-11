@@ -27,6 +27,10 @@
       register: storage_test_mdstat1
       changed_when: false
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: check that raid_level null does not create raid
       include_role:
         name: linux-system-roles.storage

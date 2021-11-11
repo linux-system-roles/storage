@@ -101,6 +101,10 @@
 
     - name: Test for correct handling of non-list disk specification.
       block:
+        - name: Workaround for udev issue on some platforms
+          command: udevadm trigger --subsystem-match=block
+          changed_when: false
+
         - name: Try to create LVM pool with disks specified as non-list.
           include_role:
             name: linux-system-roles.storage

@@ -20,6 +20,10 @@
       vars:
         max_return: 1
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Create a disk device mounted on "{{ mount_location }}"
       include_role:
         name: linux-system-roles.storage

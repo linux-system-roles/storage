@@ -21,6 +21,10 @@
       vars:
         max_return: 2
 
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+
     - name: Create a RAID0 device mounted on "{{ mount_location }}"
       include_role:
         name: linux-system-roles.storage
@@ -34,6 +38,10 @@
             mount_point: "{{ mount_location }}"
 
     - include_tasks: verify-role-results.yml
+
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:

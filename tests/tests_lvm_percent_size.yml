@@ -22,6 +22,10 @@
 
     - name: Test for correct handling of invalid percentage-based size specification.
       block:
+        - name: Workaround for udev issue on some platforms
+          command: udevadm trigger --subsystem-match=block
+          changed_when: false
+
         - name: Try to create LVM with an invalid size specification.
           include_role:
             name: linux-system-roles.storage
