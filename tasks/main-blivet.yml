@@ -51,11 +51,18 @@
   when: storage_skip_checks is not defined or
         not "service_facts" in storage_skip_checks
 
+# rejectattr required because the fix to service_facts is on Ansible > 2.12 only
+# https://github.com/ansible/ansible/pull/75326
 - name: Set storage_cryptsetup_services
   set_fact:
     storage_cryptsetup_services: "{{
-      ansible_facts.services.values() | selectattr('name', 'defined') |
-      map(attribute='name') | select('match', '^systemd-cryptsetup@') |
+      ansible_facts.services.values() |
+      selectattr('name', 'defined') |
+      rejectattr('status', 'match', '^not-found$') |
+      rejectattr('status', 'match', '^masked$') |
+      rejectattr('status', 'match', '^failed$') |
+      map(attribute='name') |
+      select('match', '^systemd-cryptsetup@') |
       list }}"
 
 - block:
