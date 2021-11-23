@@ -665,73 +665,83 @@ class BlivetLVMVolume(BlivetVolume):
             size = self._blivet_pool._device.align(size, roundup=True)
         return size
 
-    def _create(self):
-        if self._device:
-            return
+    def _trim_size(self, size):
+        parent_device = self._blivet_pool._device
 
-        parent = self._blivet_pool._device
-        if parent is None:
-            raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool['name'], self._volume['name']))
-
-        size = self._get_size()
-
-        fmt = self._get_format()
-        trim_percent = (1.0 - float(parent.free_space / size)) * 100
+        trim_percent = (1.0 - float(parent_device.free_space / size)) * 100
         log.debug("size: %s ; %s", size, trim_percent)
 
-        create_vdo = self._volume['deduplication'] or self._volume['compression']
-
-        if create_vdo:
-            pool_size = parent.free_space if size > parent.free_space else size
-            if self._volume['vdo_pool_size']:
-                pool_size = Size(self._volume['vdo_pool_size'])
-                if pool_size > parent.free_space:
-                    if trim_percent > MAX_TRIM_PERCENT:
-                        raise BlivetAnsibleError("specified 'vdo_pool_size' for volume '%s' "
-                                                 "exceeds available space in pool '%s' (%s)" % (pool_size,
-                                                                                                parent.name,
-                                                                                                parent.free_space))
-                    else:
-                        log.info("adjusting %s size from %s to %s to fit in %s free space",
-                                 self._volume['name'],
-                                 size,
-                                 parent.free_space,
-                                 parent.name)
-                        pool_size = parent.free_space
-
-            try:
-                vdopool = self._blivet.new_lv(name='vdopool', vdo_pool=True,
-                                              parents=[parent], compression=self._volume['compression'],
-                                              deduplication=self._volume['deduplication'],
-                                              size=pool_size)
-            except Exception as e:
-                raise BlivetAnsibleError("failed to set up VDO pool '%s': %s" % (self._volume['name'], str(e)))
-
-            self._blivet.create_device(vdopool)
-        elif size > parent.free_space:
+        if size > parent_device.free_space:
             if trim_percent > MAX_TRIM_PERCENT:
                 raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)" % (size,
-                                                                                                                       parent.name,
-                                                                                                                       parent.free_space))
+                                                                                                                       parent_device.name,
+                                                                                                                       parent_device.free_space))
             else:
                 log.info("adjusting %s size from %s to %s to fit in %s free space",
                          self._volume['name'],
                          size,
-                         parent.free_space,
-                         parent.name)
-                size = parent.free_space
+                         parent_device.free_space,
+                         parent_device.name)
+                return parent_device.free_space
+        return size
+
+    def _get_params_create_vdo(self):
+        # Create parent vdopool and return vdo specific parameters for LV creation
+        parent_device = self._blivet_pool._device
+        size = self._get_size()
+
+        pool_size = parent_device.free_space if size > parent_device.free_space else size
+
+        if self._volume['vdo_pool_size']:
+            try:
+                pool_size = self._trim_size(Size(self._volume['vdo_pool_size']))
+            except BlivetAnsibleError:
+                # Literally the same error just more specific description
+                raise BlivetAnsibleError("specified 'vdo_pool_size' for volume '%s' "
+                                         "exceeds available space in pool '%s' (%s)" % (pool_size,
+                                                                                        parent_device.name,
+                                                                                        parent_device.free_space))
 
         try:
-            if create_vdo:
-                device = self._blivet.new_lv(name=self._volume['name'], vdo_lv=create_vdo,
-                                             parents=[vdopool],
-                                             size=size, fmt=fmt)
-            else:
-                # This is here for backwards compatibility. Until 8.4 blivet does not support
-                # vdo_lv optional parameter
-                device = self._blivet.new_lv(name=self._volume['name'],
-                                             parents=[parent],
-                                             size=size, fmt=fmt)
+            vdopool = self._blivet.new_lv(name='vdopool', vdo_pool=True,
+                                          parents=[parent_device], compression=self._volume['compression'],
+                                          deduplication=self._volume['deduplication'],
+                                          size=pool_size)
+        except Exception as e:
+            raise BlivetAnsibleError("failed to set up VDO pool '%s': %s" % (self._volume['name'], str(e)))
+
+        self._blivet.create_device(vdopool)
+
+        return dict(vdo_lv=True, parents=[vdopool])
+
+    def _create(self):
+        if self._device:
+            return
+
+        parent_device = self._blivet_pool._device
+        if parent_device is None:
+            raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool['name'], self._volume['name']))
+
+        use_vdo = self._volume['deduplication'] or self._volume['compression']
+
+        # VDO size is technically unlimited, so no size checks needed when it is used
+        if use_vdo:
+            size = self._get_size()
+        else:
+            size = self._trim_size(self._get_size())
+
+        # generic arguments preparation for blivet.new_lv call
+        newlv_arguments = dict(fmt=self._get_format(),
+                               name=self._volume['name'],
+                               parents=[parent_device],
+                               size=size)
+
+        if use_vdo:
+            vdo_arguments = self._get_params_create_vdo()
+            newlv_arguments.update(vdo_arguments)
+
+        try:
+            device = self._blivet.new_lv(**newlv_arguments)
         except Exception as e:
             raise BlivetAnsibleError("failed to set up volume '%s': %s" % (self._volume['name'], str(e)))
 
