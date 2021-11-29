@@ -4,6 +4,8 @@
   vars:
     mount_location: '/opt/test1'
     testfile: "{{ mount_location }}/quux"
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

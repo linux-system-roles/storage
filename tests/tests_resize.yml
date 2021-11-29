@@ -13,6 +13,8 @@
                         unused_disk_subfact.sectorsize|int }}'
     disk_size: '{{ unused_disk_subfact.sectors|int *
                    unused_disk_subfact.sectorsize|int }}'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:
