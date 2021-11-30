@@ -5,6 +5,8 @@
     storage_safe_mode: false
     storage_use_partitions: true
     mount_location1: '/opt/test1'
+  tags:
+    - tests::lvm
 
   # This tests the issue when removing nonexistent pool (with listed volumes)
   # caused crash

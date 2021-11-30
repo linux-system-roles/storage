@@ -9,6 +9,8 @@
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
     disk_size: '{{ unused_disk_subfact.sectors|int *
                    unused_disk_subfact.sectorsize|int }}'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

@@ -5,7 +5,8 @@
     mount_location: '/opt/test1'
     testfile: "{{ mount_location }}/quux"
     volume_size: '5g'
-
+  tags:
+    - tests::lvm
   tasks:
     - include_role:
         name: linux-system-roles.storage

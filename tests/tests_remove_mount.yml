@@ -5,6 +5,8 @@
     mount_location_before: '/opt/test1'
     mount_location_after: ''
     volume_size: '3g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

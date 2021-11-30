@@ -7,6 +7,8 @@
     testfile: "{{ mount_location }}/quux"
     testfile_location_2: "{{ mount_location_2 }}/quux"
     volume_size: '5g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

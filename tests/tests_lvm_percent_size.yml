@@ -10,6 +10,8 @@
     size2: "40%"
     size3: "25%"
     size4: "50%"
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

@@ -7,6 +7,8 @@
     volume_group_size: '10g'
     volume_size: '12g'
     pool_size: '9g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

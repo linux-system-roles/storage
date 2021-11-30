@@ -11,6 +11,8 @@
       - '/non/existent/disk'
     invalid_size: 'xyz GiB'
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

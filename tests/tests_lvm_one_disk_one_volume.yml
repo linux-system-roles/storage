@@ -5,6 +5,8 @@
     mount_location: '/opt/test1'
     volume_group_size: '5g'
     volume_size: '4g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

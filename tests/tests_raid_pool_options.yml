@@ -10,6 +10,8 @@
     volume1_size: '2g'
     volume3_size: '3g'
     volume2_size: '3g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

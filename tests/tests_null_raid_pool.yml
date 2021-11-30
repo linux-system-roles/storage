@@ -6,6 +6,8 @@
     storage_use_partitions: true
     mount_location1: '/opt/test1'
     volume1_size: '2g'
+  tags:
+    - tests::lvm
 
   tasks:
     - include_role:

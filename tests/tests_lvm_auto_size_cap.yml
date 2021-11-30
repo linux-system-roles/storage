@@ -1,7 +1,8 @@
 ---
 - hosts: all
   become: true
-
+  tags:
+    - tests::lvm
   tasks:
     - include_role:
         name: linux-system-roles.storage
