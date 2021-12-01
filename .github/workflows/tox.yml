@@ -36,7 +36,7 @@ jobs:
           toxpyver=$(echo "${{ matrix.pyver }}" | tr -d .)
           toxenvs="py${toxpyver}"
           case "$toxpyver" in
-          27) toxenvs="${toxenvs},coveralls,flake8,pylint,custom" ;;
+          27) toxenvs="flake8,pylint,custom" ;;
           36) toxenvs="${toxenvs},coveralls,black,yamllint,shellcheck,custom" ;;
           37) toxenvs="${toxenvs},coveralls,custom" ;;
           38) toxenvs="${toxenvs},coveralls,ansible-lint,ansible-plugin-scan,collection,ansible-test,custom" ;;
