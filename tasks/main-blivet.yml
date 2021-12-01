@@ -85,6 +85,14 @@
         diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map|d(omit) }}"
         # yamllint enable rule:line-length
       register: blivet_output
+
+    - name: Workaround for udev issue on some platforms
+      command: udevadm trigger --subsystem-match=block
+      changed_when: false
+      when:
+        - storage_udevadm_trigger | d(false)
+        - blivet_output is changed
+
   rescue:
     - name: failed message
       fail:

@@ -199,6 +199,10 @@ Default value is equal to the size of the volume.
 #### `storage_safe_mode`
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.
 
+#### `storage_udevadm_trigger`
+When true (the default is false), the role will use udevadm trigger
+to cause udev changes to take effect immediately.  This may help on some
+platforms with "buggy" udev.
 
 Example Playbook
 ----------------
