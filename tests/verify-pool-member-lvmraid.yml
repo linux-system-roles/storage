@@ -16,4 +16,3 @@
     - storage_test_lvmraid_volume.raid_level is not none
     - storage_test_pool.state != "absent"
     - storage_test_lvmraid_volume.state != "absent"
-
