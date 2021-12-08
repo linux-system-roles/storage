@@ -132,21 +132,35 @@ The `mount_point` specifies the directory on which the file system will be mount
 The `mount_options` specifies custom mount options as a string, e.g.: 'ro'.
 
 ##### `raid_level`
-Specifies RAID level when type is `raid`.
-Accepted values are: `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+Specifies RAID level. LVM RAID can be created as well.
+"Regular" RAID volume requires type to be `raid`.
+LVM RAID needs that volume has `storage_pools` parent with type `lvm`,
+`raid_disks` need to be specified as well.
+Accepted values are: `linear` (N/A for LVM RAID), `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+__WARNING__: Changing `raid_level` for a volume is a destructive operation, meaning
+             all data on that volume will be lost as part of the process of
+             removing old and adding new RAID. RAID reshaping is currently not
+             supported.
 
-#### `raid_device_count`
+##### `raid_device_count`
 When type is `raid` specifies number of active RAID devices.
 
-#### `raid_spare_count`
+##### `raid_spare_count`
 When type is `raid` specifies number of spare RAID devices.
 
-#### `raid_metadata_version`
+##### `raid_metadata_version`
 When type is `raid` specifies RAID metadata version as a string, e.g.: '1.0'.
 
-#### `raid_chunk_size`
+##### `raid_chunk_size`
 When type is `raid` specifies RAID chunk size as a string, e.g.: '512 KiB'.
 Chunk size has to be multiple of 4 KiB.
+
+##### `raid_disks`
+Specifies which disks should be used for LVM RAID volume.
+`raid_level` needs to be specified and volume has to have `storage_pools` parent with type `lvm`.
+Accepts sublist of `disks` of parent `storage_pools`.
+In case multiple LVM RAID volumes within the same storage pool, the same disk can be used
+in multiple `raid_disks`.
 
 ##### `encryption`
 This specifies whether the volume will be encrypted using LUKS.

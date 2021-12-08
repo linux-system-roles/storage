@@ -714,6 +714,24 @@ class BlivetLVMVolume(BlivetVolume):
 
         return dict(vdo_lv=True, parents=[vdopool])
 
+    def _get_params_lvmraid(self):
+        # Return lvmraid specific parameters for LV creation
+        parent_device = self._blivet_pool._device
+
+        if self._volume['raid_disks']:
+            pvs = list()
+
+            for path in self._volume['raid_disks']:
+                disk = self._blivet.devicetree.resolve_device(path)
+                for pv in parent_device.pvs:
+                    if disk in pv.parents:
+                        pvs.append(pv)
+
+        else:
+            pvs = parent_device.pvs
+
+        return dict(seg_type=self._volume['raid_level'], pvs=pvs)
+
     def _create(self):
         if self._device:
             return
@@ -723,6 +741,7 @@ class BlivetLVMVolume(BlivetVolume):
             raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool['name'], self._volume['name']))
 
         use_vdo = self._volume['deduplication'] or self._volume['compression']
+        use_lvmraid = self._volume['raid_level']
 
         # VDO size is technically unlimited, so no size checks needed when it is used
         if use_vdo:
@@ -739,6 +758,10 @@ class BlivetLVMVolume(BlivetVolume):
         if use_vdo:
             vdo_arguments = self._get_params_create_vdo()
             newlv_arguments.update(vdo_arguments)
+
+        if use_lvmraid:
+            lvmraid_arguments = self._get_params_lvmraid()
+            newlv_arguments.update(lvmraid_arguments)
 
         try:
             device = self._blivet.new_lv(**newlv_arguments)

@@ -1,0 +1,6 @@
+- name: Validate pool member LVM RAID settings
+  include_tasks: verify-pool-member-lvmraid.yml
+  loop: "{{ storage_test_pool.volumes }}"
+  loop_control:
+    loop_var: storage_test_lvmraid_volume
+  when: storage_test_pool.type == 'lvm'

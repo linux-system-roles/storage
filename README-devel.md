@@ -3,7 +3,8 @@
 ### Overview
 The majority of the role's logic is in `library/blivet.py`, which is a module
 that does the heavy lifting of managing the actual storage configuration. The
-next biggest piece is in `tasks/`, followed by `defaults/`.
+next biggest piece is in `tasks/`, followed by `defaults/`. Storage role python
+imports are located at `module_utils/storage_lsr`.
 
 ### Defaults
 This is where we define the structure of the vars available to users to specify

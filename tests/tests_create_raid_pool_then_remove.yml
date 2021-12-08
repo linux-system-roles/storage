@@ -96,3 +96,57 @@
                 mount_point: "{{ mount_location3 }}"
 
     - include_tasks: verify-role-results.yml
+
+    - name: Create a RAID1 lvm raid device
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: present
+            volumes:
+              - name: lv1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+                raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+                raid_level: raid1
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: present
+            volumes:
+              - name: lv1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+                raid_level: raid1
+                raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove the device created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: absent
+            volumes:
+              - name: lv1
+                size: "{{ volume1_size }}"
+                mount_point: "{{ mount_location1 }}"
+                raid_level: raid1
+                raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+
+    - include_tasks: verify-role-results.yml
