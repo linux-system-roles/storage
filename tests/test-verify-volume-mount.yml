@@ -6,7 +6,9 @@
 - name: Get expected mount device based on device type
   set_fact:
     storage_test_device_path: "{{ storage_test_volume._kernel_device
-      if _storage_test_volume_present and not storage_test_volume.encryption and storage_test_volume.raid_level
+      if _storage_test_volume_present and not storage_test_volume.encryption and
+      storage_test_volume.raid_level and
+      (storage_test_pool is not defined or storage_test_pool is none)
       else storage_test_volume._device }}"
 
 - name: Set some facts

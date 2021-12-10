@@ -1,0 +1,18 @@
+- name: check LVM RAID
+  block:
+    - name: Get information about LVM RAID
+      command: "lvs --noheading -o lv_name --select 'lv_name={{ storage_test_lvmraid_volume.name }}&&lv_layout={{ storage_test_lvmraid_volume.raid_level }}' {{ storage_test_pool.name }}"
+      register: storage_test_lvmraid_status
+      changed_when: false
+
+    - name: Check that volume is LVM RAID
+      assert:
+        that: storage_test_lvmraid_status.stdout | trim == storage_test_lvmraid_volume.name
+
+    - set_fact:
+        storage_test_lvmraid_status: null
+
+  when:
+    - storage_test_lvmraid_volume.raid_level is not none
+    - storage_test_pool.state != "absent"
+    - storage_test_lvmraid_volume.state != "absent"
