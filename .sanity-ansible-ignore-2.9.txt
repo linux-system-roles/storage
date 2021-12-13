@@ -11,6 +11,7 @@ plugins/modules/bsize.py validate-modules:missing-gplv3-license
 plugins/modules/find_unused_disk.py validate-modules:missing-gplv3-license
 plugins/modules/lvm_gensym.py validate-modules:missing-gplv3-license
 plugins/modules/resolve_blockdev.py validate-modules:missing-gplv3-license
+plugins/module_utils/storage_lsr/argument_validator.py import-2.6!skip
 plugins/module_utils/storage_lsr/size.py pep8!skip
 tests/storage/scripts/generate_tests.py metaclass-boilerplate!skip
 tests/storage/scripts/generate_tests.py future-import-boilerplate!skip

@@ -27,7 +27,8 @@
 - name: Verify PV count
   assert:
     that: "{{ _storage_test_pool_pvs_lvm|length == _storage_test_expected_pv_count|int }}"
-    msg: "Unexpected PV count for pool {{ storage_test_pool.name }}"
+    msg: "Unexpected PV count for pool {{ storage_test_pool.name }}
+          (has: {{ _storage_test_pool_pvs_lvm|length }} expected: {{ _storage_test_expected_pv_count|int }})"
   when: storage_test_pool.type == 'lvm'
 
 - set_fact:
@@ -45,7 +46,8 @@
 - name: Check the type of each PV
   assert:
     that: "{{ storage_test_blkinfo.info[pv]['type'] == _storage_test_expected_pv_type }}"
-    msg: "Incorrect type for PV {{ pv }} in pool {{ storage_test_pool.name }}"
+    msg: "Incorrect type for PV {{ pv }} (has: '{{ storage_test_blkinfo.info[pv]['type'] }}'
+          expected: '{{ _storage_test_expected_pv_type }})' in pool '{{ storage_test_pool.name }}'"
   loop: "{{ _storage_test_pool_pvs }}"
   loop_control:
     loop_var: pv

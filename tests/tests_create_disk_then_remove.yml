@@ -20,14 +20,14 @@
       vars:
         max_return: 1
 
-    - name: Create a disk device mounted on "{{ mount_location }}"
+    - name: Create a disk device mounted on "{{ mount_location }}"; specify disks as non-list
       include_role:
         name: linux-system-roles.storage
       vars:
         storage_volumes:
           - name: test1
             type: disk
-            disks: "{{ unused_disks }}"
+            disks: "{{ unused_disks[0] }}"
             fs_type: ext4
             mount_point: "{{ mount_location }}"
 

@@ -3,6 +3,7 @@
   become: true
   vars:
     storage_safe_mode: false
+    storage_use_partitions: true
     mount_location: '/opt/test1'
     volume_group_size: '10g'
     volume_size: '12g'

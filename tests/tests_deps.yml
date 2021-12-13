@@ -22,7 +22,7 @@
                 type: lvm
                 fs_type: xfs
                 state: present
-                mountpoint: '/foo'
+                mount_point: '/foo'
                 encryption: false
 
     - name: Assert unexpected required package list is empty
