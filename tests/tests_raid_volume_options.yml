@@ -5,6 +5,7 @@
     storage_safe_mode: false
     storage_use_partitions: true
     mount_location: '/opt/test1'
+    storage_udevadm_trigger: true
 
   tasks:
     - include_role:
