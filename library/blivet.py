@@ -1469,6 +1469,8 @@ def run_module():
                                                           fs_type=dict(type='str'),
                                                           mount_point=dict(type='str'),
                                                           name=dict(type='str'),
+                                                          raid_disks=dict(type='list', elements='str', default=list()),
+                                                          raid_level=dict(type='str'),
                                                           size=dict(type='str'),
                                                           state=dict(type='str', default='present', choices=['present', 'absent']),
                                                           type=dict(type='str'),
