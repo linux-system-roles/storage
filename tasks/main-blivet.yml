@@ -86,6 +86,9 @@
         # yamllint enable rule:line-length
       register: blivet_output
 
+    - name: Wait for remote system in case blivet crashes it
+      wait_for_connection:
+
     - name: Workaround for udev issue on some platforms
       command: udevadm trigger --subsystem-match=block
       changed_when: false
