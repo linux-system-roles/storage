@@ -210,6 +210,26 @@ will take on the device. Virtual size of VDO volume is set by `size` parameter.
 e.g.: "30g", "50GiB".
 Default value is equal to the size of the volume.
 
+#### `cached`
+This specifies whether the volume should be cached or not.
+This is currently supported only for LVM volumes where dm-cache
+is used.
+__NOTE__: Only creating new cached volumes and removing cache from
+          an existing volume is currently supported. Enabling cache
+          for an existing volume is not yet supported.
+
+#### `cache_size`
+Size of the cache. `cache_size` format is intended to be human-readable,
+e.g.: "30g", "50GiB".
+
+#### `cache_mode`
+Mode for the cache. Supported values include `writethrough` (default) and `writeback`.
+
+#### `cache_devices`
+List of devices that will be used for the cache. These should be either physical volumes or
+drives these physical volumes are allocated on. Generally you want to select fast devices like
+SSD or NVMe drives for cache.
+
 #### `storage_safe_mode`
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.
 

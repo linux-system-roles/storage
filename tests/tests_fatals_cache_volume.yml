@@ -1,0 +1,79 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    volume_group_size: '10g'
+    volume_size: '5g'
+    cache_size: '4g'
+  tags:
+    - tests::lvm
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - name: Mark tasks to be skipped
+      set_fact:
+        storage_skip_checks:
+          - blivet_available
+          - packages_installed
+          - service_facts
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 2
+        disks_needed: 2
+
+    - name: Verify that creating a cached partition volume fails
+      block:
+        - name: Create cached partition
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: "{{ unused_disks[0] }}"
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    cached: true
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"
+
+    - name: Verify that creating cache on unused disk fails
+      block:
+        - name: Create cached volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: "foo"
+                disks: "{{ [unused_disks[0]] }}"
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    cached: true
+                    cache_size: "{{ cache_size }}"
+                    cache_devices: "{{ [unused_disks[1]] }}"
+
+        - name: unreachable task
+          fail:
+            msg: UNREACH
+
+      rescue:
+        - name: Check that we failed in the role
+          assert:
+            that:
+              - ansible_failed_result.msg != 'UNREACH'
+            msg: "Role has not failed when it should have"

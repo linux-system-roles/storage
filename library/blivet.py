@@ -474,6 +474,9 @@ class BlivetVolume(BlivetBase):
     def _manage_encryption(self):
         self._device = self._manage_one_encryption(self._device)
 
+    def _manage_cache(self):
+        pass
+
     def _resize(self):
         """ Schedule actions as needed to ensure the device has the desired size. """
         size = self._get_size()
@@ -552,6 +555,7 @@ class BlivetVolume(BlivetBase):
             raise BlivetAnsibleError("failed to look up or create device '%s'" % self._volume['name'])
 
         self._manage_encryption()
+        self._manage_cache()
 
         # schedule reformat if appropriate
         if self._device.raw_device.exists:
@@ -621,6 +625,10 @@ class BlivetPartitionVolume(BlivetVolume):
 
     def _resize(self):
         pass
+
+    def _manage_cache(self):
+        if self._volume['cached']:
+            raise BlivetAnsibleError("caching is not supported for partition volumes")
 
     def _create(self):
         if self._device:
@@ -734,6 +742,55 @@ class BlivetLVMVolume(BlivetVolume):
 
         return dict(seg_type=self._volume['raid_level'], pvs=pvs)
 
+    def _detach_cache(self):
+        """ Detach cache from the volume and remove the unused cache pool """
+        try:
+            cpool_name = self._device.cache.detach()
+        except Exception as e:
+            raise BlivetAnsibleError("failed to detach cache from volume '%s': %s" % (self._device.name, str(e)))
+
+        # full reset is needed for the cache pool to be added to the devicetree so we can remove it
+        self._blivet.reset()
+
+        cpool_name = cpool_name.rstrip("_cpool")
+        cpool_device = self._blivet.devicetree.resolve_device("%s-%s" % (self._device.vg.name, cpool_name))
+
+        self._blivet.destroy_device(cpool_device)
+
+    def _attach_cache(self):
+        """ Create a new cache pool and attach it to the volume """
+        raise BlivetAnsibleError("adding cache to an existing volume is currently not supported")
+
+    def _manage_cache(self):
+        if not self._device:
+            # cache for newly created LVs is managed in _create
+            return
+
+        if self._volume['cached'] and not self._device.raw_device.cached:
+            self._attach_cache()
+        if not self._volume['cached'] and self._device.raw_device.cached:
+            self._detach_cache()
+
+    def _get_params_lvmcache(self):
+        parent = self._blivet_pool._device
+        fast_pvs = []
+        for cache_spec in self._volume['cache_devices']:
+            cache_device = self._blivet.devicetree.resolve_device(cache_spec)
+            if cache_device is None:
+                raise BlivetAnsibleError("cache device '%s' not found" % cache_spec)
+
+            pv_device = next((pv for pv in parent.pvs if cache_device.name in [an.name for an in pv.ancestors]),
+                             None)
+            if pv_device is None:
+                raise BlivetAnsibleError("cache device '%s' doesn't seems to be a physical volume or its parent" % cache_spec)
+            fast_pvs.append(pv_device)
+
+        cache_request = devices.lvm.LVMCacheRequest(size=Size(self._volume['cache_size']),
+                                                    mode=self._volume['cache_mode'],
+                                                    pvs=fast_pvs)
+
+        return dict(cache_request=cache_request)
+
     def _create(self):
         if self._device:
             return
@@ -764,6 +821,10 @@ class BlivetLVMVolume(BlivetVolume):
         if use_lvmraid:
             lvmraid_arguments = self._get_params_lvmraid()
             newlv_arguments.update(lvmraid_arguments)
+
+        if self._volume['cached']:
+            lvmcache_arguments = self._get_params_lvmcache()
+            newlv_arguments.update(lvmcache_arguments)
 
         try:
             device = self._blivet.new_lv(**newlv_arguments)
@@ -1456,7 +1517,11 @@ def run_module():
                                 state=dict(type='str', default='present', choices=['present', 'absent']),
                                 type=dict(type='str'),
                                 volumes=dict(type='list', elements='dict', default=list(),
-                                             options=dict(compression=dict(type='bool'),
+                                             options=dict(cached=dict(type='bool'),
+                                                          cache_devices=dict(type='list', elements='str', default=list()),
+                                                          cache_mode=dict(type='str'),
+                                                          cache_size=dict(type='str'),
+                                                          compression=dict(type='bool'),
                                                           deduplication=dict(type='bool'),
                                                           encryption=dict(type='bool'),
                                                           encryption_cipher=dict(type='str'),
