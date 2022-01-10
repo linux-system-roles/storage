@@ -96,6 +96,15 @@
         - blivet_output is changed
 
   rescue:
+    - name: look for kernel crash
+      shell: |
+        for dir in /var/crash/*; do
+          ls -alrtF "$dir"
+          if [ -f "$dir/vmcore-dmesg.txt" ]; then
+            tail -100 "$dir/vmcore-dmesg.txt"
+          fi
+        done
+
     - name: failed message
       fail:
         msg: "{{ ansible_failed_result }}"
