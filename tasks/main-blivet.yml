@@ -14,10 +14,12 @@
 - name: show storage_pools
   debug:
     var: storage_pools
+    verbosity: 1
 
 - name: show storage_volumes
   debug:
     var: storage_volumes
+    verbosity: 1
 
 - name: get required packages
   blivet:
@@ -107,6 +109,7 @@
 - name: show blivet_output
   debug:
     var: blivet_output
+    verbosity: 1
 
 - name: set the list of pools for test verification
   set_fact:
