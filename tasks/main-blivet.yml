@@ -21,13 +21,14 @@
 
 - name: get required packages
   blivet:
-    pools: "{{ storage_pools|default([]) }}"
-    volumes: "{{ storage_volumes|default([]) }}"
-    use_partitions: "{{ storage_use_partitions }}"
-    disklabel_type: "{{ storage_disklabel_type }}"
-    pool_defaults: "{{ storage_pool_defaults }}"
-    volume_defaults: "{{ storage_volume_defaults }}"
-    packages_only: true
+    parameters:
+      - pools: "{{ storage_pools|default([]) }}"
+        volumes: "{{ storage_volumes|default([]) }}"
+        use_partitions: "{{ storage_use_partitions }}"
+        disklabel_type: "{{ storage_disklabel_type }}"
+        pool_defaults: "{{ storage_pool_defaults }}"
+        volume_defaults: "{{ storage_volume_defaults }}"
+        packages_only: true
   register: package_info
   when: storage_skip_checks is not defined or
         not "packages_installed" in storage_skip_checks
@@ -74,16 +75,17 @@
 
     - name: manage the pools and volumes to match the specified state
       blivet:
-        pools: "{{ storage_pools|default([]) }}"
-        volumes: "{{ storage_volumes|default([]) }}"
-        use_partitions: "{{ storage_use_partitions }}"
-        disklabel_type: "{{ storage_disklabel_type }}"
-        pool_defaults: "{{ storage_pool_defaults }}"
-        volume_defaults: "{{ storage_volume_defaults }}"
-        safe_mode: "{{ storage_safe_mode }}"
-        # yamllint disable-line rule:line-length
-        diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map|d(omit) }}"
-        # yamllint enable rule:line-length
+        parameters:
+          - pools: "{{ storage_pools|default([]) }}"
+            volumes: "{{ storage_volumes|default([]) }}"
+            use_partitions: "{{ storage_use_partitions }}"
+            disklabel_type: "{{ storage_disklabel_type }}"
+            pool_defaults: "{{ storage_pool_defaults }}"
+            volume_defaults: "{{ storage_volume_defaults }}"
+            safe_mode: "{{ storage_safe_mode }}"
+            # yamllint disable-line rule:line-length
+            diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map|d(omit) }}"
+            # yamllint enable rule:line-length
       register: blivet_output
 
     - name: Workaround for udev issue on some platforms

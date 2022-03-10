@@ -1580,10 +1580,11 @@ def run_module():
         packages=list(),
     )
 
-    module = AnsibleModule(argument_spec=module_args,
+    dummy_args = dict(parameters=dict(type='list', default=list()))
+    module = AnsibleModule(argument_spec=dummy_args,
                            supports_check_mode=True)
 
-    errors, updated_params = validate_parameters(module_args, module.params)
+    errors, updated_params = validate_parameters(module_args, module.params['parameters'][0])
     if errors:
         module.fail_json(msg="Parameter check failed: %s" % errors)
 

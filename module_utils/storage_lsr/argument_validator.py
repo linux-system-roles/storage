@@ -101,6 +101,10 @@ def validate_parameters(argument_spec, parameters, error_log=None, updated_param
     if updated_params is None:
         updated_params = dict()
 
+    for param in parameters.keys():
+        if param not in argument_spec.keys():
+            error_log.append("%s is unknown parameter" % param)
+
     for spec, value in argument_spec.items():
 
         if spec not in parameters:
@@ -132,10 +136,12 @@ def validate_parameters(argument_spec, parameters, error_log=None, updated_param
                 updated_params[spec] = up_params
 
         elif value.get('type') == 'list':
+            param_spec = parameters[spec] if isinstance(parameters[spec], list) else [parameters[spec]]
+
             if 'options' in value and value.get('elements', '') == 'dict':
                 # nested list of dicts
                 updated_params[spec] = list()
-                for item in parameters[spec]:
+                for item in param_spec:
                     errors, up_params = validate_parameters(value['options'], item)
                     if errors:
                         # recursion will build prefixes of the error messages
@@ -144,11 +150,11 @@ def validate_parameters(argument_spec, parameters, error_log=None, updated_param
                     updated_params[spec].append(up_params)
             elif 'elements' not in value:
                 # generic list, no way to check its contents
-                updated_params[spec] = parameters[spec]
+                updated_params[spec] = param_spec
             else:
                 # list of items of defined type
                 try:
-                    normalized_list = ArgValidator.validate_list(value['elements'], parameters[spec])
+                    normalized_list = ArgValidator.validate_list(value['elements'], param_spec)
                 except (TypeError, ValueError) as e:
                     normalized_list = "ERROR"
                     error_log.append(spec + ': ' + str(e))
