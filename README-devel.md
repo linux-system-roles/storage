@@ -42,6 +42,13 @@ provided constraints.
 There are unit tests for the embedded modules in `tests/unit/` and integration
 tests for the role in `tests/`.
 
+### Generated Tests
+For each existing test file, there are two more generated tests that use NVMe
+and SCSI drives instead of the default VirtIO ones. When adding a new test
+file, make sure these are generated too, `tests/scripts` contains a script to
+generate the tests and also commit hooks to do this automatically for each
+git commit.
+
 ## Running Tests
 All of the integration tests are designed to use extra/unused disks in a vm.
 Keep in mind that containers do not provide any storage isolation, and so are
