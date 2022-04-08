@@ -1,4 +1,10 @@
 ---
+- name: Ensure ansible_facts used by role
+  setup:
+    gather_subset: min
+  when: not ansible_facts.keys() | list |
+    intersect(__storage_required_facts) == __storage_required_facts
+
 - name: Set platform/version specific variables
   include_vars: "{{ __vars_file }}"
   loop:
