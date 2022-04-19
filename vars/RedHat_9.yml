@@ -7,3 +7,4 @@ blivet_package_list:
   - libblockdev-swap
   - vdo
   - kmod-kvdo
+  - xfsprogs
