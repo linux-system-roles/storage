@@ -119,7 +119,7 @@ try:
     from blivet3.callbacks import callbacks
     from blivet3 import devicelibs
     from blivet3 import devices
-    from blivet3.deviceaction import ActionConfigureFormat
+    from blivet3.deviceaction import ActionConfigureFormat, ActionAddMember, ActionRemoveMember
     from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
@@ -135,7 +135,7 @@ except ImportError:
         from blivet.callbacks import callbacks
         from blivet import devicelibs
         from blivet import devices
-        from blivet.deviceaction import ActionConfigureFormat
+        from blivet.deviceaction import ActionConfigureFormat, ActionAddMember, ActionRemoveMember
         from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
@@ -1163,32 +1163,43 @@ class BlivetPool(BlivetBase):
                 if self._pool.get(name) is None:
                     self._pool[name] = default
 
+    def _create_one_member(self, disk):
+        if not disk.isleaf or disk.format.type is not None:
+            if safe_mode and disk.format.name != get_format(None).name:
+                raise BlivetAnsibleError(
+                    "cannot remove existing formatting (%s) and/or devices on disk '%s' (pool '%s') in safe mode" %
+                    (disk.format.type, disk.name, self._pool['name'])
+                )
+            else:
+                self._blivet.devicetree.recursive_remove(disk)
+
+        if use_partitions:
+            label = get_format("disklabel", device=disk.path)
+            self._blivet.format_device(disk, label)
+            member = self._blivet.new_partition(parents=[disk], size=Size("256MiB"), grow=True)
+            self._blivet.create_device(member)
+        else:
+            member = disk
+
+        if self._is_raid:
+            self._blivet.format_device(member, fmt=get_format("mdmember"))
+        else:
+            self._blivet.format_device(member, self._get_format())
+
+        if use_partitions:
+            try:
+                do_partitioning(self._blivet)
+            except Exception:
+                raise BlivetAnsibleError("failed to allocate partitions for pool '%s'" % self._pool['name'])
+
+        return member
+
     def _create_members(self):
         """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
 
         for disk in self._disks:
-            if not disk.isleaf or disk.format.type is not None:
-                if safe_mode and disk.format.name != get_format(None).name:
-                    raise BlivetAnsibleError(
-                        "cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" %
-                        (disk.name, self._pool['name'])
-                    )
-                else:
-                    self._blivet.devicetree.recursive_remove(disk)
-
-            if use_partitions:
-                label = get_format("disklabel", device=disk.path)
-                self._blivet.format_device(disk, label)
-                member = self._blivet.new_partition(parents=[disk], size=Size("256MiB"), grow=True)
-                self._blivet.create_device(member)
-            else:
-                member = disk
-
-            if self._is_raid:
-                self._blivet.format_device(member, fmt=get_format("mdmember"))
-            else:
-                self._blivet.format_device(member, self._get_format())
+            member = self._create_one_member(disk)
             members.append(member)
 
         if self._is_raid:
@@ -1200,12 +1211,6 @@ class BlivetPool(BlivetBase):
             result = [raid_array]
         else:
             result = members
-
-        if use_partitions:
-            try:
-                do_partitioning(self._blivet)
-            except Exception:
-                raise BlivetAnsibleError("failed to allocate partitions for pool '%s'" % self._pool['name'])
 
         return result
 
@@ -1220,6 +1225,9 @@ class BlivetPool(BlivetBase):
         self._get_volumes()
         for bvolume in self._blivet_volumes:
             bvolume.manage()
+
+    def _manage_members(self):
+        """ Schedule actions as needed to configure this pool's members. """
 
     def manage(self):
         """ Schedule actions to configure this pool according to the yaml input. """
@@ -1242,6 +1250,10 @@ class BlivetPool(BlivetBase):
 
         # schedule create if appropriate
         self._create()
+
+        if self._device:
+            self._manage_members()
+
         self._manage_volumes()
 
 
@@ -1386,6 +1398,53 @@ class BlivetLVMPool(BlivetPool):
             new_thinlvs_obj.append(new_thinlv_obj)
 
         return existing_thinlvs_obj + new_thinlvs_obj
+
+    def _manage_members(self):
+        """ Schedule actions as needed to configure this pool's members. """
+        if not self._device:
+            return
+
+        add_disks = [d for d in self._disks if d not in self._device.ancestors]
+        remove_disks = [pv for pv in self._device.pvs if not any(d in pv.ancestors for d in self._disks)]
+
+        if not (add_disks or remove_disks):
+            return
+
+        if self._is_raid:
+            raise BlivetAnsibleError("managing pool members is not supported with RAID")
+
+        for disk in add_disks:
+            member = self._create_one_member(disk)
+            member = self._manage_one_encryption(member)
+
+            try:
+                ac = ActionAddMember(self._device, member)
+                self._blivet.devicetree.actions.add(ac)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to add disk '%s' to pool '%s': %s" % (disk.name,
+                                                                                       self._pool['name'],
+                                                                                       str(e)))
+
+        for disk in remove_disks:
+            if self._device.free_space < disk.size:
+                raise BlivetAnsibleError("disk '%s' cannot be removed from pool '%s'" % (disk.name,
+                                                                                         self._pool['name']))
+
+            try:
+                ac = ActionRemoveMember(self._device, disk)
+                # XXX: scheduling ActionRemoveMember is currently broken, we need to execute
+                # the action now manually, see https://bugzilla.redhat.com/show_bug.cgi?id=2076956
+                # self._blivet.devicetree.actions.add(ac)
+                ac.apply()
+                ac.execute()
+            except Exception as e:
+                raise BlivetAnsibleError("failed to remove disk '%s' from pool '%s': %s" % (disk.name,
+                                                                                            self._pool['name'],
+                                                                                            str(e)))
+            # XXX workaround for https://github.com/storaged-project/blivet/pull/1040
+            disk.format.vg_name = None
+
+            self._blivet.devicetree.recursive_remove(disk.raw_device)
 
     def _create(self):
         if not self._device:
