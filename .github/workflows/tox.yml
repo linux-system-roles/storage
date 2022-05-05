@@ -3,7 +3,7 @@ name: tox
 on:  # yamllint disable-line rule:truthy
   - pull_request
 env:
-  TOX_LSR: "git+https://github.com/linux-system-roles/tox-lsr@2.10.1"
+  TOX_LSR: "git+https://github.com/linux-system-roles/tox-lsr@2.11.0"
   LSR_ANSIBLE_TEST_DOCKER: "true"
   LSR_ANSIBLES: 'ansible==2.9.*'
   LSR_MSCENARIOS: default
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        pyver: ['2.7', '3.6', '3.7', '3.8', '3.9']
+        pyver: ['2.7', '3.6', '3.8', '3.9', '3.10']
     steps:
       - name: checkout PR
         uses: actions/checkout@v2
@@ -38,8 +38,8 @@ jobs:
           case "$toxpyver" in
           27) toxenvs="flake8,pylint,custom" ;;
           36) toxenvs="${toxenvs},coveralls,black,yamllint,shellcheck,custom" ;;
-          37) toxenvs="${toxenvs},coveralls,custom" ;;
           38) toxenvs="${toxenvs},coveralls,ansible-lint,ansible-plugin-scan,collection,ansible-test,custom" ;;
           39) toxenvs="${toxenvs},coveralls,custom" ;;
+          310) toxenvs="${toxenvs},coveralls,custom" ;;
           esac
           TOXENV="$toxenvs" lsr_ci_runtox
