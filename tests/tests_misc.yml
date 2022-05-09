@@ -192,6 +192,8 @@
             mount_options: rw,noatime,defaults
 
     - include_tasks: verify-role-results.yml
+      vars:
+        __storage_verify_mount_options: true
 
     - name: Remove the disk volume created above
       include_role:

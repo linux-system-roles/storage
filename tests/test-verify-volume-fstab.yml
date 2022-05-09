@@ -13,7 +13,10 @@
       else 0 }}"
     storage_test_fstab_mount_options_matches: "{{ storage_test_fstab.stdout_lines |
       map('regex_search', ' ' + storage_test_volume.mount_point + ' .* ' + storage_test_volume.mount_options + ' +') |
-      select('string')|list if (storage_test_volume.mount_options|d('none',true) != 'none') else [] }}"
+      select('string')|list if (
+        storage_test_volume.mount_options|d('none',true) != 'none'
+        and storage_test_volume.mount_point|d('none',true) != 'none'
+      ) else [] }}"
     storage_test_fstab_expected_mount_options_matches: "{{ 1
       if (_storage_test_volume_present and storage_test_volume.mount_options)
       else 0 }}"
@@ -38,7 +41,10 @@
     that: storage_test_fstab_mount_options_matches|length == storage_test_fstab_expected_mount_options_matches|int
     msg: "Expected number ({{ storage_test_fstab_expected_mount_options_matches }}) of
       entries with volume '{{ storage_test_volume.name }}' mount options not found in /etc/fstab."
-  when: "'mount_options' in storage_test_volume"
+  when:
+    - __storage_verify_mount_options | d(false)
+    - "'mount_options' in storage_test_volume"
+    - "'mount_point' in storage_test_volume"
 
 - name: Clean up variables
   set_fact:
