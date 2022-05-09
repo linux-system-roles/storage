@@ -189,6 +189,7 @@
             fs_type: 'ext4'
             fs_create_options: '-F'
             mount_point: "{{ mount_location }}"
+            mount_options: rw,noatime,defaults
 
     - include_tasks: verify-role-results.yml
 
