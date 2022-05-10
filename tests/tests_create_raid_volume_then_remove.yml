@@ -29,7 +29,7 @@
         storage_volumes:
           - name: test1
             type: raid
-            raid_level: "raid0"
+            raid_level: "striped"
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
 

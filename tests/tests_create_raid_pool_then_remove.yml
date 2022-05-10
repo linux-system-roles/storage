@@ -36,7 +36,7 @@
           - name: vg1
             disks: "{{ unused_disks }}"
             type: lvm
-            raid_level: "raid0"
+            raid_level: "striped"
             state: present
             volumes:
               - name: lv1

@@ -27,7 +27,8 @@
 
 - name: (2/2) Process volume type (get RAID value)
   set_fact:
-    st_volume_type: "{{ storage_test_volume.raid_level }}"
+    st_volume_type: "{{ (storage_test_volume.raid_level == 'striped') |
+      ternary('raid0', storage_test_volume.raid_level) }}"
   when: storage_test_volume.type == "raid"
 
 - name: Verify the volume's device type

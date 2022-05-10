@@ -285,8 +285,11 @@ class BlivetBase(object):
             raise BlivetAnsibleError("chunk size must be multiple of 4 KiB")
 
         try:
+            raid_level = self._spec_dict["raid_level"]
+            if raid_level == "striped":
+                raid_level = "raid0"
             raid_array = self._blivet.new_mdarray(name=raid_name,
-                                                  level=self._spec_dict["raid_level"],
+                                                  level=raid_level,
                                                   member_devices=active_count,
                                                   total_devices=len(members),
                                                   parents=members,
@@ -740,7 +743,10 @@ class BlivetLVMVolume(BlivetVolume):
         else:
             pvs = parent_device.pvs
 
-        return dict(seg_type=self._volume['raid_level'], pvs=pvs)
+        seg_type = self._volume['raid_level']
+        if seg_type == "striped":
+            seg_type = "raid0"
+        return dict(seg_type=seg_type, pvs=pvs)
 
     def _detach_cache(self):
         """ Detach cache from the volume and remove the unused cache pool """
@@ -801,6 +807,8 @@ class BlivetLVMVolume(BlivetVolume):
 
         use_vdo = self._volume['deduplication'] or self._volume['compression']
         use_lvmraid = self._volume['raid_level']
+        if use_lvmraid == "striped":
+            use_lvmraid = "raid0"
 
         # VDO size is technically unlimited, so no size checks needed when it is used
         if use_vdo:

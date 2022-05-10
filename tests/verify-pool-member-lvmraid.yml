@@ -1,9 +1,12 @@
 - name: check LVM RAID
   block:
     - name: Get information about LVM RAID
-      command: "lvs --noheading -o lv_name --select 'lv_name={{ storage_test_lvmraid_volume.name }}&&lv_layout={{ storage_test_lvmraid_volume.raid_level }}' {{ storage_test_pool.name }}"
+      command: "lvs --noheading -o lv_name --select 'lv_name={{ storage_test_lvmraid_volume.name }}&&lv_layout={{ __raid_level }}' {{ storage_test_pool.name }}"
       register: storage_test_lvmraid_status
       changed_when: false
+      vars:
+        __raid_level: "{{ (storage_test_lvmraid_volume.raid_level == 'striped') |
+          ternary('raid0', storage_test_lvmraid_volume.raid_level) }}"
 
     - name: Check that volume is LVM RAID
       assert:
