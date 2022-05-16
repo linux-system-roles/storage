@@ -105,6 +105,7 @@ volumes:
     elements: dict
 '''
 
+import copy
 import logging
 import os
 import traceback
@@ -1500,6 +1501,39 @@ def activate_swaps(b, pools, volumes):
 
 def run_module():
     # available arguments/parameters that a user can pass
+    common_volume_opts = dict(encryption=dict(type='bool'),
+                              encryption_cipher=dict(type='str'),
+                              encryption_key=dict(type='str'),
+                              encryption_key_size=dict(type='int'),
+                              encryption_luks_version=dict(type='str'),
+                              encryption_password=dict(type='str'),
+                              fs_create_options=dict(type='str'),
+                              fs_label=dict(type='str', default=''),
+                              fs_type=dict(type='str'),
+                              mount_options=dict(type='str'),
+                              mount_point=dict(type='str'),
+                              name=dict(type='str'),
+                              raid_level=dict(type='str'),
+                              size=dict(type='str'),
+                              state=dict(type='str', default='present', choices=['present', 'absent']),
+                              type=dict(type='str'))
+    volume_opts = copy.deepcopy(common_volume_opts)
+    volume_opts.update(
+        dict(disks=dict(type='list'),
+             raid_device_count=dict(type='int'),
+             raid_spare_count=dict(type='int'),
+             raid_metadata_version=dict(type='str')))
+    pool_volume_opts = copy.deepcopy(common_volume_opts)
+    pool_volume_opts.update(
+        dict(cached=dict(type='bool'),
+             cache_devices=dict(type='list', elements='str', default=list()),
+             cache_mode=dict(type='str'),
+             cache_size=dict(type='str'),
+             compression=dict(type='bool'),
+             deduplication=dict(type='bool'),
+             raid_disks=dict(type='list', elements='str', default=list()),
+             vdo_pool_size=dict(type='str')))
+
     module_args = dict(
         pools=dict(type='list', elements='dict',
                    options=dict(disks=dict(type='list', elements='str', default=list()),
@@ -1517,49 +1551,9 @@ def run_module():
                                 state=dict(type='str', default='present', choices=['present', 'absent']),
                                 type=dict(type='str'),
                                 volumes=dict(type='list', elements='dict', default=list(),
-                                             options=dict(cached=dict(type='bool'),
-                                                          cache_devices=dict(type='list', elements='str', default=list()),
-                                                          cache_mode=dict(type='str'),
-                                                          cache_size=dict(type='str'),
-                                                          compression=dict(type='bool'),
-                                                          deduplication=dict(type='bool'),
-                                                          encryption=dict(type='bool'),
-                                                          encryption_cipher=dict(type='str'),
-                                                          encryption_key=dict(type='str'),
-                                                          encryption_key_size=dict(type='int'),
-                                                          encryption_luks_version=dict(type='str'),
-                                                          encryption_password=dict(type='str'),
-                                                          fs_create_options=dict(type='str'),
-                                                          fs_label=dict(type='str', default=''),
-                                                          fs_type=dict(type='str'),
-                                                          mount_point=dict(type='str'),
-                                                          name=dict(type='str'),
-                                                          raid_disks=dict(type='list', elements='str', default=list()),
-                                                          raid_level=dict(type='str'),
-                                                          size=dict(type='str'),
-                                                          state=dict(type='str', default='present', choices=['present', 'absent']),
-                                                          type=dict(type='str'),
-                                                          vdo_pool_size=dict(type='str'))))),
+                                             options=pool_volume_opts))),
         volumes=dict(type='list', elements='dict',
-                     options=dict(disks=dict(type='list'),
-                                  encryption=dict(type='bool'),
-                                  encryption_cipher=dict(type='str'),
-                                  encryption_key=dict(type='str'),
-                                  encryption_key_size=dict(type='int'),
-                                  encryption_luks_version=dict(type='str'),
-                                  encryption_password=dict(type='str'),
-                                  fs_create_options=dict(type='str'),
-                                  fs_label=dict(type='str', default=''),
-                                  fs_type=dict(type='str'),
-                                  mount_point=dict(type='str'),
-                                  name=dict(type='str'),
-                                  raid_level=dict(type='str'),
-                                  raid_device_count=dict(type='int'),
-                                  raid_spare_count=dict(type='int'),
-                                  raid_metadata_version=dict(type='str'),
-                                  size=dict(type='str'),
-                                  state=dict(type='str', default='present', choices=['present', 'absent']),
-                                  type=dict(type='str'))),
+                     options=volume_opts),
         packages_only=dict(type='bool', required=False, default=False),
         disklabel_type=dict(type='str', required=False, default=None),
         safe_mode=dict(type='bool', required=False, default=True),
