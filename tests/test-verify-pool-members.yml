@@ -59,6 +59,9 @@
 - name: Check LVM RAID
   include_tasks: verify-pool-members-lvmraid.yml
 
+- name: Check Thin Pools
+  include_tasks: verify-pool-members-thin.yml
+
 - name: Check member encryption
   include_tasks: verify-pool-members-encryption.yml
 

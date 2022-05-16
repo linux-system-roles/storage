@@ -1,0 +1,125 @@
+---
+- hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    storage_use_partitions: true
+    mount_location1: '/opt/test1'
+    mount_location2: '/opt/test2'
+    volume1_size: '3g'
+    volume2_size: '4g'
+    fs_after: "{{ (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') | ternary('ext4', 'xfs') }}"
+
+  tasks:
+    - include_role:
+        name: linux-system-roles.storage
+
+    - include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 3
+
+    - name: Create a thinpool device
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: present
+            volumes:
+              - name: lv1
+                thin_pool_name: tpool1
+                thin_pool_size: '10g'
+                size: "{{ volume1_size }}"
+                thin: true
+                mount_point: "{{ mount_location1 }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Repeat previous invocation to verify idempotence
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            volumes:
+              - name: lv1
+                thin_pool_name: tpool1
+                thin_pool_size: '10g'
+                size: "{{ volume1_size }}"
+                thin: true
+                mount_point: "{{ mount_location1 }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Change thinlv fs type
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            volumes:
+              - name: lv1
+                thin_pool_name: tpool1
+                thin: true
+                fs_type: "{{ fs_after }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Create new LV under existing thinpool
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            volumes:
+              - name: lv2
+                thin_pool_name: tpool1
+                size: "{{ volume2_size }}"
+                thin: true
+                mount_point: "{{ mount_location2 }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Remove existing LV under existing thinpool
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            volumes:
+              - name: lv2
+                thin_pool_name: tpool1
+                thin: true
+                mount_point: "{{ mount_location2 }}"
+                state: absent
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Cleanup
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: absent
+            volumes:
+              - name: lv1
+                thin_pool_name: tpool1
+                thin_pool_size: '10g'
+                size: "{{ volume1_size }}"
+                thin: true
+                mount_point: "{{ mount_location1 }}"
+
+    - include_tasks: verify-role-results.yml

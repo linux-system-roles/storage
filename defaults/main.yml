@@ -61,6 +61,10 @@ storage_volume_defaults:
   deduplication: null
   vdo_pool_size: null
 
+  thin: null
+  thin_pool_name: null
+  thin_pool_size: null
+
   cached: false
   cache_size: 0
   cache_mode: null
