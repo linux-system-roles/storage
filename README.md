@@ -53,7 +53,7 @@ device node basename (like `sda` or `mpathb`), /dev/disk/ symlink
 ##### `raid_level`
 When used with `type: lvm` it manages a volume group with a mdraid array of given level
 on it. Input `disks` are in this case used as RAID members.
-Accepted values are: `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+Accepted values are: `linear`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
 
 ##### `volumes`
 This is a list of volumes that belong to the current pool. It follows the
