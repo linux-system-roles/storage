@@ -758,21 +758,7 @@ class BlivetLVMVolume(BlivetVolume):
 
         self._blivet.destroy_device(cpool_device)
 
-    def _attach_cache(self):
-        """ Create a new cache pool and attach it to the volume """
-        raise BlivetAnsibleError("adding cache to an existing volume is currently not supported")
-
-    def _manage_cache(self):
-        if not self._device:
-            # cache for newly created LVs is managed in _create
-            return
-
-        if self._volume['cached'] and not self._device.raw_device.cached:
-            self._attach_cache()
-        if not self._volume['cached'] and self._device.raw_device.cached:
-            self._detach_cache()
-
-    def _get_params_lvmcache(self):
+    def _get_cache_pvs(self):
         parent = self._blivet_pool._device
         fast_pvs = []
         for cache_spec in self._volume['cache_devices']:
@@ -786,6 +772,35 @@ class BlivetLVMVolume(BlivetVolume):
                 raise BlivetAnsibleError("cache device '%s' doesn't seems to be a physical volume or its parent" % cache_spec)
             fast_pvs.append(pv_device)
 
+        return fast_pvs
+
+    def _attach_cache(self):
+        """ Create a new cache pool and attach it to the volume """
+
+        if not hasattr(devices.lvm, "LVMCachePoolMixin"):
+            raise BlivetAnsibleError("adding cache to an existing volume is currently not supported")
+
+        fast_pvs = self._get_cache_pvs()
+        cpool = self._blivet.new_lv(size=Size(self._volume['cache_size']),
+                                    parents=[self._blivet_pool._device],
+                                    cache_mode=self._volume['cache_mode'],
+                                    pvs=fast_pvs,
+                                    cache_pool=True,
+                                    attach_to=self._device)
+        self._blivet.create_device(cpool)
+
+    def _manage_cache(self):
+        if not self._device:
+            # cache for newly created LVs is managed in _create
+            return
+
+        if self._volume['cached'] and not self._device.raw_device.cached:
+            self._attach_cache()
+        if not self._volume['cached'] and self._device.raw_device.cached:
+            self._detach_cache()
+
+    def _get_params_lvmcache(self):
+        fast_pvs = self._get_cache_pvs()
         cache_request = devices.lvm.LVMCacheRequest(size=Size(self._volume['cache_size']),
                                                     mode=self._volume['cache_mode'],
                                                     pvs=fast_pvs)
