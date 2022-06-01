@@ -1,0 +1,23 @@
+- name: check thinpool
+  block:
+    - name: Get information about thinpool
+      command: "lvs --noheading -o pool_lv --select 'lv_name={{ storage_test_thin_volume.name }}&&segtype=thin' {{ storage_test_pool.name }}"
+      register: storage_test_thin_status
+      changed_when: false
+
+    - name: Check that volume is in correct thinpool (when thinp name is provided)
+      assert:
+        that: storage_test_thin_status.stdout | trim == storage_test_thin_volume.thin_pool_name
+      when: storage_test_thin_volume.thin_pool_name is not none
+
+    - name: Check that volume is in thinpool (when thinp name is not provided)
+      assert:
+        that: storage_test_thin_status.stdout | trim != ""
+
+    - set_fact:
+        storage_test_lvmraid_status: null
+
+  when:
+    - storage_test_thin_volume.thin
+    - storage_test_pool.state != "absent"
+    - storage_test_thin_volume.state != "absent"

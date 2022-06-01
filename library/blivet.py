@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
@@ -120,6 +119,7 @@ try:
     from blivet3.callbacks import callbacks
     from blivet3 import devices
     from blivet3.deviceaction import ActionConfigureFormat
+    from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -134,6 +134,7 @@ except ImportError:
         from blivet.callbacks import callbacks
         from blivet import devices
         from blivet.deviceaction import ActionConfigureFormat
+        from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -676,17 +677,17 @@ class BlivetLVMVolume(BlivetVolume):
             size = self._blivet_pool._device.align(size, roundup=True)
         return size
 
-    def _trim_size(self, size):
-        parent_device = self._blivet_pool._device
+    def _trim_size(self, size, parent_device):
 
         trim_percent = (1.0 - float(parent_device.free_space / size)) * 100
         log.debug("size: %s ; %s", size, trim_percent)
 
         if size > parent_device.free_space:
             if trim_percent > MAX_TRIM_PERCENT:
-                raise BlivetAnsibleError("specified size for volume '%s' exceeds available space in pool '%s' (%s)" % (size,
-                                                                                                                       parent_device.name,
-                                                                                                                       parent_device.free_space))
+                raise BlivetAnsibleError("specified size for volume '%s' '%s' exceeds available space in pool '%s' (%s)" % (self._volume['name'],
+                                                                                                                            size,
+                                                                                                                            parent_device.name,
+                                                                                                                            parent_device.free_space))
             else:
                 log.info("adjusting %s size from %s to %s to fit in %s free space",
                          self._volume['name'],
@@ -705,7 +706,7 @@ class BlivetLVMVolume(BlivetVolume):
 
         if self._volume['vdo_pool_size']:
             try:
-                pool_size = self._trim_size(Size(self._volume['vdo_pool_size']))
+                pool_size = self._trim_size(Size(self._volume['vdo_pool_size']), parent_device)
             except BlivetAnsibleError:
                 # Literally the same error just more specific description
                 raise BlivetAnsibleError("specified 'vdo_pool_size' for volume '%s' "
@@ -792,28 +793,51 @@ class BlivetLVMVolume(BlivetVolume):
 
         return dict(cache_request=cache_request)
 
+    def _get_parent_thinpool_by_name(self, thin_pool_name):
+
+        if thin_pool_name is None:
+            if len(self._blivet_pool._thinpools) != 1:
+                raise BlivetAnsibleError("cannot determine thinpool for assigning volume '%s' " % self._volume.get('name'))
+            else:
+                return self._blivet_pool._thinpools[0]
+
+        for thinp in self._blivet_pool._thinpools:
+            if thin_pool_name == thinp.lvname:
+                return thinp
+        return None
+
     def _create(self):
         if self._device:
             return
 
-        parent_device = self._blivet_pool._device
-        if parent_device is None:
-            raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool['name'], self._volume['name']))
-
+        thin_pool = self._volume.get('thin')
         use_vdo = self._volume['deduplication'] or self._volume['compression']
         use_lvmraid = self._volume['raid_level']
 
-        # VDO size is technically unlimited, so no size checks needed when it is used
+        if thin_pool:
+            parent_device = self._get_parent_thinpool_by_name(self._volume.get('thin_pool_name'))
+            if parent_device is None:
+                raise BlivetAnsibleError("failed to find thin pool '%s' for volume '%s'" % (self._volume.get('thin_pool_name'), self._volume['name']))
+        else:
+            parent_device = self._blivet_pool._device
+            if parent_device is None:
+                raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool._device.name, self._volume['name']))
+
         if use_vdo:
+            # VDO size is technically unlimited, so no size checks needed when it is used
             size = self._get_size()
         else:
-            size = self._trim_size(self._get_size())
+            size = self._trim_size(self._get_size(), parent_device)
 
         # generic arguments preparation for blivet.new_lv call
         newlv_arguments = dict(fmt=self._get_format(),
                                name=self._volume['name'],
                                parents=[parent_device],
                                size=size)
+
+        if thin_pool:
+            thin_arguments = dict(thin_volume=True)
+            newlv_arguments.update(thin_arguments)
 
         if use_vdo:
             vdo_arguments = self._get_params_create_vdo()
@@ -1266,18 +1290,114 @@ class BlivetLVMPool(BlivetPool):
 
         return managed_members
 
+    def _manage_thin_pools(self, pool_device):
+
+        def get_vol_size(volume):
+            if isinstance(volume, str) and '%' in volume:
+                try:
+                    percentage = int(volume[:-1].strip())
+                except ValueError:
+                    raise BlivetAnsibleError("invalid percentage '%s' size specified for volume in pool '%s'" % (volume, pool_device.name))
+
+                size = pool_device.size * (percentage / 100.0)
+            else:
+                try:
+                    size = Size(volume)
+                except Exception:
+                    raise BlivetAnsibleError("invalid size specification for volume in pool '%s'" % pool_device.name)
+
+            return size
+
+        existing_thinlvs_obj = [d for d in pool_device.children if d.is_thin_pool]
+
+        existing_thinlvs = list()
+
+        for thinlv_obj in existing_thinlvs_obj:
+            name = thinlv_obj.name.split(self._pool['name'] + '-')[-1]
+            size = thinlv_obj.size
+            existing_thinlvs.append({'name': name, 'size': size})
+
+        thinlvs_to_create = list()
+        new_thinlvs_obj = list()
+
+        # Calculate auto size of thin LVs as follows:
+        # <available space for all autos> = <size of VG> - <20% of VG for thin metadata> - <all user given sizes>
+        # <auto size> = <available space for all autos> / (<count of thinLVs> + <count of regular LVs>)
+        auto_size_dev_count = 0
+        reserved_space = Size(0)
+
+        for volume in self._pool.get('volumes'):
+            if not volume['state']:
+                continue
+
+            if volume['thin']:
+                thin_name = volume.get('thin_pool_name')
+                thin_size = volume.get('thin_pool_size')
+                if thin_name not in [t['name'] for t in thinlvs_to_create] + [d['name'] for d in existing_thinlvs]:
+                    thinlvs_to_create.append({'name': thin_name, 'size': thin_size})
+                    if thin_size is None:
+                        auto_size_dev_count += 1
+                    else:
+                        reserved_space += get_vol_size(thin_size)
+            else:
+                # regular LV just take its size
+                vol_size = volume.get('size')
+                if vol_size is None:
+                    auto_size_dev_count += 1
+                else:
+                    reserved_space += get_vol_size(vol_size)
+
+        # Thin pool will take 20% of VG space as a safety spare. At least 1GiB, at most 100GiB
+        thin_meta_space = DEFAULT_THPOOL_RESERVE.percent * (pool_device.size * 0.01)
+        if thin_meta_space < DEFAULT_THPOOL_RESERVE.min:
+            thin_meta_space = DEFAULT_THPOOL_RESERVE.min
+        elif thin_meta_space > DEFAULT_THPOOL_RESERVE.max:
+            thin_meta_space = DEFAULT_THPOOL_RESERVE.max
+
+        available_space = pool_device.size - thin_meta_space
+
+        if auto_size_dev_count > 0:
+            calculated_thinlv_size = available_space / auto_size_dev_count
+
+        for thinlv in thinlvs_to_create:
+
+            if thinlv['size'] is None:
+                tlv_size = Size(calculated_thinlv_size)
+            else:
+                tlv_size = Size(thinlv['size'])
+
+            thinlv_params = dict(thin_pool=True, size=tlv_size, parents=[pool_device])
+
+            if thinlv is not None:
+                thinlv_params.update(dict(name=thinlv['name']))
+
+            try:
+                new_thinlv_obj = self._blivet.new_lv(**thinlv_params)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to set up thin pool '%s': %s" % (self._pool['name'], str(e)))
+            self._blivet.create_device(new_thinlv_obj)
+            new_thinlvs_obj.append(new_thinlv_obj)
+
+        return existing_thinlvs_obj + new_thinlvs_obj
+
     def _create(self):
+        if not self._device:
+            members = self._manage_encryption(self._create_members())
+            try:
+                pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to set up pool '%s': %s" % (self._pool['name'], str(e)))
+
+            self._blivet.create_device(pool_device)
+            self._device = pool_device
+
+        self._thinpools = self._manage_thin_pools(self._device)
+
+    def _look_up_device(self):
+        self._thinpools = list()
+        super(BlivetLVMPool, self)._look_up_device()
         if self._device:
-            return
-
-        members = self._manage_encryption(self._create_members())
-        try:
-            pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
-        except Exception as e:
-            raise BlivetAnsibleError("failed to set up pool '%s': %s" % (self._pool['name'], str(e)))
-
-        self._blivet.create_device(pool_device)
-        self._device = pool_device
+            self._thinpools = [d for d in self._device.children if d.type == 'lvmthinpool']
 
 
 _BLIVET_POOL_TYPES = {
@@ -1532,6 +1652,9 @@ def run_module():
              compression=dict(type='bool'),
              deduplication=dict(type='bool'),
              raid_disks=dict(type='list', elements='str', default=list()),
+             thin_pool_name=dict(type='str'),
+             thin_pool_size=dict(type='str'),
+             thin=dict(type='bool', default=False),
              vdo_pool_size=dict(type='str')))
 
     module_args = dict(
