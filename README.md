@@ -53,7 +53,7 @@ device node basename (like `sda` or `mpathb`), /dev/disk/ symlink
 ##### `raid_level`
 When used with `type: lvm` it manages a volume group with a mdraid array of given level
 on it. Input `disks` are in this case used as RAID members.
-Accepted values are: `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+Accepted values are: `linear`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
 
 ##### `volumes`
 This is a list of volumes that belong to the current pool. It follows the
@@ -135,7 +135,10 @@ Specifies RAID level. LVM RAID can be created as well.
 "Regular" RAID volume requires type to be `raid`.
 LVM RAID needs that volume has `storage_pools` parent with type `lvm`,
 `raid_disks` need to be specified as well.
-Accepted values are: `linear` (N/A for LVM RAID), `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+Accepted values are:
+* for LVM RAID volume: `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`, `striped`, `mirror`
+* for RAID volume: `linear`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+
 __WARNING__: Changing `raid_level` for a volume is a destructive operation, meaning
              all data on that volume will be lost as part of the process of
              removing old and adding new RAID. RAID reshaping is currently not

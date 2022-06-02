@@ -117,6 +117,7 @@ LIB_IMP_ERR = ""
 try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
+    from blivet3 import devicelibs
     from blivet3 import devices
     from blivet3.deviceaction import ActionConfigureFormat
     from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
@@ -132,6 +133,7 @@ except ImportError:
     try:
         from blivet import Blivet
         from blivet.callbacks import callbacks
+        from blivet import devicelibs
         from blivet import devices
         from blivet.deviceaction import ActionConfigureFormat
         from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
@@ -152,6 +154,11 @@ if BLIVET_PACKAGE:
     blivet_flags.debug = True
     set_up_logging()
     log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
+
+    # XXX add support for LVM RAID raid0 level
+    devicelibs.lvm.raid_levels.add_raid_level(devicelibs.raid.RAID0)
+    if "raid0" not in devicelibs.lvm.raid_seg_types:
+        devicelibs.lvm.raid_seg_types.append("raid0")
 
 
 MAX_TRIM_PERCENT = 2
