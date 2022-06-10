@@ -261,7 +261,8 @@ def locate_parameter(params, path, param_value):
                               'indices': stack_item['indices'] + [None]})
         else:
             # The end of given path
-            if param_value == list() or stack_item['value'] in param_value:
+            if (stack_item['value'] is not None and
+                    (param_value == list() or stack_item['value'] in param_value)):
                 result['indices'].append(stack_item['indices'])
 
     if result['indices'] == []:
