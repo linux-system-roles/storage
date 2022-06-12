@@ -1375,7 +1375,7 @@ class BlivetLVMPool(BlivetPool):
 
             thinlv_params = dict(thin_pool=True, size=tlv_size, parents=[pool_device])
 
-            if thinlv is not None:
+            if thinlv['name'] is not None:
                 thinlv_params.update(dict(name=thinlv['name']))
 
             try:
