@@ -1,4 +1,5 @@
 - hosts: all
+  gather_facts: true
   tasks:
     - name: create var file in caller that can override the one in called role
       delegate_to: localhost
