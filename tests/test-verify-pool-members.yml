@@ -2,7 +2,6 @@
     _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs | dict2items |
       selectattr('value.vg', 'match', '^' ~ storage_test_pool.name ~ '$') |
       map(attribute='key') | list }}"
-    _storage_test_pool_pvs: []
     _storage_test_expected_pv_count: "{{ 0
       if storage_test_pool.state == 'absent'
       else (storage_test_pool.raid_level | ternary(1, storage_test_pool.disks|length)) }}"
@@ -18,17 +17,18 @@
   when: storage_test_pool.type == 'lvm'
 
 - set_fact:
-    _storage_test_pool_pvs: "{{ _storage_test_pool_pvs }} + [ '{{ pv_paths.results[idx].device }}' ]"
-  loop: "{{ _storage_test_pool_pvs_lvm }}"
-  loop_control:
-    index_var: idx
+    __pvs_lvm_len: "{{ _storage_test_pool_pvs_lvm|length }}"
+  when: storage_test_pool.type == 'lvm'
+
+- set_fact:
+    _storage_test_pool_pvs: "{{ pv_paths.results[0:(__pvs_lvm_len|int)] | map(attribute='device') | list }}"
   when: storage_test_pool.type == 'lvm'
 
 - name: Verify PV count
   assert:
-    that: "{{ _storage_test_pool_pvs_lvm|length == _storage_test_expected_pv_count|int }}"
+    that: "{{ __pvs_lvm_len|int == _storage_test_expected_pv_count|int }}"
     msg: "Unexpected PV count for pool {{ storage_test_pool.name }}
-          (has: {{ _storage_test_pool_pvs_lvm|length }} expected: {{ _storage_test_expected_pv_count|int }})"
+          (has: {{ __pvs_lvm_len|int }} expected: {{ _storage_test_expected_pv_count|int }})"
   when: storage_test_pool.type == 'lvm'
 
 - set_fact:
@@ -73,3 +73,4 @@
     _storage_test_expected_pv_count: null
     _storage_test_pool_pvs_lvm: []
     _storage_test_pool_pvs: []
+    __pvs_lvm_len: null
