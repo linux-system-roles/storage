@@ -10,3 +10,8 @@
       package:
         name: "{{ blivet_package_list }}"
         state: present
+
+    - name: Install cryptsetup
+      package:
+        name: cryptsetup
+        state: present

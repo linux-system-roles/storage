@@ -3,6 +3,11 @@
   register: _storage_test_member_backing_dev
   when: storage_test_pool.encryption and storage_test_pool.state == 'present'
 
+- name: Ensure cryptsetup is present
+  package:
+    name: cryptsetup
+    state: present
+
 - name: Collect LUKS info for this member
   command: cryptsetup luksDump {{ _storage_test_member_backing_dev.stdout }}
   register: _storage_test_luks_dump
