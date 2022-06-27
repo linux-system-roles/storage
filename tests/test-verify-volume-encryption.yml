@@ -7,6 +7,11 @@
   register: storage_test_luks_dev
   when: storage_test_volume.encryption
 
+- name: Ensure cryptsetup is present
+  package:
+    name: cryptsetup
+    state: present
+
 - name: Collect LUKS info for this volume
   command: cryptsetup luksDump {{ storage_test_volume._raw_device }}
   register: luks_dump
