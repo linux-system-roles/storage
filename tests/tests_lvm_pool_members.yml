@@ -34,19 +34,19 @@
 
     - name: Set distribution version
       set_fact:
-        is_rhel9: "{{ (ansible_facts.distribution == 'CentOS' or
-                    ansible_facts.distribution == 'Enterprise Linux' or
-                    ansible_facts.distribution == 'RedHat') and
-                    ansible_facts.distribution_major_version == '9' }}"
-        is_rhel8: "{{ (ansible_facts.distribution == 'CentOS' or
-                    ansible_facts.distribution == 'Enterprise Linux' or
-                    ansible_facts.distribution == 'RedHat') and
-                    ansible_facts.distribution_major_version =='8' }}"
-        is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
+        is_rhel9: "{{ ansible_facts['os_family'] == 'RedHat' and
+          ansible_facts['distribution_major_version'] == '9' }}"
+        is_rhel8: "{{ ansible_facts['os_family'] == 'RedHat' and
+          ansible_facts['distribution_major_version'] == '8' }}"
+        is_rhel7: "{{ ansible_facts['os_family'] == 'RedHat' and
+          ansible_facts['distribution_major_version'] == '7' }}"
+        is_fedora: "{{ ansible_facts['distribution'] == 'Fedora' }}"
 
     # end early when running with old blivet where removing PVs from a VG fails
-    - meta: end_play
+    - name: Skip test if blivet is too old
+      meta: end_play
       when: ((is_fedora and blivet_pkg_version is version("3.4.3-1", "<")) or
+             (is_rhel7 and blivet_pkg_version is version("3.4.0-10", "<")) or
              (is_rhel8 and blivet_pkg_version is version("3.4.0-10", "<")) or
              (is_rhel9 and blivet_pkg_version is version("3.4.0-14", "<")))
 
