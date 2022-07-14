@@ -37,10 +37,6 @@
     loop_var: storage_test_pool
   when: _storage_pools_list is defined and _storage_pools_list | length > 0
 
-- name: Clean up variable namespace
-  set_fact:
-    storage_test_pool: null
-
 #
 # Verify standalone volumes.
 #
@@ -59,4 +55,3 @@
     storage_test_fstab: null
     storage_test_crypttab: null
     storage_test_blkinfo: null
-    storage_test_volume: null
