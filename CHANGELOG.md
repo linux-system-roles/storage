@@ -17,10 +17,6 @@ For LVM pools this adds support for adding and removing members
 
 * Do not allow removing members from existing pools in safe mode
 
-- ensure role works with gather_facts: false (#277)
-
-Ensure tests work when using ANSIBLE_GATHERING=explicit
-
 ### Bug Fixes
 
 - loop variables are scoped local - no need to reset them (#282)
@@ -60,6 +56,10 @@ In addition - it is an Ansible antipattern to use
 so that was rewritten to use filters instead
 
 ### Other Changes
+
+- ensure role works with gather_facts: false (#277)
+
+Ensure tests work when using ANSIBLE_GATHERING=explicit
 
 - ensure cryptsetup is available for testing (#279)
 
