@@ -50,6 +50,11 @@ Supported identifiers include: device node (like `/dev/sda` or `/dev/mapper/mpat
 device node basename (like `sda` or `mpathb`), /dev/disk/ symlink
 (like `/dev/disk/by-id/wwn-0x5000c5005bc37f3f`).
 
+For LVM pools this can be also used to add and remove disks to/from an existing pool.
+Disks in the list that are not used by the pool will be added to the pool.
+Disks that are currently used by the pool but not present in the list will be removed
+from the pool only if `storage_safe_mode` is set to `false`.
+
 ##### `raid_level`
 When used with `type: lvm` it manages a volume group with a mdraid array of given level
 on it. Input `disks` are in this case used as RAID members.
@@ -216,9 +221,6 @@ Default value is equal to the size of the volume.
 This specifies whether the volume should be cached or not.
 This is currently supported only for LVM volumes where dm-cache
 is used.
-__NOTE__: Only creating new cached volumes and removing cache from
-          an existing volume is currently supported. Enabling cache
-          for an existing volume is not yet supported.
 
 #### `cache_size`
 Size of the cache. `cache_size` format is intended to be human-readable,
@@ -231,6 +233,24 @@ Mode for the cache. Supported values include `writethrough` (default) and `write
 List of devices that will be used for the cache. These should be either physical volumes or
 drives these physical volumes are allocated on. Generally you want to select fast devices like
 SSD or NVMe drives for cache.
+
+#### `thin`
+Whether the volume should be thinly provisioned or not.
+This is supported only for LVM volumes.
+
+#### `thin_pool_name`
+For `thin` volumes, this can be used to specify the name of the LVM thin pool that will be used
+for the volume. If the pool with the provided name already exists, the volume will be added to that
+pool. If it doesn't exist a new pool named `thin_pool_name` will be created.
+If not specified:
+* if there are no existing thin pools present, a new thin pool will be created with an automatically
+  generated name,
+* if there is exactly one existing thin pool, the thin volume will be added to it and
+* if there are multiple thin pools present an exception will be raised.
+
+#### `thin_pool_size`
+Size for the thin pool. `thin_pool_size` format is intended to be human-readable,
+e.g.: "30g", "50GiB".
 
 #### `storage_safe_mode`
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.
