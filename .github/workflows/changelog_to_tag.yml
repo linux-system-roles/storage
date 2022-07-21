@@ -22,13 +22,13 @@ jobs:
           pat='\[[0-9]*\.[0-9]*\.[0-9]*\] - [0-9\-]*'
           print=false
           cat CHANGELOG.md | while read -r line; do
-              if [[ $line =~ $pat ]] && [[ $print == false ]]; then
-                  echo $line
+              if [[ "$line" =~ $pat ]] && [[ "$print" == false ]]; then
+                  echo "$line"
                   print=true
-              elif [[ $line =~ $pat ]] && [[ $print == true ]]; then
+              elif [[ "$line" =~ $pat ]] && [[ "$print" == true ]]; then
                   break
-              elif [[ $print == true ]]; then
-                  echo $line
+              elif [[ "$print" == true ]]; then
+                  echo "$line"
               fi
           done > ./.tagmsg.txt
           _tagname=$( grep -m 1 "[0-9]*\.[0-9]*\.[0-9]*" CHANGELOG.md | sed -e "s/^.*\[\([0-9]*\.[0-9]*\.[0-9]*\)\].*/\1/" )
@@ -55,3 +55,7 @@ jobs:
           body_path: ./.tagmsg.txt
           draft: false
           prerelease: false
+      - name: Publish role to Galaxy
+        uses: robertdebock/galaxy-action@1.2.0
+        with:
+          galaxy_api_key: ${{ secrets.galaxy_api_key }}
