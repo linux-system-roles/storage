@@ -1,6 +1,86 @@
 Changelog
 =========
 
+[1.9.0] - 2022-07-19
+--------------------
+
+### New Features
+
+- Add support for attaching LVM cache to existing LVs (#273)
+
+Fixes: #252
+
+- Add support for managing pool members (#264)
+
+For LVM pools this adds support for adding and removing members
+(PVs) from the pool (VG).
+
+* Do not allow removing members from existing pools in safe mode
+
+### Bug Fixes
+
+- loop variables are scoped local - no need to reset them (#282)
+
+If you use
+```yaml
+  loop_control:
+    loop_var: storage_test_pool
+```
+Then the variable `storage_test_pool` is scoped local to the task
+and is undefined after the task.  In addition, referencing the
+variable after the loop causes this warning:
+```
+[WARNING]: The loop variable 'storage_test_pool' is already in use. You should
+set the `loop_var` value in the `loop_control` option for the task to something
+else to avoid variable collisions and unexpected behavior.
+```
+
+- support ansible-core-2.13 (#278)
+
+Looks like ansible-core-2.13 (or latest jinja3) does not support
+constructs like this:
+```
+var: "{{ [some list] }} + {{ [other list] }}"
+```
+instead, the entire thing has to be evaluated in the same jinja
+evaluation context:
+```
+var: "{{ [some list] + [other list] }}"
+```
+In addition - it is an Ansible antipattern to use
+```yaml
+- set_fact:
+    var: "{{ var + item }}"
+    loop: "{{ some_list }}"
+```
+so that was rewritten to use filters instead
+
+### Other Changes
+
+- ensure role works with gather_facts: false (#277)
+
+Ensure tests work when using ANSIBLE_GATHERING=explicit
+
+- ensure cryptsetup is available for testing (#279)
+
+- make min_ansible_version a string in meta/main.yml (#281)
+
+The Ansible developers say that `min_ansible_version` in meta/main.yml
+must be a `string` value like `"2.9"`, not a `float` value like `2.9`.
+
+- Skip the entire test_lvm_pool_members playbook with old blivet (#280)
+
+Multiple bugs in blivet were fixed in order to make the feature
+work and without the correct version even the most basic test to
+remove a PV from a VG will fail so we should skip the entire test
+with old versions of blivet.
+Skip test on el7 if blivet version is too old
+Add support for `is_rhel7`
+Refactor EL platform and version checking code
+Add a name for the `end_play` task
+
+- Add CHANGELOG.md (#283)
+
 [1.8.1] - 2022-06-12
 --------------------
 
