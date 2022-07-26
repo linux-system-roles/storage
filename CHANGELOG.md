@@ -1,6 +1,29 @@
 Changelog
 =========
 
+[1.9.1] - 2022-07-26
+--------------------
+
+### New Features
+
+- none
+
+### Bug Fixes
+
+- Update README.md with latest changes (#290)
+
+* LVM thin provisioning support.
+* Support for adding/removing disks to/from existing pools.
+* Cache can now be attached to an pre-existing volume.
+
+Fixes: #287
+Fixes: #288
+Fixes: #289
+
+### Other Changes
+
+- changelog_to_tag action - support other than "master" for the main branch name, as well (#291)
+
 [1.9.0] - 2022-07-19
 --------------------
 
