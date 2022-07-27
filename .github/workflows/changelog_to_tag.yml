@@ -19,8 +19,8 @@ jobs:
         id: tag
         run: |
           set -euxo pipefail
-          echo GITHUB_REF = ${GITHUB_REF:-none}
-          echo GITHUB_REF_NAME = ${GITHUB_REF_NAME:-none}
+          echo GITHUB_REF = "${GITHUB_REF:-none}"
+          echo GITHUB_REF_NAME = "${GITHUB_REF_NAME:-none}"
           print=false
           while read -r line; do
               if [[ "$line" =~ ^\[([0-9]+\.[0-9]+\.[0-9]+)\]\ -\ [0-9-]+ ]]; then
