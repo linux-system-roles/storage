@@ -19,8 +19,6 @@ jobs:
         id: tag
         run: |
           set -euxo pipefail
-          echo GITHUB_REF = "${GITHUB_REF:-none}"
-          echo GITHUB_REF_NAME = "${GITHUB_REF_NAME:-none}"
           print=false
           while read -r line; do
               if [[ "$line" =~ ^\[([0-9]+\.[0-9]+\.[0-9]+)\]\ -\ [0-9-]+ ]]; then
@@ -42,14 +40,20 @@ jobs:
                   exit 1
               fi
           done
-          # Get the main branch name
-          _branch=$( git branch -r | grep -o 'origin/HEAD -> origin/.*$' | \
-                     awk -F'/' '{print $3}' )
+          # Get name of the branch that the change was pushed to
+          _branch="${GITHUB_REF_NAME:-}"
+          if [ "$_branch" = master ] || [ "$_branch" = main ]; then
+              echo Using branch name ["$_branch"] as push branch
+          else
+              echo WARNING: GITHUB_REF_NAME ["$_branch"] is not main or master
+              _branch=$( git branch -r | grep -o 'origin/HEAD -> origin/.*$' | \
+                         awk -F'/' '{print $3}' || : )
+          fi
           if [ -z "$_branch" ]; then
               _branch=$( git branch --points-at HEAD --no-color --format='%(refname:short)' )
           fi
           if [ -z "$_branch" ]; then
-              echo ERROR: unable to determine main branch
+              echo ERROR: unable to determine push branch
               git branch -a
               exit 1
           fi
