@@ -22,7 +22,7 @@ Fixes: #289
 
 ### Other Changes
 
-- changelog_to_tag action - support other than "master" for the main branch name, as well (#291)
+- changelog_to_tag action - Use GITHUB_REF_NAME for main branch name
 
 [1.9.0] - 2022-07-19
 --------------------
