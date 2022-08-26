@@ -679,7 +679,19 @@ class BlivetLVMVolume(BlivetVolume):
         return "%s-%s" % (self._blivet_pool._device.name, self._volume['name'])
 
     def _get_size(self):
-        size = super(BlivetLVMVolume, self)._get_size()
+
+        spec = self._volume['size']
+        if self._volume['thin'] and isinstance(spec, str) and '%' in spec:
+            try:
+                percentage = int(spec[:-1].strip())
+            except ValueError:
+                raise BlivetAnsibleError("invalid percentage '%s' size specified for thin volume '%s'" % (self._volume['size'], self._volume['name']))
+
+            parent = self._get_parent_thinpool_by_name(self._volume.get('thin_pool_name'))
+            size = parent.size * (percentage / 100.0)
+        else:
+            size = super(BlivetLVMVolume, self)._get_size()
+
         if isinstance(self._volume['size'], str) and '%' in self._volume['size']:
             size = self._blivet_pool._device.align(size, roundup=True)
         return size
