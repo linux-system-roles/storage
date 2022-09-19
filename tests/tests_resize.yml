@@ -162,7 +162,7 @@
         - name: Verify the output
           assert:
             that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('invalid size.+for volume') and
+                   blivet_output.msg|regex_search('invalid.+size') and
                    not blivet_output.changed"
             msg: "Unexpected behavior w/ invalid volume size"
 
@@ -195,7 +195,7 @@
         - name: Verify the output
           assert:
             that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('invalid size.+for volume') and
+                   blivet_output.msg|regex_search('invalid.+size') and
                    not blivet_output.changed"
             msg: "Unexpected behavior w/ invalid volume size"
 

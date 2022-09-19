@@ -1338,19 +1338,21 @@ class BlivetLVMPool(BlivetPool):
 
     def _manage_thin_pools(self, pool_device):
 
-        def get_vol_size(volume):
-            if isinstance(volume, str) and '%' in volume:
+        def str_to_size(spec, hundredpercent=None):
+            # Convert given 'spec' string to Size. When input string can be in percent
+            # (e.g. '50%'), use the optional parameter (type Size) as a reference
+            if isinstance(spec, str) and ('%' in spec):
                 try:
-                    percentage = int(volume[:-1].strip())
+                    percentage = int(spec[:-1].strip())
                 except ValueError:
-                    raise BlivetAnsibleError("invalid percentage '%s' size specified for volume in pool '%s'" % (volume, pool_device.name))
+                    raise BlivetAnsibleError("invalid percentage '%s' size specified in pool '%s'" % (spec, pool_device.name))
 
-                size = pool_device.size * (percentage / 100.0)
+                size = Size(hundredpercent * (percentage / 100.0))
             else:
                 try:
-                    size = Size(volume)
+                    size = Size(spec)
                 except Exception:
-                    raise BlivetAnsibleError("invalid size specification for volume in pool '%s'" % pool_device.name)
+                    raise BlivetAnsibleError("invalid size specification '%s' in pool '%s'" % (spec, pool_device.name))
 
             return size
 
@@ -1372,27 +1374,6 @@ class BlivetLVMPool(BlivetPool):
         auto_size_dev_count = 0
         reserved_space = Size(0)
 
-        for volume in self._pool.get('volumes'):
-            if not volume['state']:
-                continue
-
-            if volume['thin']:
-                thin_name = volume.get('thin_pool_name')
-                thin_size = volume.get('thin_pool_size')
-                if thin_name not in [t['name'] for t in thinlvs_to_create] + [d['name'] for d in existing_thinlvs]:
-                    thinlvs_to_create.append({'name': thin_name, 'size': thin_size})
-                    if thin_size is None:
-                        auto_size_dev_count += 1
-                    else:
-                        reserved_space += get_vol_size(thin_size)
-            else:
-                # regular LV just take its size
-                vol_size = volume.get('size')
-                if vol_size is None:
-                    auto_size_dev_count += 1
-                else:
-                    reserved_space += get_vol_size(vol_size)
-
         # Thin pool will take 20% of VG space as a safety spare. At least 1GiB, at most 100GiB
         thin_meta_space = DEFAULT_THPOOL_RESERVE.percent * (pool_device.size * 0.01)
         if thin_meta_space < DEFAULT_THPOOL_RESERVE.min:
@@ -1402,6 +1383,31 @@ class BlivetLVMPool(BlivetPool):
 
         available_space = pool_device.size - thin_meta_space
 
+        for volume in self._pool.get('volumes'):
+            if not volume['state']:
+                continue
+
+            if volume['thin']:
+                thin_name = volume.get('thin_pool_name')
+                thin_size = volume.get('thin_pool_size')
+                if thin_size is not None:
+                    thin_size = str_to_size(thin_size, available_space)
+
+                if thin_name not in [t['name'] for t in thinlvs_to_create] + [d['name'] for d in existing_thinlvs]:
+                    thinlvs_to_create.append({'name': thin_name, 'size': thin_size})
+
+                if thin_size is None:
+                    auto_size_dev_count += 1
+                else:
+                    reserved_space += thin_size
+            else:
+                # regular LV just take its size
+                vol_size = volume.get('size')
+                if vol_size is None:
+                    auto_size_dev_count += 1
+                else:
+                    reserved_space += str_to_size(vol_size, pool_device.size)
+
         if auto_size_dev_count > 0:
             calculated_thinlv_size = available_space / auto_size_dev_count
 
@@ -1410,7 +1416,7 @@ class BlivetLVMPool(BlivetPool):
             if thinlv['size'] is None:
                 tlv_size = Size(calculated_thinlv_size)
             else:
-                tlv_size = Size(thinlv['size'])
+                tlv_size = thinlv['size']
 
             thinlv_params = dict(thin_pool=True, size=tlv_size, parents=[pool_device])
 
