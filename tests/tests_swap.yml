@@ -21,6 +21,7 @@
       vars:
         min_size: "{{ volume_size }}"
         max_return: 2
+        disks_needed: 2
 
     - name: Create a disk device with swap
       include_role:
