@@ -27,6 +27,7 @@
     - include_tasks: get_unused_disk.yml
       vars:
         max_return: 2
+        disks_needed: 2
 
     - name: Try to create a raid pool with invalid raid_level (expect failure)
       block:
