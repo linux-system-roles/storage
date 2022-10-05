@@ -32,8 +32,13 @@
       set_fact:
         blivet_pkg_version: "{{ ansible_facts.packages[blivet_pkg_name[0]][0]['version'] + '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
 
-    - name: Set distribution version
-      set_fact:
+    # end early when running with old blivet where removing PVs from a VG fails
+    - name: Run test only if blivet supports the functionality
+      when: ((is_fedora and blivet_pkg_version is version("3.4.3-1", ">=")) or
+             (is_rhel7 and blivet_pkg_version is version("3.4.0-10", ">=")) or
+             (is_rhel8 and blivet_pkg_version is version("3.4.0-10", ">=")) or
+             (is_rhel9 and blivet_pkg_version is version("3.4.0-14", ">=")))
+      vars:
         is_rhel9: "{{ ansible_facts['os_family'] == 'RedHat' and
           ansible_facts['distribution_major_version'] == '9' }}"
         is_rhel8: "{{ ansible_facts['os_family'] == 'RedHat' and
@@ -41,224 +46,216 @@
         is_rhel7: "{{ ansible_facts['os_family'] == 'RedHat' and
           ansible_facts['distribution_major_version'] == '7' }}"
         is_fedora: "{{ ansible_facts['distribution'] == 'Fedora' }}"
+      block:
+        - include_tasks: get_unused_disk.yml
+          vars:
+            min_size: "{{ volume_group_size }}"
+            disks_needed: 3
 
-    # end early when running with old blivet where removing PVs from a VG fails
-    - name: Skip test if blivet is too old
-      meta: end_play
-      when: ((is_fedora and blivet_pkg_version is version("3.4.3-1", "<")) or
-             (is_rhel7 and blivet_pkg_version is version("3.4.0-10", "<")) or
-             (is_rhel8 and blivet_pkg_version is version("3.4.0-10", "<")) or
-             (is_rhel9 and blivet_pkg_version is version("3.4.0-14", "<")))
+        - name: Create volume group 'foo' with 3 PVs
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
 
-    - include_tasks: get_unused_disk.yml
-      vars:
-        min_size: "{{ volume_group_size }}"
-        disks_needed: 3
+        - include_tasks: verify-role-results.yml
 
-    - name: Create volume group 'foo' with 3 PVs
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ unused_disks }}"
+        - name: Save UUID of the created volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid
 
-    - include_tasks: verify-role-results.yml
+        - name: Verify that nothing changes when disks don't change
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
 
-    - name: Save UUID of the created volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid
+        - include_tasks: verify-role-results.yml
 
-    - name: Verify that nothing changes when disks don't change
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ unused_disks }}"
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - include_tasks: verify-role-results.yml
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Remove 2 PVs from the 'foo' volume group
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ [unused_disks[0]] }}"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
+        - include_tasks: verify-role-results.yml
 
-    - name: Remove 2 PVs from the 'foo' volume group
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ [unused_disks[0]] }}"
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - include_tasks: verify-role-results.yml
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Add the second disk back to the 'foo' volume group
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ [unused_disks[0], unused_disks[1]] }}"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
+        - include_tasks: verify-role-results.yml
 
-    - name: Add the second disk back to the 'foo' volume group
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - include_tasks: verify-role-results.yml
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Remove the first PV and add the third disk to the 'foo' volume group
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ [unused_disks[1], unused_disks[2]] }}"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
+        - include_tasks: verify-role-results.yml
 
-    - name: Remove the first PV and add the third disk to the 'foo' volume group
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ [unused_disks[1], unused_disks[2]] }}"
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - include_tasks: verify-role-results.yml
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Create volume group 'foo' with 3 encrypted PVs
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_safe_mode: false
+            storage_pools:
+              - name: foo
+                encryption: true
+                encryption_password: 'yabbadabbadoo'
+                disks: "{{ unused_disks }}"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
+        - name: Save UUID of the created volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid
 
-    - name: Create volume group 'foo' with 3 encrypted PVs
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            encryption: true
-            encryption_password: 'yabbadabbadoo'
-            disks: "{{ unused_disks }}"
+        - name: Remove 2 PVs from the 'foo' volume group
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                encryption: true
+                encryption_password: 'yabbadabbadoo'
+                disks: "{{ [unused_disks[0]] }}"
 
-    - name: Save UUID of the created volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid
+        - include_tasks: verify-role-results.yml
 
-    - name: Remove 2 PVs from the 'foo' volume group
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            encryption: true
-            encryption_password: 'yabbadabbadoo'
-            disks: "{{ [unused_disks[0]] }}"
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - include_tasks: verify-role-results.yml
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Add the disks back to the 'foo' volume group
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                encryption: true
+                encryption_password: 'yabbadabbadoo'
+                disks: "{{ unused_disks }}"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
+        - include_tasks: verify-role-results.yml
 
-    - name: Add the disks back to the 'foo' volume group
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            encryption: true
-            encryption_password: 'yabbadabbadoo'
-            disks: "{{ unused_disks }}"
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - include_tasks: verify-role-results.yml
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Create a new volume group with a logical volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks[0] }}"
+                encryption: false
+                volumes:
+                  - name: test
+                    size: "{{ volume_size }}"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
+        - name: Save UUID of the created volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid
 
-    - name: Create a new volume group with a logical volume
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ unused_disks[0] }}"
-            encryption: false
-            volumes:
-              - name: test
-                size: "{{ volume_size }}"
+        - include_tasks: verify-role-results.yml
 
-    - name: Save UUID of the created volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid
+        - name: Add a second PV to the VG
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+                volumes:
+                  - name: test
+                    size: "{{ volume_size }}"
 
-    - include_tasks: verify-role-results.yml
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - name: Add a second PV to the VG
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ [unused_disks[0], unused_disks[1]] }}"
-            volumes:
-              - name: test
-                size: "{{ volume_size }}"
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Remove the first PV from the VG
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ [unused_disks[1]] }}"
+                volumes:
+                  - name: test
+                    size: "{{ volume_size }}"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
+        - name: Get UUID of the 'foo' volume group
+          command: "vgs --noheading -o vg_uuid foo"
+          register: storage_test_members_vg_uuid_after
 
-    - name: Remove the first PV from the VG
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ [unused_disks[1]] }}"
-            volumes:
-              - name: test
-                size: "{{ volume_size }}"
+        - name: Make sure the VG UUID didn't change (VG wasn't removed)
+          assert:
+            that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
 
-    - name: Get UUID of the 'foo' volume group
-      command: "vgs --noheading -o vg_uuid foo"
-      register: storage_test_members_vg_uuid_after
+        - name: Clean up
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                state: "absent"
 
-    - name: Make sure the VG UUID didn't change (VG wasn't removed)
-      assert:
-        that: storage_test_members_vg_uuid.stdout == storage_test_members_vg_uuid_after.stdout
-
-    - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ unused_disks }}"
-            state: "absent"
-
-    - include_tasks: verify-role-results.yml
+        - include_tasks: verify-role-results.yml
