@@ -161,10 +161,12 @@
 
         - name: Verify the output
           assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('invalid size.+for volume') and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ invalid volume size"
+            that: blivet_output.failed and not blivet_output.changed
+                  and blivet_output.msg | regex_search(__pattern)
+            msg: >
+              Unexpected error message when using invalid size: {{ blivet_output.msg }}
+          vars:
+            __pattern: invalid size specification.+in pool
 
     - name: Test for correct handling of invalid size specification
       block:
@@ -194,10 +196,12 @@
 
         - name: Verify the output
           assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('invalid size.+for volume') and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ invalid volume size"
+            that: blivet_output.failed and not blivet_output.changed
+                  and blivet_output.msg | regex_search(__pattern)
+            msg: >
+              Unexpected error message when using invalid size: {{ blivet_output.msg }}
+          vars:
+            __pattern: invalid size specification.+in pool
 
     - name: Clean up
       include_role:
