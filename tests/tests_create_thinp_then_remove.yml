@@ -6,6 +6,7 @@
     storage_use_partitions: true
     mount_location1: '/opt/test1'
     mount_location2: '/opt/test2'
+    mount_location3: '/opt/test3'
     volume1_size: '3g'
     volume2_size: '4g'
     fs_after: "{{ (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') | ternary('ext4', 'xfs') }}"
@@ -18,7 +19,7 @@
       vars:
         max_return: 3
 
-    - name: Create a thinpool device
+    - name: create a thinpool device
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -102,6 +103,44 @@
                 thin: true
                 mount_point: "{{ mount_location2 }}"
                 state: absent
+
+    - include_tasks: verify-role-results.yml
+
+    - name: Cleanup
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: absent
+            volumes:
+              - name: lv1
+                thin_pool_name: tpool1
+                thin_pool_size: '10g'
+                size: "{{ volume1_size }}"
+                thin: true
+                mount_point: "{{ mount_location1 }}"
+
+    - include_tasks: verify-role-results.yml
+
+    - name: create a thinpool device using percentages
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            state: present
+            volumes:
+              - name: lv1
+                thin_pool_name: tpool1
+                thin_pool_size: '100%'
+                size: "100%"
+                thin: true
+                mount_point: "{{ mount_location1 }}"
 
     - include_tasks: verify-role-results.yml
 

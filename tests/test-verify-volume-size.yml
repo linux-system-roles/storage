@@ -20,6 +20,12 @@
 - debug:
     var: storage_test_expected_size
 
+- name: Get the size of parent/pool device
+  bsize:
+    size: "{{ ansible_lvm.vgs[storage_test_pool.name].size_g + 'G' }}"
+  register: storage_test_pool_size
+  when: _storage_test_volume_present and storage_test_volume.type == "lvm"
+
 - name: Convert percentage-based size to normal size as needed
   block:
     - debug:
@@ -28,11 +34,6 @@
     - debug:
         var: storage_test_blkinfo
 
-    - name: Get the size of parent/pool device
-      bsize:
-        size: "{{ ansible_lvm.vgs[storage_test_pool.name].size_g + 'G' }}"
-      register: storage_test_pool_size
-
     - debug:
         var: storage_test_pool_size
 
@@ -40,6 +41,77 @@
       set_fact:
         storage_test_expected_size: "{{ (storage_test_pool_size.bytes * ((storage_test_volume.size[:-1]|int)/100.0)) }}"
   when: _storage_test_volume_present and storage_test_volume.type == "lvm" and "%" in storage_test_volume.size|string
+
+- name: Process thin pool sizes when applicable
+  block:
+    - name: Default thin pool reserved space values
+      set_fact:
+        _storage_test_default_thpool_reserve_percent: "20"
+
+    - name: Default minimal thin pool reserved space size
+      bsize:
+        size: "1G"
+      register: _storage_test_default_thpool_reserve_min
+
+    - name: Default maximal thin pool reserved space size
+      bsize:
+        size: "100G"
+      register: _storage_test_default_thpool_reserve_max
+
+    - name: Calculate maximum usable space in thin pool
+      bsize:
+        size: "{{ storage_test_pool_size.bytes * (1 - (_storage_test_default_thpool_reserve_percent|int)/100.0) }}"
+      register: _storage_test_max_thin_pool_size
+
+    - name: Apply upper size limit to max usable thin pool space
+      set_fact:
+        _storage_test_max_thin_pool_size: _storage_test_default_thpool_reserve_max
+      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size.bytes > _storage_test_default_thpool_reserve_max.bytes
+
+    - name: Apply lower size limit to max usable thin pool space
+      set_fact:
+        _storage_test_max_thin_pool_size: _storage_test_default_thpool_reserve_min
+      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size.bytes < _storage_test_default_thpool_reserve_min.bytes
+
+    - debug:
+        var: storage_test_volume.thin_pool_size
+
+    - debug:
+        var: storage_test_volume.size
+
+    - name: Establish base value for expected thin pool size
+      set_fact:
+        storage_test_expected_thin_pool_size: "{{ storage_test_pool_size.bytes }}"
+      when:
+        - storage_test_volume.thin_pool_size is not none
+        - true and '%' not in storage_test_volume.thin_pool_size  # workaround - starting condition with '%' leads to a syntax error
+
+    - name: Calculate the expected size based on pool size and percentage value
+      set_fact:
+        storage_test_expected_thin_pool_size: "{{ (_storage_test_max_thin_pool_size.bytes * ((storage_test_volume.thin_pool_size[:-1]|int)/100.0)) }}"
+      when:
+        - storage_test_volume.thin_pool_size is not none
+        - true and '%' in storage_test_volume.thin_pool_size|string  # workaround - starting condition with '%' leads to a syntax error
+
+    - name: Establish base value for expected thin pool volume size
+      set_fact:
+        storage_test_expected_tp_volume_size: "{{ storage_test_expected_size }}"
+
+    - name: Calculate the expected thin pool volume size based on percentage value
+      set_fact:
+        storage_test_expected_tp_volume_size: "{{ ((storage_test_expected_thin_pool_size|int) * ((storage_test_volume.size[:-1]|int)/100.0)) }}"
+      when:
+        - true and '%' in storage_test_volume.size|string  # workaround - starting condition with '%' leads to a syn:tax error
+
+    - name: Replace expected volume size with calculated value
+      set_fact:
+        storage_test_expected_size: "{{ storage_test_expected_tp_volume_size }}"
+      when:
+        - storage_test_volume.thin_pool_size is not none
+
+  when:
+    - storage_test_volume.thin
+    - _storage_test_volume_present
 
 - debug:
     var: storage_test_actual_size
