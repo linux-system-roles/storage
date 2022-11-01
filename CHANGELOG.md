@@ -1,6 +1,49 @@
 Changelog
 =========
 
+[1.9.2] - 2022-11-01
+--------------------
+
+### New Features
+
+- none
+
+### Bug Fixes
+
+- Master thin support size fix (#299)
+
+Fixed calculation of relative thinp sizes
+
+- percent specified 'size' of thin pool volume is now properly
+  calculated from size of parent thinpool
+
+Fixed size and percentage handling for thin pools
+
+- percentage size thin volume now correctly references its parent device
+  for size calculation
+- percentage values are now accepted size for thin pool size
+
+### Other Changes
+
+- Add disks_needed for raid test cases (#300)
+
+Creating raid will be failed if we don't have enough unused disks, set
+disks_needed earlier.
+
+Set disks_needed=2 for tests_swap.yml
+
+- use block instead of end_play (#302)
+
+Do not use `end_play` with the conditional `when` which uses variables
+for the condition.  The problem is that `end_play` is executed in a
+different scope where the variables are not defined, even when using
+`set_fact`.  The fix is to instead use a `block` and a `when`.
+
+- Modified lvmvdo check
+
+VDO check was failing due to issue in 'vdostats'.
+Modified vdo testing so 'lvs' is used to get data instead
+
 [1.9.1] - 2022-07-26
 --------------------
 
