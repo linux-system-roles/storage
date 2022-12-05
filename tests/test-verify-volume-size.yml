@@ -50,28 +50,36 @@
 
     - name: Default minimal thin pool reserved space size
       bsize:
-        size: "1G"
+        size: "1GB"
       register: _storage_test_default_thpool_reserve_min
 
     - name: Default maximal thin pool reserved space size
       bsize:
-        size: "100G"
+        size: "100GB"
       register: _storage_test_default_thpool_reserve_max
 
+    # Cannot use Size type yet, it would complicate following logic
     - name: Calculate maximum usable space in thin pool
-      bsize:
-        size: "{{ storage_test_pool_size.bytes * (1 - (_storage_test_default_thpool_reserve_percent|int)/100.0) }}"
-      register: _storage_test_max_thin_pool_size
+      set_fact:
+        _storage_test_max_thin_pool_size: "{{ storage_test_pool_size.bytes * (1 - (_storage_test_default_thpool_reserve_percent|int)/100.0) }}"
 
     - name: Apply upper size limit to max usable thin pool space
       set_fact:
-        _storage_test_max_thin_pool_size: _storage_test_default_thpool_reserve_max
-      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size.bytes > _storage_test_default_thpool_reserve_max.bytes
+        _storage_test_max_thin_pool_size: "{{ storage_test_pool_size.bytes - _storage_test_default_thpool_reserve_max.bytes }}"
+      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size|int > _storage_test_default_thpool_reserve_max.bytes
 
     - name: Apply lower size limit to max usable thin pool space
       set_fact:
-        _storage_test_max_thin_pool_size: _storage_test_default_thpool_reserve_min
-      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size.bytes < _storage_test_default_thpool_reserve_min.bytes
+        _storage_test_max_thin_pool_size: "{{storage_test_pool_size.bytes - _storage_test_default_thpool_reserve_min.bytes}}"
+      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size|int < _storage_test_default_thpool_reserve_min.bytes
+
+    - name: Convert maximum usable thin pool space from int to Size
+      bsize:
+        size: "{{ _storage_test_max_thin_pool_size }}B"
+      register: _storage_test_max_thin_pool_size
+
+    - debug:
+        var: _storage_test_max_thin_pool_size
 
     - debug:
         var: storage_test_volume.thin_pool_size
@@ -121,5 +129,5 @@
 
 - assert:
     that: (storage_test_expected_size|int - storage_test_actual_size.bytes)|abs / storage_test_expected_size|int < 0.01
-    msg: "Volume {{ storage_test_volume.name }} has unexpected size ({{ storage_test_expected_size|int }} / {{ storage_test_actual_size.bytes }})"
+    msg: "Volume {{ storage_test_volume.name }} has unexpected size (expected: {{ storage_test_expected_size|int }} / actual: {{ storage_test_actual_size.bytes }})"
   when: _storage_test_volume_present and storage_test_volume.type == "lvm"
