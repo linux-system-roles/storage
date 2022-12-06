@@ -1,6 +1,24 @@
 Changelog
 =========
 
+[1.9.3] - 2022-12-06
+--------------------
+
+### New Features
+
+- none
+
+### Bug Fixes
+
+- Thin pool test with large size volume fix (#310)
+
+fixed size calculation for large size thin pools in the test
+modified provision.fmf disk size to simulate larger disks in the tests
+
+### Other Changes
+
+- none
+
 [1.9.2] - 2022-11-01
 --------------------
 
