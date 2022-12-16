@@ -28,18 +28,16 @@ modified provision.fmf disk size to simulate larger disks in the tests
 
 ### Bug Fixes
 
-- Master thin support size fix (#299)
+- Fixed calculation of relative thinp sizes (#299)
 
-Fixed calculation of relative thinp sizes
+percent specified 'size' of thin pool volume is now properly
+calculated from size of parent thinpool
 
-- percent specified 'size' of thin pool volume is now properly
-  calculated from size of parent thinpool
+- Fixed size and percentage handling for thin pools (#299)
 
-Fixed size and percentage handling for thin pools
-
-- percentage size thin volume now correctly references its parent device
-  for size calculation
-- percentage values are now accepted size for thin pool size
+percentage size thin volume now correctly references its parent device
+for size calculation
+percentage values are now accepted size for thin pool size
 
 ### Other Changes
 
@@ -444,7 +442,7 @@ Add a name for the `end_play` task
 ### Other Changes
 
 - Remove python-26 environment from tox testing
-- update to tox-lsr 2.4.0 - add support for ansible-test sanity with docker
+- update to tox-lsr 2.4.0 - add support for ansible-test with docker
 - CI: Add support for RHEL-9
 
 [1.3.0] - 2021-02-14
