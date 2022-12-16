@@ -128,6 +128,6 @@
     var: storage_test_expected_size
 
 - assert:
-    that: (storage_test_expected_size|int - storage_test_actual_size.bytes)|abs / storage_test_expected_size|int < 0.01
+    that: (storage_test_expected_size|int - storage_test_actual_size.bytes)|abs / storage_test_expected_size|int < 0.02
     msg: "Volume {{ storage_test_volume.name }} has unexpected size (expected: {{ storage_test_expected_size|int }} / actual: {{ storage_test_actual_size.bytes }})"
   when: _storage_test_volume_present and storage_test_volume.type == "lvm"
