@@ -1,6 +1,27 @@
 Changelog
 =========
 
+[1.9.4] - 2022-12-16
+--------------------
+
+### New Features
+
+- none
+
+### Bug Fixes
+
+- none
+
+### Other Changes
+
+- Tests - use a threshold of 2 percent in volume size check (#313)
+
+There seems to be an issue calculating the expected size and the
+actual size of the volume.  On some systems, the difference is
+greater than 1% but less than 2%.  We are working on a better, more
+reliable method of calculating the expected and actual sizes.  In
+the meantime, make the threshold 2%.
+
 [1.9.3] - 2022-12-06
 --------------------
 
