@@ -1,4 +1,6 @@
-- hosts: all
+---
+- name: Setup snapshot
+  hosts: all
   tasks:
     - name: Set platform/version specific variables
       include_role:

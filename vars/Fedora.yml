@@ -1,3 +1,4 @@
+---
 blivet_package_list:
   - python3-blivet
   - libblockdev-crypto

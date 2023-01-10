@@ -1,14 +1,14 @@
 ---
-- name: set platform/version specific variables
+- name: Set platform/version specific variables
   include_tasks: tasks/set_vars.yml
 
-- name: define an empty list of pools to be used in testing
+- name: Define an empty list of pools to be used in testing
   set_fact:
     _storage_pools_list: []
 
-- name: define an empty list of volumes to be used in testing
+- name: Define an empty list of volumes to be used in testing
   set_fact:
     _storage_volumes_list: []
 
-- name: include the appropriate provider tasks
+- name: Include the appropriate provider tasks
   include_tasks: "main-{{ storage_provider }}.yml"

@@ -1,3 +1,4 @@
+---
 # ansible_facts required by the role
 __storage_required_facts:
   - distribution
