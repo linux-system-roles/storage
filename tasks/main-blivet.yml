@@ -1,30 +1,25 @@
 ---
-- name: get a list of rpm packages installed on host machine
-  package_facts:
-    manager: "auto"
-  when: false
-
-- name: make sure blivet is available
+- name: Make sure blivet is available
   package:
     name: "{{ blivet_package_list }}"
     state: present
   when: storage_skip_checks is not defined or
         not "blivet_available" in storage_skip_checks
 
-- name: show storage_pools
+- name: Show storage_pools
   debug:
     var: storage_pools
     verbosity: 1
 
-- name: show storage_volumes
+- name: Show storage_volumes
   debug:
     var: storage_volumes
     verbosity: 1
 
-- name: get required packages
+- name: Get required packages
   blivet:
-    pools: "{{ storage_pools|default([]) }}"
-    volumes: "{{ storage_volumes|default([]) }}"
+    pools: "{{ storage_pools | default([]) }}"
+    volumes: "{{ storage_volumes | default([]) }}"
     use_partitions: "{{ storage_use_partitions }}"
     disklabel_type: "{{ storage_disklabel_type }}"
     pool_defaults: "{{ storage_pool_defaults }}"
@@ -34,21 +29,21 @@
   when: storage_skip_checks is not defined or
         not "packages_installed" in storage_skip_checks
 
-- name: enable copr repositories if needed
-  include_tasks: "enable_coprs.yml"
+- name: Enable copr repositories if needed
+  include_tasks: enable_coprs.yml
   vars:
     copr_packages: "{{ package_info.packages }}"
   when: storage_skip_checks is not defined or
         not "packages_installed" in storage_skip_checks
 
-- name: make sure required packages are installed
+- name: Make sure required packages are installed
   package:
     name: "{{ package_info.packages }}"
     state: present
   when: storage_skip_checks is not defined or
         not "packages_installed" in storage_skip_checks
 
-- name: get service facts
+- name: Get service facts
   service_facts:
   when: storage_skip_checks is not defined or
         not "service_facts" in storage_skip_checks
@@ -67,24 +62,25 @@
       select('match', '^systemd-cryptsetup@') |
       list }}"
 
-- block:
+- name: Manage storage devices and check for errors
+  block:
     - name: Mask the systemd cryptsetup services
       systemd:
         name: "{{ item }}"
-        masked: yes
+        masked: true
       loop: "{{ storage_cryptsetup_services }}"
 
-    - name: manage the pools and volumes to match the specified state
+    - name: Manage the pools and volumes to match the specified state
       blivet:
-        pools: "{{ storage_pools|default([]) }}"
-        volumes: "{{ storage_volumes|default([]) }}"
+        pools: "{{ storage_pools | default([]) }}"
+        volumes: "{{ storage_volumes | default([]) }}"
         use_partitions: "{{ storage_use_partitions }}"
         disklabel_type: "{{ storage_disklabel_type }}"
         pool_defaults: "{{ storage_pool_defaults }}"
         volume_defaults: "{{ storage_volume_defaults }}"
         safe_mode: "{{ storage_safe_mode }}"
         # yamllint disable-line rule:line-length
-        diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map|d(omit) }}"
+        diskvolume_mkfs_option_map: "{{ __storage_blivet_diskvolume_mkfs_option_map | d(omit) }}"
         # yamllint enable rule:line-length
       register: blivet_output
 
@@ -96,26 +92,26 @@
         - blivet_output is changed
 
   rescue:
-    - name: failed message
+    - name: Failed message
       fail:
         msg: "{{ ansible_failed_result }}"
   always:
     - name: Unmask the systemd cryptsetup services
       systemd:
         name: "{{ item }}"
-        masked: no
+        masked: false
       loop: "{{ storage_cryptsetup_services }}"
 
-- name: show blivet_output
+- name: Show blivet_output
   debug:
     var: blivet_output
     verbosity: 1
 
-- name: set the list of pools for test verification
+- name: Set the list of pools for test verification
   set_fact:
     _storage_pools_list: "{{ blivet_output.pools }}"
 
-- name: set the list of volumes for test verification
+- name: Set the list of volumes for test verification
   set_fact:
     _storage_volumes_list: "{{ blivet_output.volumes }}"
 
@@ -131,49 +127,49 @@
 #     update its view, then set up the new mounts. Otherwise,
 #     systemd will forcibly prevent mounting a new volume to an
 #     existing mount point.
-- name: remove obsolete mounts
-  mount:
-    src: "{{ mount_info['src']|default(omit) }}"
+- name: Remove obsolete mounts
+  mount:  # noqa fqcn
+    src: "{{ mount_info['src'] | default(omit) }}"
     path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype']|default(omit) }}"
-    opts: "{{ mount_info['opts']|default(omit) }}"
+    fstype: "{{ mount_info['fstype'] | default(omit) }}"
+    opts: "{{ mount_info['opts'] | default(omit) }}"
     state: "{{ mount_info['state'] }}"
   loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
             selectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
 
-- name: tell systemd to refresh its view of /etc/fstab
+- name: Tell systemd to refresh its view of /etc/fstab
   systemd:
-    daemon_reload: yes
+    daemon_reload: true
   when: blivet_output['mounts']
 
-- name: set up new/current mounts
-  mount:
-    src: "{{ mount_info['src']|default(omit) }}"
+- name: Set up new/current mounts
+  mount:  # noqa fqcn
+    src: "{{ mount_info['src'] | default(omit) }}"
     path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype']|default(omit) }}"
-    opts: "{{ mount_info['opts']|default(omit) }}"
+    fstype: "{{ mount_info['fstype'] | default(omit) }}"
+    opts: "{{ mount_info['opts'] | default(omit) }}"
     state: "{{ mount_info['state'] }}"
   loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
             rejectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
 
-- name: tell systemd to refresh its view of /etc/fstab
+- name: Tell systemd to refresh its view of /etc/fstab
   systemd:
-    daemon_reload: yes
+    daemon_reload: true
   when: blivet_output['mounts']
 
 #
 # Manage /etc/crypttab
 #
-- name: retrieve facts for the /etc/crypttab file
+- name: Retrieve facts for the /etc/crypttab file
   stat:
     path: /etc/crypttab
   register: __storage_crypttab
 
-- name: manage /etc/crypttab to account for changes we just made
+- name: Manage /etc/crypttab to account for changes we just made
   lineinfile:
     path: /etc/crypttab
     # The line option is used when `state: present`

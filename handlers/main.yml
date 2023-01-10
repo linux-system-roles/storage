@@ -1,6 +1,0 @@
----
-# handlers file for template
-# - name: restart NAME
-#   service:
-#     name: NAME
-#     state: restarted or started

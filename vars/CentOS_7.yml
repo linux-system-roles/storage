@@ -1,3 +1,4 @@
+---
 blivet_package_list:
   - python-enum34
   - python-blivet3
