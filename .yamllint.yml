@@ -2,4 +2,6 @@
 ---
 ignore: |
   /.tox/
+  /tests/
+  /.github/
 extends: default
