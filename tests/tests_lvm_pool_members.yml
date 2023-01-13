@@ -34,10 +34,11 @@
 
     # end early when running with old blivet where removing PVs from a VG fails
     - name: Run test only if blivet supports this functionality
-      when: ((is_fedora and blivet_pkg_version is version("3.4.3-1", ">=")) or
-             (is_rhel7 and blivet_pkg_version is version("3.4.0-10", ">=")) or
-             (is_rhel8 and blivet_pkg_version is version("3.4.0-10", ">=")) or
-             (is_rhel9 and blivet_pkg_version is version("3.4.0-14", ">=")))
+      when: (blivet_pkg_version is defined and
+             ((is_fedora and blivet_pkg_version is version("3.4.3-1", ">=")) or
+              (is_rhel7 and blivet_pkg_version is version("3.4.0-10", ">=")) or
+              (is_rhel8 and blivet_pkg_version is version("3.4.0-10", ">=")) or
+              (is_rhel9 and blivet_pkg_version is version("3.4.0-14", ">="))))
       vars:
         is_rhel9: "{{ ansible_facts['os_family'] == 'RedHat' and
           ansible_facts['distribution_major_version'] == '9' }}"
