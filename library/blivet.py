@@ -204,7 +204,6 @@ class BlivetBase(object):
         raise NotImplementedError()
 
     def _manage_one_encryption(self, device):
-        global safe_mode
         ret = device
         # Make sure to handle adjusting both existing stacks and future stacks.
         if device == device.raw_device and self._spec_dict['encryption']:
@@ -419,7 +418,6 @@ class BlivetVolume(BlivetBase):
         return True
 
     def _apply_defaults(self):
-        global volume_defaults
         for name, default in volume_defaults.items():
             if name in self._volume and self._volume[name] not in [None, list(), dict()]:
                 continue
@@ -959,8 +957,6 @@ class BlivetMDRaidVolume(BlivetVolume):
         return True
 
     def _create(self):
-        global safe_mode
-
         if self._device:
             return
 
@@ -1016,8 +1012,6 @@ _BLIVET_VOLUME_TYPES = {
 
 def _get_blivet_volume(blivet_obj, volume, bpool=None):
     """ Return a BlivetVolume instance appropriate for the volume dict. """
-    global volume_defaults
-
     volume_type = volume.get('type', None)
     if volume_type is None:
         volume_type = bpool._pool['type'] if bpool else volume_defaults['type']
@@ -1176,7 +1170,6 @@ class BlivetPool(BlivetBase):
         return True
 
     def _apply_defaults(self):
-        global pool_defaults
         for name, default in pool_defaults.items():
             if name in self._pool and self._pool[name] not in [None, list(), dict()]:
                 continue
@@ -1258,7 +1251,6 @@ class BlivetPool(BlivetBase):
 
     def manage(self):
         """ Schedule actions to configure this pool according to the yaml input. """
-        global safe_mode
         # look up the device
         self._look_up_device()
         self._apply_defaults()
@@ -1513,7 +1505,6 @@ _BLIVET_POOL_TYPES = {
 def _get_blivet_pool(blivet_obj, pool):
     """ Return an appropriate BlivetPool instance for the pool dict. """
     if 'type' not in pool or pool['type'] is None:
-        global pool_defaults
         pool['type'] = pool_defaults['type']
 
     if pool['type'] not in _BLIVET_POOL_TYPES:
