@@ -10,5 +10,4 @@
 - name: Get list of COPRs to be enabled
   command:
     cmd: "{{ ansible_pkg_mgr }} -y copr enable {{ repo.repository }}"
-    warn: false
   when: copr_present.stdout == "0"
