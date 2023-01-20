@@ -1,6 +1,22 @@
 Changelog
 =========
 
+[1.9.5] - 2023-01-19
+--------------------
+
+### New Features
+
+- none
+
+### Bug Fixes
+
+- none
+
+### Other Changes
+
+- ansible-lint 6.x fixes (#317)
+- Improve skip tags handling in the tests_lvm_pool_members tests (#319)
+
 [1.9.4] - 2022-12-16
 --------------------
 
