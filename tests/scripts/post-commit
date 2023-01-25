@@ -6,14 +6,14 @@
 # Make sure file is executable and copy it to <your repo>/.git/hooks/
 # This script has to be used together with pre-commit to work properly.
 
-GITPATH=`git rev-parse --show-toplevel`
+GITPATH=$(git rev-parse --show-toplevel)
 
-if [ -e $GITPATH/.commit ]
+if [ -e "$GITPATH/.commit" ]
     then
-    rm $GITPATH/.commit
+    rm "$GITPATH/.commit"
 
-    cd $GITPATH/tests/scripts && /usr/bin/python generate_tests.py
+    cd "$GITPATH/tests/scripts" && /usr/bin/python generate_tests.py
 
-    git add $GITPATH/tests/tests_*_generated.yml
+    git add "$GITPATH"/tests/tests_*_generated.yml
     git commit --amend -C HEAD --no-verify
 fi

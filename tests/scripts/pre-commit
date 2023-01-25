@@ -4,7 +4,6 @@
 # Make sure file is executable and copy it into <your repo>/.git/hooks/
 # This script has to be used together with post-commit to work properly.
 
-GITPATH=`git rev-parse --show-toplevel`
+GITPATH=$(git rev-parse --show-toplevel)
 
-touch $GITPATH/.commit
-
+touch "$GITPATH/.commit"
