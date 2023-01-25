@@ -1,0 +1,45 @@
+---
+name: Ansible Test
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+env:
+  LSR_ROLE2COLL_NAMESPACE: fedora
+  LSR_ROLE2COLL_NAME: linux_system_roles
+jobs:
+  ansible_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Install tox, tox-lsr
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip
+          sudo apt-get update
+          sudo apt-get install -y git
+          pip install "git+https://github.com/linux-system-roles/tox-lsr@2.13.1"
+      - name: Convert role to collection format
+        run: |
+          set -euxo pipefail
+          TOXENV=collection lsr_ci_runtox
+          # copy the ignore files
+          coll_dir=".tox/ansible_collections/$LSR_ROLE2COLL_NAMESPACE/$LSR_ROLE2COLL_NAME"
+          ignore_dir="$coll_dir/tests/sanity"
+          if [ ! -d "$ignore_dir" ]; then
+            mkdir -p "$ignore_dir"
+          fi
+          for file in .sanity-ansible-ignore-*.txt; do
+            if [ -f "$file" ]; then
+              cp "$file" "$ignore_dir/${file//*.sanity-ansible-}"
+            fi
+          done
+      - name: Run ansible-test
+        uses: ansible-community/ansible-test-gh-action@release/v1
+        with:
+          testing-type: sanity
+          collection-src-directory: .tox/ansible_collections/${{ env.LSR_ROLE2COLL_NAMESPACE }}/${{ env.LSR_ROLE2COLL_NAME }}
