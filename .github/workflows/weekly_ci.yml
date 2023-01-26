@@ -3,44 +3,35 @@ name: Weekly CI trigger
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   schedule:
-    - cron: '0 22 * * 6'
+    - cron: 0 22 * * 6
 env:
-  BRANCH_NAME: "weekly-ci"
-  COMMIT_MESSAGE: "This PR is to trigger periodic CI testing"
-  BODY_MESSAGE: "This PR is for the purpose of triggering periodic CI testing. We don't currently have a way to trigger CI without a PR, so this PR serves that purpose."
+  BRANCH_NAME: weekly-ci
+  COMMIT_MESSAGE: This PR is to trigger periodic CI testing
+  BODY_MESSAGE: >-
+    This PR is for the purpose of triggering periodic CI testing.
+    We don't currently have a way to trigger CI without a PR,
+    so this PR serves that purpose.
   COMMENT: "[citest]"
 jobs:
   weekly_ci:
     runs-on: ubuntu-latest
     steps:
+      - name: Update pip, git
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y git
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
       - name: Create and push empty commit
         run: |
           set -euxo pipefail
 
-          get_main_branch() {
-              local br
-              br=$(git branch --list main)
-              if [ -n "$br" ]; then
-                  echo main
-                  return 0
-              fi
-              br=$(git branch --list master)
-              if [ -n "$br" ]; then
-                  echo master
-                  return 0
-              fi
-              echo UNKNOWN
-              return 1
-          }
-
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout ${{ env.BRANCH_NAME }} || git checkout -b ${{ env.BRANCH_NAME }}
-          git rebase $(get_main_branch)
+          git rebase main
           git commit --allow-empty -m "${{ env.COMMIT_MESSAGE }}"
           git push -f --set-upstream origin ${{ env.BRANCH_NAME }}
 
