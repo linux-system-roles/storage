@@ -53,6 +53,7 @@ class Size(object):
         prefix = raw_units
         no_suffix_flag = True
         valid_suffix = False
+        used_factor = BINARY_FACTOR
 
         # get rid of possible units suffix ('bytes', 'b' or 'B')
         for suffix in SUFFIXES:

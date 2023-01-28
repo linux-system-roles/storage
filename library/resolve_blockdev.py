@@ -117,6 +117,7 @@ def run_module():
     try:
         result['device'] = resolve_blockdev(module.params['spec'], run_cmd=module.run_command)
     except Exception:
+        # Error handling is done next.
         pass
 
     if not result['device'] or not os.path.exists(result['device']):
