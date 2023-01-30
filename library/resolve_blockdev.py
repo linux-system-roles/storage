@@ -83,7 +83,8 @@ def resolve_blockdev(spec, run_cmd):
 
 
 def _get_dm_name_from_kernel_dev(kdev):
-    return open("%s/%s/dm/name" % (SYS_CLASS_BLOCK, os.path.basename(kdev))).read().strip()
+    with open("%s/%s/dm/name" % (SYS_CLASS_BLOCK, os.path.basename(kdev))) as f:
+        return f.read().strip()
 
 
 def _get_md_name_from_kernel_dev(kdev):
