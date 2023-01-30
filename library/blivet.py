@@ -492,6 +492,7 @@ class BlivetVolume(BlivetBase):
             try:
                 self._device.format.update_size_info()
             except AttributeError:
+                # Error handling is done next.
                 pass
 
             if not self._device.resizable:
@@ -1548,20 +1549,21 @@ class FSTab(object):
         if self._entries:
             self.reset()
 
-        for line in open('/etc/fstab').readlines():
-            if line.lstrip().startswith("#"):
-                continue
+        with open('/etc/fstab') as f:
+            for line in f.readlines():
+                if line.lstrip().startswith("#"):
+                    continue
 
-            fields = line.split()
-            if len(fields) < 6:
-                continue
+                fields = line.split()
+                if len(fields) < 6:
+                    continue
 
-            device = self._blivet.devicetree.resolve_device(fields[0])
-            self._entries.append(dict(device_id=fields[0],
-                                      device_path=getattr(device, 'path', None),
-                                      fs_type=fields[2],
-                                      mount_point=fields[1],
-                                      mount_options=fields[3]))
+                device = self._blivet.devicetree.resolve_device(fields[0])
+                self._entries.append(dict(device_id=fields[0],
+                                          device_path=getattr(device, 'path', None),
+                                          fs_type=fields[2],
+                                          mount_point=fields[1],
+                                          mount_options=fields[3]))
 
 
 def get_mount_info(pools, volumes, actions, fstab):

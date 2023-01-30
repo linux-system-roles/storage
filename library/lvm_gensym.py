@@ -61,12 +61,15 @@ from ansible.module_utils import facts
 
 def get_os_name():
     """Search the host file and return the name in the ID column"""
-    for line in open('/etc/os-release').readlines():
-        if not line.find('ID='):
-            os_name = line[3:]
-            break
+    os_name = None
+    with open('/etc/os-release') as f:
+        for line in f.readlines():
+            if not line.find('ID='):
+                os_name = line[3:]
+                break
 
-    os_name = os_name.replace('\n', '').replace('"', '')
+    if os_name:
+        os_name = os_name.replace('\n', '').replace('"', '')
     return os_name
 
 
