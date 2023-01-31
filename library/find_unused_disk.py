@@ -30,6 +30,11 @@ options:
         default: '0'
         type: str
 
+    max_size:
+        description: Specifies the maximum disk size to return an unused disk.
+        default: '0'
+        type: str
+
     with_interface:
         description: Specifies which disk interface will be accepted (scsi, virtio, nvme).
         default: null
@@ -157,6 +162,7 @@ def run_module():
     module_args = dict(
         max_return=dict(type='int', required=False, default=10),
         min_size=dict(type='str', required=False, default='0'),
+        max_size=dict(type='str', required=False, default='0'),
         with_interface=dict(type='str', required=False, default=None)
     )
 
@@ -170,6 +176,7 @@ def run_module():
         supports_check_mode=True
     )
 
+    max_size = Size(module.params['max_size'])
     for path, attrs in get_disks(module).items():
         if is_ignored(path):
             continue
@@ -183,6 +190,9 @@ def run_module():
             continue
 
         if Size(attrs["size"]).bytes < Size(module.params['min_size']).bytes:
+            continue
+
+        if max_size.bytes > 0 and Size(attrs["size"]).bytes > max_size.bytes:
             continue
 
         if get_partitions(path):
