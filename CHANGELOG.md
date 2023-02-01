@@ -1,6 +1,23 @@
 Changelog
 =========
 
+[1.9.6] - 2023-02-01
+--------------------
+
+### New Features
+
+- none
+
+### Bug Fixes
+
+- none
+
+### Other Changes
+
+- fix shellcheck issues (#327)
+- Fix issues found by CodeQL (#329)
+- restrict swap size to less than 128GB on EL7 (#331)
+
 [1.9.5] - 2023-01-19
 --------------------
 
