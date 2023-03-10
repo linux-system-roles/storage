@@ -3,6 +3,11 @@
 name: Python Unit Tests
 on:  # yamllint disable-line rule:truthy
   pull_request:
+  merge_group:
+    branches:
+      - main
+    types:
+      - checks_requested
   push:
     branches:
       - main
@@ -46,7 +51,7 @@ jobs:
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
-          pip install "git+https://github.com/linux-system-roles/tox-lsr@2.13.1"
+          pip install "git+https://github.com/linux-system-roles/tox-lsr@2.13.2"
           # If you have additional OS dependency packages e.g. libcairo2-dev
           # then put them in .github/config/ubuntu-requirements.txt, one
           # package per line.
@@ -69,3 +74,6 @@ jobs:
           *) toxenvs="${toxenvs},coveralls" ;;
           esac
           TOXENV="$toxenvs" lsr_ci_runtox
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
