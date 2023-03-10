@@ -12,7 +12,6 @@
                          unused_disk_subfact.sectorsize | int }}"
   tags:
     - tests::lvm
-
   tasks:
     - name: Include the role to ensure packages are installed
       include_role:
@@ -62,45 +61,28 @@
     - name: Verify results
       include_tasks: verify-role-results.yml
 
-    - name: Test for correct handling of invalid parameter when creating ext4 filesystem
-      block:
-        - name: Try to create ext4 filesystem with invalid parameter "-Fb 512"
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                type: lvm
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    fs_type: ext4
-                    size: "{{ volume1_size }}"
-                    fs_create_options: -Fb 512
-                    mount_point: "{{ mount_location }}"
-
-        - name: Unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != "UNREACH"
-            msg: Role has not failed when it should have
-
-        - name: Verify the output when creating ext4 filesystem with invalid parameter "-Fb 512"
-          assert:
-            that:
-              - blivet_output.failed
-              - blivet_output.msg | regex_search(errmsgpat)
-              - not blivet_output.changed
-            msg: Unexpected behavior when creating ext4 filesystem with invalid parameter
-          vars:
-            errmsgpat: >-
-              Failed to commit changes to disk.*FSError.*format failed:
-              1.*/dev/mapper/foo-test1
+    - name: >-
+        Test for correct handling of invalid parameter when creating ext4
+        filesystem
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          Failed to commit changes to disk.*FSError.*format failed:
+          1.*/dev/mapper/foo-test1
+        __storage_failed_msg: >-
+          Unexpected behavior when creating ext4 filesystem with invalid
+          parameter
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  fs_type: ext4
+                  size: "{{ volume1_size }}"
+                  fs_create_options: -Fb 512
+                  mount_point: "{{ mount_location }}"
 
     - name: Remove the volume group created above
       include_role:
@@ -112,7 +94,9 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - name: Create one LVM logical volume under one volume group, size {{ volume1_size }}
+    - name: >-
+        Create one LVM logical volume under one volume group, size
+        {{ volume1_size }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -130,41 +114,22 @@
       include_tasks: verify-role-results.yml
 
     - name: Test for correct handling resize large size
-      block:
-        - name: Resizing with one large value which large than disk's size
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                type: lvm
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    fs_type: ext4
-                    size: "{{ too_large_size }}"
-                    mount_point: "{{ mount_location }}"
-
-        - name: Unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != "UNREACH"
-            msg: Role has not failed when it should have
-
-        - name: Verify the output when resizing with large size
-          assert:
-            that:
-              - blivet_output.failed
-              - blivet_output.msg | regex_search(errmsgpat)
-              - not blivet_output.changed
-            msg: Unexpected behavior when resizing with large size
-          vars:
-            errmsgpat: volume.*test1.*cannot be resized to.*
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          volume.*test1.*cannot be resized to.*
+        __storage_failed_msg: >-
+          Unexpected behavior when resizing with large size
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  fs_type: ext4
+                  size: "{{ too_large_size }}"
+                  mount_point: "{{ mount_location }}"
 
     - name: Remove the volume group created above
       include_role:
@@ -236,36 +201,18 @@
       set_fact:
         __swap_disk: "{{ unused_disks[0] }}"
 
-    - name: Test for correct handling of mounting a non-mountable formatting type
-      block:
-        - name: Try to mount swap filesystem to {{ mount_location }}
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_volumes:
-              - name: test1
-                type: disk
-                disks: "{{ [__swap_disk] }}"
-                fs_type: swap
-                mount_point: "{{ mount_location }}"
-
-        - name: Unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != "UNREACH"
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output when mount swap filesystem to "{{ mount_location }}"
-          assert:
-            that:
-              - blivet_output.failed
-              - blivet_output.msg | regex_search(errmsgpat)
-              - not blivet_output.changed
-            msg: Unexpected behavior when mount swap filesystem
-          vars:
-            errmsgpat: volume.*test1.*has a mount point but no mountable file system
+    - name: >-
+        Test for correct handling of mounting a non-mountable formatting type
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          volume.*test1.*has a mount point but no mountable file system
+        __storage_failed_msg: >-
+          Unexpected behavior when mount swap filesystem
+        __storage_failed_params:
+          storage_volumes:
+            - name: test1
+              type: disk
+              disks: "{{ [__swap_disk] }}"
+              fs_type: swap
+              mount_point: "{{ mount_location }}"

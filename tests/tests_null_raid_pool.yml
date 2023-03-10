@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test null raid pool
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -10,7 +11,8 @@
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -20,17 +22,18 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         max_return: 2
         disks_needed: 2
 
-    - name: get existing raids (before run)
+    - name: Get existing raids (before run)
       command: "cat /proc/mdstat"
       register: storage_test_mdstat1
       changed_when: false
 
-    - name: check that raid_level null does not create raid
+    - name: Check that raid_level null does not create raid
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -45,13 +48,13 @@
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
 
-    - name: get existing raids (after run)
+    - name: Get existing raids (after run)
       command: "cat /proc/mdstat"
       register: storage_test_mdstat2
       changed_when: false
 
     # Cleanup before assert so it is always executed
-    - name: cleanup
+    - name: Cleanup
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -66,7 +69,7 @@
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
 
-    - name: compare mdstat results
+    - name: Compare mdstat results
       assert:
         that:
           - storage_test_mdstat1.stdout == storage_test_mdstat2.stdout

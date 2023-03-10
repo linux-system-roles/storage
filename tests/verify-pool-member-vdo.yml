@@ -1,39 +1,49 @@
-- name: check VDO
-  block:
-    - name: get information about VDO deduplication
-      command: "lvs --noheading -o vdo_deduplication --select 'lv_name=vdopool' {{ storage_test_pool.name }}"
-      register: storage_test_vdo_status
-      changed_when: false
-
-    - assert:
-        that: storage_test_vdo_status.stdout |trim != "enabled"
-        msg: "VDO deduplication is on but it should not"
-      when: not storage_test_vdo_volume.deduplication
-
-    - assert:
-        that: storage_test_vdo_status.stdout | trim == "enabled"
-        msg: "VDO deduplication is off but it should not"
-      when: storage_test_vdo_volume.deduplication | bool
-
-    - name: get information about VDO compression
-      command: "lvs --noheading -o vdo_compression --select 'lv_name=vdopool' {{ storage_test_pool.name }}"
-      register: storage_test_vdo_status
-      changed_when: false
-
-    - assert:
-        that: storage_test_vdo_status.stdout | trim != "enabled"
-        msg: "VDO compression is on but it should not"
-      when: not storage_test_vdo_volume.compression
-
-    - assert:
-        that: storage_test_vdo_status.stdout | trim == "enabled"
-        msg: "VDO compression is off but it should not"
-      when: storage_test_vdo_volume.compression | bool
-
+---
+- name: Check VDO
   when:
-    - storage_test_vdo_volume.deduplication != none or storage_test_vdo_volume.compression != none
+    - storage_test_vdo_volume.deduplication != none or
+      storage_test_vdo_volume.compression != none
     - storage_test_pool.state != "absent"
     - storage_test_vdo_volume.state != "absent"
+  block:
+    - name: Get information about VDO deduplication
+      command: >-
+        lvs --noheading -o vdo_deduplication --select lv_name=vdopool
+        {{ storage_test_pool.name }}
+      register: storage_test_vdo_status
+      changed_when: false
 
-- set_fact:
+    - name: Check if VDO deduplication is off
+      assert:
+        that: storage_test_vdo_status.stdout | trim != "enabled"
+        msg: VDO deduplication is on but it should not
+      when: not storage_test_vdo_volume.deduplication
+
+    - name: Check if VDO deduplication is on
+      assert:
+        that: storage_test_vdo_status.stdout | trim == "enabled"
+        msg: VDO deduplication is off but it should not
+      when: storage_test_vdo_volume.deduplication | bool
+
+    - name: Get information about VDO compression
+      command: >-
+        lvs --noheading -o vdo_compression --select lv_name=vdopool
+        {{ storage_test_pool.name }}
+      register: storage_test_vdo_status
+      changed_when: false
+
+    - name: Check if VDO deduplication is off
+      assert:
+        that: storage_test_vdo_status.stdout | trim != "enabled"
+        msg: VDO compression is on but it should not
+      when: not storage_test_vdo_volume.compression
+
+    - name: Check if VDO deduplication is on
+      assert:
+        that: storage_test_vdo_status.stdout | trim == "enabled"
+        msg: VDO compression is off but it should not
+      when: storage_test_vdo_volume.compression | bool
+
+- name: Clear test variables
+  set_fact:
     storage_test_vdo_status: null

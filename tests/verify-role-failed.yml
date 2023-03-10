@@ -1,0 +1,40 @@
+---
+- name: Verify role raises correct error
+  block:
+    - name: Verify role raises correct error
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools: "{{
+          __storage_failed_params.get('storage_pools', []) }}"
+        storage_volumes: "{{
+          __storage_failed_params.get('storage_volumes', []) }}"
+        storage_safe_mode: "{{
+          __storage_failed_params.get('storage_safe_mode', true) }}"
+
+    - name: Unreachable task
+      fail:
+        msg: UNREACH
+
+  rescue:
+    - name: Check that we failed in the role
+      assert:
+        that: ansible_failed_result.msg != 'UNREACH'
+        msg: Role has not failed when it should have
+
+    - name: Verify the blivet output and error message are correct
+      assert:
+        that:
+          - blivet_output.failed
+          - blivet_output.msg is search(__storage_failed_regex)
+          - not blivet_output.changed
+        msg: "{{ __storage_failed_msg }}"
+      when:
+        - __storage_failed_regex is defined
+        - __storage_failed_msg is defined
+
+    - name: Verify module raised the correct exception
+      assert:
+        that: ansible_failed_result.msg.exception is
+          search(__storage_failed_exception)
+      when: __storage_failed_exception is defined

@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test raid pool options
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -14,7 +15,8 @@
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -24,7 +26,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         max_return: 3
         disks_needed: 3
@@ -46,14 +49,15 @@
               - name: lv1
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
-              - name: lv2
+              - name: Lv2
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
-              - name: lv3
+              - name: Lv3
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation minus the pool raid options
       include_role:
@@ -68,10 +72,10 @@
               - name: lv1
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
-              - name: lv2
+              - name: Lv2
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
-              - name: lv3
+              - name: Lv3
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
@@ -84,7 +88,8 @@
               blivet_output.pools[0].raid_metadata_version == '1.0'
         msg: "Failure to preserve RAID settings for preexisting pool."
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Remove the pool created above
       include_role:
@@ -103,11 +108,12 @@
               - name: lv1
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
-              - name: lv2
+              - name: Lv2
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
-              - name: lv3
+              - name: Lv3
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

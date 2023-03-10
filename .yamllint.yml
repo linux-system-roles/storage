@@ -3,5 +3,3 @@
 extends: default
 ignore: |
   /.tox/
-  /tests/
-  /.github/

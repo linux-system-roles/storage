@@ -18,6 +18,5 @@ exclude_paths:
   - tests/roles/
   - .github/
   - examples/roles/
-  - tests/
 mock_roles:
   - linux-system-roles.storage

@@ -1,12 +1,14 @@
 ---
-- hosts: all
+- name: Test missing volume type in pool
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
     mount_location: '/opt/test1'
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -16,7 +18,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         max_return: 1
 
@@ -38,7 +41,8 @@
         that: blivet_output.pools[0].volumes[0].type == "partition"
         msg: "Incorrect type assigned to un-typed volume in partition pool"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Remove the partition created above
       include_role:
@@ -59,7 +63,8 @@
         that: blivet_output.pools[0].volumes[0].type == "partition"
         msg: "Incorrect type assigned to un-typed volume in partition pool"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
@@ -80,4 +85,5 @@
         that: blivet_output.pools[0].volumes[0].type == "partition"
         msg: "Incorrect type assigned to un-typed volume in partition pool"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

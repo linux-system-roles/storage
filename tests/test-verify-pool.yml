@@ -15,7 +15,7 @@
     #     compression
     #     deduplication
 
-- name:
+- name: Verify pool subset
   include_tasks: "test-verify-pool-{{ storage_test_pool_subset }}.yml"
   loop: "{{ _storage_pool_tests }}"
   loop_control:

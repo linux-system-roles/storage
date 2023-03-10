@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test lvm multiple disks multiple volumes
+  hosts: all
   become: true
   vars:
     mount_location1: '/opt/test1'
@@ -8,9 +9,9 @@
     volume_size: '4g'
   tags:
     - tests::lvm
-
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -20,13 +21,16 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 2
         disks_needed: 2
 
-    - name: Create a logical volume spanning two physical volumes that changes its mount location
+    - name: >-
+        Create a logical volume spanning two physical volumes that changes its
+        mount location
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -41,7 +45,8 @@
                 size: "{{ volume_size }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
@@ -58,7 +63,8 @@
                 size: "{{ volume_size }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -70,4 +76,5 @@
             volumes: []
             state: absent
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

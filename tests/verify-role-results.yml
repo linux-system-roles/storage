@@ -1,3 +1,4 @@
+---
 - name: Print out pool information
   debug:
     var: _storage_pools_list

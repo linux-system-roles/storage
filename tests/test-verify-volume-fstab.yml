@@ -1,46 +1,68 @@
 ---
 - name: Set some variables for fstab checking
   set_fact:
-    storage_test_fstab_id_matches: "{{ storage_test_fstab.stdout_lines|map('regex_search', '^' + storage_test_volume._mount_id + ' ')|select('string')|list }}"
-    storage_test_fstab_mount_point_matches: "{{ storage_test_fstab.stdout_lines |
-      map('regex_search', ' +' + storage_test_volume.mount_point + ' +') |
-      select('string')|list if (storage_test_volume.mount_point|d('none',true) != 'none') else [] }}"
+    # noqa jinja[spacing]
+    storage_test_fstab_id_matches: "{{ storage_test_fstab.stdout_lines |
+      map('regex_search', '^' + storage_test_volume._mount_id + ' ') |
+      select('string') | list }}"
+    storage_test_fstab_mount_point_matches: "{{
+      storage_test_fstab.stdout_lines |
+      map('regex_search', ' +' + __mount_point + ' +') |
+      select('string') | list
+      if (__mount_point | d('none', true) != 'none')
+      else [] }}"
     storage_test_fstab_expected_id_matches: "{{ 1
-      if (_storage_test_volume_present and (storage_test_volume.mount_point|d('none',true) != 'none' or storage_test_volume.fs_type == 'swap'))
+      if (_storage_test_volume_present and
+          (__mount_point | d('none', true) != 'none' or
+           storage_test_volume.fs_type == 'swap'))
       else 0 }}"
     storage_test_fstab_expected_mount_point_matches: "{{ 1
-      if (_storage_test_volume_present and storage_test_volume.mount_point and storage_test_volume.mount_point.startswith('/'))
+      if (_storage_test_volume_present and
+          __mount_point and
+          __mount_point.startswith('/'))
       else 0 }}"
-    storage_test_fstab_mount_options_matches: "{{ storage_test_fstab.stdout_lines |
-      map('regex_search', ' ' + storage_test_volume.mount_point + ' .* ' + storage_test_volume.mount_options + ' +') |
-      select('string')|list if (
-        storage_test_volume.mount_options|d('none',true) != 'none'
-        and storage_test_volume.mount_point|d('none',true) != 'none'
+    storage_test_fstab_mount_options_matches: "{{
+      storage_test_fstab.stdout_lines |
+      map('regex_search', __pattern) | select('string') | list
+      if (
+        __mount_options | d('none', true) != 'none'
+        and __mount_point | d('none', true) != 'none'
       ) else [] }}"
     storage_test_fstab_expected_mount_options_matches: "{{ 1
-      if (_storage_test_volume_present and storage_test_volume.mount_options)
+      if (_storage_test_volume_present and __mount_options)
       else 0 }}"
+  vars:
+    __mount_point: "{{ storage_test_volume.mount_point }}"
+    __mount_options: "{{ storage_test_volume.mount_options }}"
+    __pattern: ' {{ __mount_point }} .* {{ __mount_options }} +'
 
 # device id
 - name: Verify that the device identifier appears in /etc/fstab
   assert:
-    that: "{{ storage_test_fstab_id_matches|length == storage_test_fstab_expected_id_matches|int }}"
-    msg: "Expected device identifier not found in /etc/fstab."
-  when: _storage_test_volume_present
+    that: storage_test_fstab_id_matches | length ==
+      storage_test_fstab_expected_id_matches | int
+    msg: Expected device identifier not found in /etc/fstab.
+  when: _storage_test_volume_present | bool
 
 # mount point
 - name: Verify the fstab mount point
   assert:
-    that: storage_test_fstab_mount_point_matches|length == storage_test_fstab_expected_mount_point_matches|int
-    msg: "Expected number ({{ storage_test_fstab_expected_mount_point_matches }}) of
-      entries with volume '{{ storage_test_volume.name }}' mount point not found in /etc/fstab."
+    that: storage_test_fstab_mount_point_matches | length ==
+      storage_test_fstab_expected_mount_point_matches | int
+    msg: >-
+      Expected number ({{ storage_test_fstab_expected_mount_point_matches }}) of
+      entries with volume '{{ storage_test_volume.name }}' mount point not found
+      in /etc/fstab.
 
 # mount options
 - name: Verify mount_options
   assert:
-    that: storage_test_fstab_mount_options_matches|length == storage_test_fstab_expected_mount_options_matches|int
-    msg: "Expected number ({{ storage_test_fstab_expected_mount_options_matches }}) of
-      entries with volume '{{ storage_test_volume.name }}' mount options not found in /etc/fstab."
+    that: storage_test_fstab_mount_options_matches | length ==
+      storage_test_fstab_expected_mount_options_matches | int
+    msg: >-
+      Expected number ({{ storage_test_fstab_expected_mount_options_matches }})
+      of entries with volume '{{ storage_test_volume.name }}' mount options not
+      found in /etc/fstab.
   when:
     - __storage_verify_mount_options | d(false)
     - "'mount_options' in storage_test_volume"

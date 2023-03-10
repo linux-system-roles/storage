@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test lvm cache create and remove
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -11,7 +12,8 @@
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -23,15 +25,17 @@
 
     - name: Gather package facts
       package_facts:
-        # gather information about packages
 
     - name: Set blivet package name
       set_fact:
-        blivet_pkg_name: "{{ ansible_facts.packages | select('search','blivet') | select('search', 'python') | list }}"
+        blivet_pkg_name: "{{ ansible_facts.packages |
+          select('search', 'blivet') | select('search', 'python') | list }}"
 
     - name: Set blivet package version
       set_fact:
-        blivet_pkg_version: "{{ ansible_facts.packages[blivet_pkg_name[0]][0]['version'] + '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+        blivet_pkg_version: "{{
+          ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
+          '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
 
     - name: Set distribution version
       set_fact:
@@ -42,10 +46,11 @@
         is_rhel8: "{{ (ansible_facts.distribution == 'CentOS' or
                     ansible_facts.distribution == 'Enterprise Linux' or
                     ansible_facts.distribution == 'RedHat') and
-                    ansible_facts.distribution_major_version =='8' }}"
+                    ansible_facts.distribution_major_version == '8' }}"
         is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 2
@@ -65,7 +70,8 @@
                 cache_size: "{{ cache_size }}"
                 cache_devices: "{{ [unused_disks[1]] }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Remove (detach) cache from the 'test' LV created above
       include_role:
@@ -79,9 +85,14 @@
                 size: "{{ volume_size }}"
                 cached: false
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - block:
+    - name: Run test on supported platforms
+      when: ((is_fedora and blivet_pkg_version is version("3.5.0-1", ">=")) or
+             (is_rhel8 and blivet_pkg_version is version("3.4.0-10", ">=")) or
+             (is_rhel9 and blivet_pkg_version is version("3.4.0-14", ">=")))
+      block:
         - name: Attach the cache to the 'test' LV created above
           include_role:
             name: linux-system-roles.storage
@@ -95,10 +106,9 @@
                     cached: true
                     cache_size: "{{ cache_size }}"
                     cache_devices: "{{ [unused_disks[1]] }}"
-        - include_tasks: verify-role-results.yml
-      when: ((is_fedora and blivet_pkg_version is version("3.5.0-1", ">=")) or
-             (is_rhel8 and blivet_pkg_version is version("3.4.0-10", ">=")) or
-             (is_rhel9 and blivet_pkg_version is version("3.4.0-14", ">=")))
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -112,4 +122,5 @@
               - name: test
                 size: "{{ volume_size }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

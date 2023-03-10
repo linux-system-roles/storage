@@ -1,10 +1,13 @@
-- set_fact:
+---
+- name: Set test variables
+  set_fact:
     _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs | dict2items |
       selectattr('value.vg', 'match', '^' ~ storage_test_pool.name ~ '$') |
       map(attribute='key') | list }}"
     _storage_test_expected_pv_count: "{{ 0
       if storage_test_pool.state == 'absent'
-      else (storage_test_pool.raid_level | ternary(1, storage_test_pool.disks|length)) }}"
+      else (storage_test_pool.raid_level |
+      ternary(1, storage_test_pool.disks | length)) }}"
   when: storage_test_pool.type == 'lvm'
 
 - name: Get the canonical device path for each member device
@@ -16,38 +19,52 @@
   register: pv_paths
   when: storage_test_pool.type == 'lvm'
 
-- set_fact:
-    __pvs_lvm_len: "{{ _storage_test_pool_pvs_lvm|length }}"
+- name: Set pvs lvm length
+  set_fact:
+    __pvs_lvm_len: "{{ _storage_test_pool_pvs_lvm | length }}"
   when: storage_test_pool.type == 'lvm'
 
-- set_fact:
-    _storage_test_pool_pvs: "{{ pv_paths.results[0:(__pvs_lvm_len|int)] | map(attribute='device') | list }}"
+- name: Set pool pvs
+  set_fact:
+    _storage_test_pool_pvs: "{{ pv_paths.results[0 : (__pvs_lvm_len | int)] |
+      map(attribute='device') | list }}"
   when: storage_test_pool.type == 'lvm'
 
 - name: Verify PV count
   assert:
-    that: "{{ __pvs_lvm_len|int == _storage_test_expected_pv_count|int }}"
-    msg: "Unexpected PV count for pool {{ storage_test_pool.name }}
-          (has: {{ __pvs_lvm_len|int }} expected: {{ _storage_test_expected_pv_count|int }})"
+    that: __pvs_lvm_len | int == _storage_test_expected_pv_count | int
+    msg: >-
+      Unexpected PV count for pool {{ storage_test_pool.name }}
+      (has: {{ __pvs_lvm_len | int }}
+       expected: {{ _storage_test_expected_pv_count | int }})
   when: storage_test_pool.type == 'lvm'
 
-- set_fact:
-    _storage_test_expected_pv_type: "{{ 'crypt' if storage_test_pool.encryption else 'disk' }}"
+- name: Set expected pv type
+  set_fact:
+    _storage_test_expected_pv_type: "{{ 'crypt'
+      if storage_test_pool.encryption else 'disk' }}"
   when: storage_test_pool.type == 'lvm'
 
-- set_fact:
-    _storage_test_expected_pv_type: "{{ 'partition' if storage_use_partitions|default(false) else 'disk' }}"
+- name: Set expected pv type
+  set_fact:
+    _storage_test_expected_pv_type: "{{ 'partition'
+      if storage_use_partitions | d(false) else 'disk' }}"
   when: storage_test_pool.type == 'lvm' and not storage_test_pool.encryption
 
-- set_fact:
+- name: Set expected pv type
+  set_fact:
     _storage_test_expected_pv_type: "{{ storage_test_pool.raid_level }}"
   when: storage_test_pool.type == 'lvm' and storage_test_pool.raid_level
 
 - name: Check the type of each PV
   assert:
-    that: "{{ storage_test_blkinfo.info[pv]['type'] == _storage_test_expected_pv_type }}"
-    msg: "Incorrect type for PV {{ pv }} (has: '{{ storage_test_blkinfo.info[pv]['type'] }}'
-          expected: '{{ _storage_test_expected_pv_type }})' in pool '{{ storage_test_pool.name }}'"
+    that: storage_test_blkinfo.info[pv]['type'] ==
+      _storage_test_expected_pv_type
+    msg: >-
+      Incorrect type for PV {{ pv }}
+      (has: '{{ storage_test_blkinfo.info[pv]['type'] }}'
+      expected: '{{ _storage_test_expected_pv_type }})'
+      in pool '{{ storage_test_pool.name }}'
   loop: "{{ _storage_test_pool_pvs }}"
   loop_control:
     loop_var: pv
@@ -68,7 +85,8 @@
 - name: Check VDO
   include_tasks: verify-pool-members-vdo.yml
 
-- set_fact:
+- name: Clean up test variables
+  set_fact:
     _storage_test_expected_pv_type: null
     _storage_test_expected_pv_count: null
     _storage_test_pool_pvs_lvm: []

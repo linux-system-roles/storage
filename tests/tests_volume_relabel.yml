@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test volume relabel
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -7,7 +8,8 @@
     volume_size: '5g'
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -17,12 +19,13 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
         max_return: 1
 
-    - name: set label
+    - name: Set label
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -34,9 +37,10 @@
             disks: "{{ unused_disks }}"
             fs_label: label
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: relabel
+    - name: Relabel
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -48,9 +52,10 @@
             disks: "{{ unused_disks }}"
             fs_label: relabel
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: run relabel again to verify idempotence
+    - name: Run relabel again to verify idempotence
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -62,12 +67,13 @@
             disks: "{{ unused_disks }}"
             fs_label: relabel
 
-    - name: check for idempotency
+    - name: Check for idempotency
       assert:
         that: not blivet_output.changed
         msg: "Volume relabeling is not idempotent."
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -80,4 +86,5 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

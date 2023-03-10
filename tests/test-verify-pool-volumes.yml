@@ -1,6 +1,6 @@
 ---
 
-- name: verify the volumes
+- name: Verify the volumes
   include_tasks: "test-verify-volume.yml"
   loop: "{{ storage_test_pool.volumes }}"
   loop_control:

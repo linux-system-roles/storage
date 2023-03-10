@@ -1,3 +1,4 @@
+---
 - name: Validate pool member VDO settings
   include_tasks: verify-pool-member-vdo.yml
   loop: "{{ storage_test_pool.volumes }}"

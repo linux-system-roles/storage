@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test raid pool fatal errors
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -14,7 +15,8 @@
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -24,41 +26,29 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         max_return: 2
         disks_needed: 2
 
     - name: Try to create a raid pool with invalid raid_level (expect failure)
-      block:
-        - name: Create a disk volume mounted at "{{ mount_location }}"
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: vg1
-                disks: "{{ unused_disks }}"
-                type: lvm
-                raid_level: "fail"
-                state: present
-                volumes:
-                  - name: lv1
-                    size: "{{ volume1_size }}"
-                    mount_point: "{{ mount_location1 }}"
-                  - name: lv2
-                    size: "{{ volume2_size }}"
-                    mount_point: "{{ mount_location2 }}"
-                  - name: lv3
-                    size: "{{ volume3_size }}"
-                    mount_point: "{{ mount_location3 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_params:
+          storage_pools:
+            - name: vg1
+              disks: "{{ unused_disks }}"
+              type: lvm
+              raid_level: fail
+              state: present
+              volumes:
+                - name: lv1
+                  size: "{{ volume1_size }}"
+                  mount_point: "{{ mount_location1 }}"
+                - name: lv2
+                  size: "{{ volume2_size }}"
+                  mount_point: "{{ mount_location2 }}"
+                - name: lv3
+                  size: "{{ volume3_size }}"
+                  mount_point: "{{ mount_location3 }}"

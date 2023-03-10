@@ -1,12 +1,14 @@
 ---
-- hosts: all
+- name: Test create disk and remove
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
     mount_location: '/opt/test1'
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -16,11 +18,14 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         max_return: 1
 
-    - name: Create a disk device mounted on "{{ mount_location }}"; specify disks as non-list
+    - name: >-
+        Create a disk device; specify disks as non-list mounted on
+        {{ mount_location }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -31,7 +36,8 @@
             fs_type: ext4
             mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation minus fs_type to verify idempotence
       include_role:
@@ -45,10 +51,13 @@
 
     - name: Assert file system is preserved on existing partition volume
       assert:
-        that: not blivet_output.changed and blivet_output.volumes[0].fs_type == 'ext4'
-        msg: "File system not preserved on existing partition volume."
+        that:
+          - not blivet_output.changed
+          - blivet_output.volumes[0].fs_type == 'ext4'
+        msg: File system not preserved on existing partition volume.
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Remove the disk device created above
       include_role:
@@ -61,4 +70,5 @@
             mount_point: "{{ mount_location }}"
             state: absent
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

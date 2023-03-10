@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test lvm errors
+  hosts: all
   become: true
   vars:
     mount_location1: '/opt/test1'
@@ -13,9 +14,9 @@
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
   tags:
     - tests::lvm
-
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -25,216 +26,102 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
     - name: Test for correct handling of invalid disk specifications.
-      block:
-        - name: Try to create LVM with an invalid disk specification.
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ invalid_disks }}"
-                volumes:
-                  - name: test1
-                    size: "{{ volume1_size }}"
-                    mount_point: "{{ mount_location1 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    # the following does not work properly
-    # - debug:
-    #     msg: "{{ 'failed: ' + blivet_output.failed | string +
-    #              'msg: ' + blivet_output.msg +
-    #              'changed: ' + blivet_output.changed | string }}"
-
-    # - name: Verify the output
-    #   assert:
-    #     that: "{{ blivet_output.failed and
-    #               blivet_output.msg|regex_search('unable to resolve.+disk')|length>0 and
-    #               not blivet_output.changed }}"
-    #     msg: "Unexpected behavior w/ non-existent pool disk"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: unable to resolve any disks specified for pool
+        __storage_failed_msg: Role did not report error about invalid disks
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: "{{ invalid_disks }}"
+              volumes:
+                - name: test1
+                  size: "{{ volume1_size }}"
+                  mount_point: "{{ mount_location1 }}"
 
     - name: Test for correct handling of invalid size specification.
-      block:
-        - name: Try to create LVM with an invalid size specification.
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    size: "{{ invalid_size }}"
-                    mount_point: "{{ mount_location1 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    # the following does not work properly
-    # - name: Verify the output
-    #   assert:
-    #     that: "{{ blivet_output.failed and
-    #               blivet_output.msg|regex_search('size.+exceeds.+space in pool') and
-    #               not blivet_output.changed }}"
-    #     msg: "Unexpected behavior w/ too-large volume size"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: invalid size specification
+        __storage_failed_msg: Role did not report that the size spec is invalid
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  size: "{{ invalid_size }}"
+                  mount_point: "{{ mount_location1 }}"
 
     - name: Test for correct handling of missing disk specification.
-      block:
-        - name: Try to create LVM pool with no disks specified.
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: []
-                volumes:
-                  - name: test1
-                    size: "{{ volume1_size }}"
-                    mount_point: "{{ mount_location1 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    # the following does not work properly
-    # - name: Verify the output
-    #   assert:
-    #     that: "{{ blivet_output.failed and
-    #               blivet_output.msg|regex_search('no disks.+pool') and
-    #               not blivet_output.changed }}"
-    #     msg: "Unexpected behavior w/ no disks specified"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: no disks specified for pool
+        __storage_failed_msg: Role did not report that no disks were specified
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: []
+              volumes:
+                - name: test1
+                  size: "{{ volume1_size }}"
+                  mount_point: "{{ mount_location1 }}"
 
     - name: Test for correct handling of LVM volume not defined within a pool.
-      block:
-        - name: Try to create LVM volume from outside of any pool.
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_volumes:
-              - name: test1
-                type: lvm
-                disks: []
-                size: "{{ volume1_size }}"
-                mount_point: "{{ mount_location1 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    # the following does not work properly
-    # - name: Verify the output
-    #   assert:
-    #     that: "{{ blivet_output.failed and
-    #               blivet_output.msg|regex_search('failed to find pool .+ for volume') and
-    #               not blivet_output.changed }}"
-    #     msg: "Unexpected behavior w/ LVM volume defined outside of any pool"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_exception: >-
+          NoneType.* object has no attribute .*_device.*
+        __storage_failed_params:
+          storage_volumes:
+            - name: test1
+              type: lvm
+              disks: []
+              size: "{{ volume1_size }}"
+              mount_point: "{{ mount_location1 }}"
 
     - name: Test for correct handling of duplicate pool names
-      block:
-        - name: Try to create two pools w/ the same name
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: pool1
-                type: lvm
-                disks: "{{ unused_disks }}"
-              - name: pool1
-                type: lvm
-                disks: "{{ unused_disks }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output of the duplicate pools test
-          assert:
-            that: "blivet_output.failed and
-                   'multiple pools with the same name' in blivet_output.msg and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ multiple pools sharing one name"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: multiple pools with the same name
+        __storage_failed_msg: >-
+          Unexpected behavior w/ multiple pools sharing one name
+        __storage_failed_params:
+          storage_pools:
+            - name: pool1
+              type: lvm
+              disks: "{{ unused_disks }}"
+            - name: pool1
+              type: lvm
+              disks: "{{ unused_disks }}"
 
     - name: Test for correct handling of duplicate volume names within a pool
-      block:
-        - name: Try to create two volumes w/ the same name
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: pool1
-                type: lvm
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    type: lvm
-                    size: "{{ volume1_size }}"
-                    mount_point: "{{ mount_location1 }}"
-                  - name: test1
-                    type: lvm
-                    size: "{{ volume2_size }}"
-                    mount_point: "{{ mount_location2 }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output of the duplicate volumes test
-          assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('multiple volumes in pool.*with the same name') and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ multiple volumes within a pool sharing a name"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: multiple volumes in pool.*with the same name
+        __storage_failed_msg: >-
+          Unexpected behavior w/ multiple volumes within a pool sharing a name
+        __storage_failed_params:
+          storage_pools:
+            - name: pool1
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  type: lvm
+                  size: "{{ volume1_size }}"
+                  mount_point: "{{ mount_location1 }}"
+                - name: test1
+                  type: lvm
+                  size: "{{ volume2_size }}"
+                  mount_point: "{{ mount_location2 }}"
 
     - name: Create a pool
       include_role:
@@ -246,101 +133,54 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: testvol1
-                fs_type: 'ext4'
+                fs_type: ext4
                 size: '1g'
 
     - name: Test for correct handling of safe_mode
-      block:
-        - name: Try to replace file system in safe mode
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: testpool1
-                type: lvm
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: testvol1
-                    fs_type: 'ext3'
-                    size: '1g'
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output
-          assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ existing data on specified disks"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting on volume.*in safe mode
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing data on specified disks
+        __storage_failed_params:
+          storage_pools:
+            - name: testpool1
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: testvol1
+                  fs_type: ext3
+                  size: '1g'
 
     - name: Test for correct handling of safe_mode with existing pool
-      block:
-        - name: Try to create LVM pool on disks that already belong to an existing pool
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks }}"
-                type: lvm
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output
-          assert:
-            that: "{{ blivet_output.failed and
-                      blivet_output.msg|regex_search('cannot remove existing formatting and/or devices on disk.*in safe mode') and
-                      not blivet_output.changed }}"
-            msg: "Unexpected behavior w/ existing data on specified disks"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting.*and/or devices on disk.*in
+          safe mode
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing data on specified disks
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              type: lvm
 
     - name: Test for correct handling of safe_mode
-      block:
-        - name: Try to replace a pool by a file system on disk in safe mode
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_volumes:
-              - name: test1
-                type: disk
-                fs_type: 'ext3'
-                disks:
-                  - "{{ unused_disks[0] }}"
-
-        - name: unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-    - name: Verify the output
-      assert:
-        that: "blivet_output.failed and
-               blivet_output.msg|regex_search('cannot remove existing formatting on volume.*in safe mode') and
-                  not blivet_output.changed"
-        msg: "Unexpected behavior w/ existing data on specified disks"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting on volume.* in safe mode
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing data on specified disks
+        __storage_failed_params:
+          storage_volumes:
+            - name: test1
+              type: disk
+              fs_type: ext3
+              disks:
+                - "{{ unused_disks[0] }}"
 
     - name: Clean up
       include_role:
