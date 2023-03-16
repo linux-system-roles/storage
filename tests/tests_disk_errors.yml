@@ -144,7 +144,8 @@
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
-          cannot remove existing formatting and/or devices on disk.*in safe mode
+          cannot remove existing formatting .*and/or devices on disk.*in
+          safe mode
         __storage_failed_msg: >-
           Unexpected behavior w/ existing data on specified disks
         __storage_failed_params:

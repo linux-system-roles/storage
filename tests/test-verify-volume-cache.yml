@@ -27,7 +27,7 @@
     - name: Set LV cache size
       set_fact:
         storage_test_lv_cache_size: "{{ lvs.stdout |
-          regex_search(__pattern, '\\1', '\\2') }}"
+          regex_search(__pattern, '\\1', '\\2') | map('int') | list }}"
       vars:
         __pattern: LVM2_CACHE_TOTAL_BLOCKS=([0-9]*) LVM2_CHUNK_SIZE=([0-9]+)
       when: storage_test_volume.cached | bool
@@ -46,13 +46,13 @@
 
     - name: Check cache size
       assert:
-        that: (storage_test_expected_cache_size | int - __actual_size) | abs /
+        that: (storage_test_expected_cache_size | int - __actual_size | int) | abs /
           storage_test_expected_cache_size | int < 0.01
         msg: >
             Unexpected cache size, expected
             {{ storage_test_expected_cache_size }},
             got {{ __actual_size }}
       vars:
-        __actual_size: "{{ storage_test_lv_cache_size[0] | int *
-          storage_test_lv_cache_size[1] | int }}"
+        __actual_size: "{{ storage_test_lv_cache_size[0] *
+          storage_test_lv_cache_size[1] }}"
       when: storage_test_volume.cached | bool
