@@ -46,8 +46,8 @@
 
     - name: Check cache size
       assert:
-        that: (storage_test_expected_cache_size | int - __actual_size | int) | abs /
-          storage_test_expected_cache_size | int < 0.01
+        that: (storage_test_expected_cache_size | int - __actual_size | int) |
+          abs / storage_test_expected_cache_size | int < 0.01
         msg: >
             Unexpected cache size, expected
             {{ storage_test_expected_cache_size }},
