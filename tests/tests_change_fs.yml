@@ -1,16 +1,20 @@
 ---
-- hosts: all
+- name: Test change fs
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
     mount_location: '/opt/test1'
     volume_size: '5g'
-    fs_after: "{{ (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') | ternary('ext4', 'xfs') }}"
+    fs_after: "{{ (ansible_distribution == 'RedHat' and
+                   ansible_distribution_major_version == '6') |
+                  ternary('ext4', 'xfs') }}"
   tags:
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -20,7 +24,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
         max_return: 1
@@ -37,7 +42,8 @@
                 size: "{{ volume_size }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Change the file system signature on the logical volume created above
       include_role:
@@ -52,7 +58,8 @@
                 fs_type: "{{ fs_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Re-run the role on the same volume without specifying fs_type
       include_role:
@@ -68,10 +75,13 @@
 
     - name: Verify the output of the duplicate volumes test
       assert:
-        that: not blivet_output.changed and blivet_output.pools[0].volumes[0].fs_type == fs_after
-        msg: "Failed to preserve omitted fs_type on existing lvm volume"
+        that:
+          - not blivet_output.changed
+          - blivet_output.pools[0].volumes[0].fs_type == fs_after
+        msg: Failed to preserve omitted fs_type on existing lvm volume
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
@@ -86,7 +96,8 @@
                 fs_type: "{{ fs_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -102,4 +113,5 @@
                 fs_type: "{{ fs_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

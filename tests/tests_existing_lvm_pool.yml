@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test managing existing lvm pool
+  hosts: all
   become: true
   vars:
     mount_location: '/opt/test1'
@@ -10,7 +11,8 @@
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -20,7 +22,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 1
@@ -36,7 +39,8 @@
               - name: test1
                 size: "{{ volume_size }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Create another volume in the existing pool, identified only by name.
       include_role:
@@ -50,7 +54,8 @@
                 fs_type: ext4
                 fs_label: newvol
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up.
       include_role:
@@ -60,4 +65,5 @@
           - name: "{{ pool_name }}"
             state: absent
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

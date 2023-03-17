@@ -1,13 +1,15 @@
 ---
-- hosts: all
+- name: Test dependencies
+  hosts: all
   become: true
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
         public: true
 
-    - name: test lvm and xfs package deps
+    - name: Test lvm and xfs package deps
       include_tasks: run_blivet.yml
       vars:
         packages_only: true
@@ -32,7 +34,7 @@
           - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
-    - name: test disk and ext4 package deps
+    - name: Test disk and ext4 package deps
       include_tasks: run_blivet.yml
       vars:
         packages_only: true
@@ -51,7 +53,7 @@
           - not blivet_output.changed
         msg: "unexpected required package list: {{ blivet_output.packages }}"
 
-    - name: test disk and swap package deps
+    - name: Test disk and swap package deps
       include_tasks: run_blivet.yml
       vars:
         packages_only: true

@@ -1,12 +1,14 @@
 ---
 
 #
-# MDRaid devices paths are returned as a symlinks. But sometimes we need their targets.
+# MDRaid devices paths are returned as a symlinks.
+# But sometimes we need their targets.
 #
 - name: Get expected mount device based on device type
   set_fact:
     storage_test_device_path: "{{ storage_test_volume._kernel_device
-      if _storage_test_volume_present and not storage_test_volume.encryption and
+      if _storage_test_volume_present and not
+      storage_test_volume.encryption and
       storage_test_volume.raid_level and
       (storage_test_pool is not defined or storage_test_pool is none)
       else storage_test_volume._device }}"
@@ -14,21 +16,30 @@
 - name: Set some facts
   set_fact:
     storage_test_mount_device_matches: "{{ ansible_mounts |
-      selectattr('device', 'match', '^' ~ storage_test_device_path ~ '$') | list }}"
+      selectattr('device', 'match', '^' ~ storage_test_device_path ~ '$') |
+      list }}"
     storage_test_mount_point_matches: "{{ ansible_mounts |
-      selectattr('mount', 'match', '^' ~ storage_test_volume.mount_point ~ '$') | list }}"
+      selectattr('mount',
+                 'match', '^' ~ storage_test_volume.mount_point ~ '$') |
+      list }}"
     storage_test_mount_expected_match_count: "{{ 1
-      if _storage_test_volume_present and storage_test_volume.mount_point and storage_test_volume.mount_point.startswith('/')
+      if _storage_test_volume_present and storage_test_volume.mount_point and
+      storage_test_volume.mount_point.startswith('/')
       else 0 }}"
-    storage_test_swap_expected_matches: "{{ 1 if _storage_test_volume_present and storage_test_volume.fs_type == 'swap' else 0 }}"
+    storage_test_swap_expected_matches: "{{ 1 if
+      _storage_test_volume_present and
+      storage_test_volume.fs_type == 'swap' else 0 }}"
 
 #
 # Verify mount presence.
 #
 - name: Verify the current mount state by device
   assert:
-    that: "{{ storage_test_mount_device_matches|length == storage_test_mount_expected_match_count|int }}"
-    msg: "Found unexpected mount state for volume '{{ storage_test_volume.name }}' device"
+    that: storage_test_mount_device_matches | length ==
+      storage_test_mount_expected_match_count | int
+    msg: >-
+      Found unexpected mount state for volume
+      '{{ storage_test_volume.name }}' device
   when: _storage_test_volume_present and storage_test_volume.mount_point
 
 #
@@ -36,36 +47,45 @@
 #
 - name: Verify the current mount state by mount point
   assert:
-    that: "{{ storage_test_mount_point_matches|length == storage_test_mount_expected_match_count|int }}"
-    msg: "Found unexpected mount state for volume '{{ storage_test_volume.name }}' mount point"
+    that: storage_test_mount_point_matches | length ==
+      storage_test_mount_expected_match_count | int
+    msg: >-
+      Found unexpected mount state for volume
+      '{{ storage_test_volume.name }}' mount point
 
 #
 # Verify mount fs type.
 #
 - name: Verify the mount fs type
   assert:
-    that: "{{ storage_test_mount_point_matches[0].fstype == storage_test_volume.fs_type }}"
-    msg: "Found unexpected mount state for volume '{{ storage_test_volume.name }} fs type"
-  when: storage_test_mount_expected_match_count|int == 1
+    that: storage_test_mount_point_matches[0].fstype ==
+      storage_test_volume.fs_type
+    msg: >-
+      Found unexpected mount state for volume
+      '{{ storage_test_volume.name }} fs type
+  when: storage_test_mount_expected_match_count | int == 1
 
 #
 # Verify swap status.
 #
-- command: realpath "{{ storage_test_volume._device }}"
+- name: Get path of test volume device
+  command: realpath {{ storage_test_volume._device | quote }}
   register: storage_test_sys_node
+  changed_when: false
   when: storage_test_volume.fs_type == "swap"
 
 - name: Gather swap info
   command: cat /proc/swaps
   register: storage_test_swaps
+  changed_when: false
   when: storage_test_volume.fs_type == "swap"
 
 - name: Verify swap status
   assert:
-    that: "{{ storage_test_swaps.stdout |
+    that: storage_test_swaps.stdout |
       regex_findall('^' + storage_test_sys_node.stdout + ' ', multiline=True) |
-      list|length|int == storage_test_swap_expected_matches|int }}"
-    msg: "Unexpected number of matching active swaps"
+      list | length | int == storage_test_swap_expected_matches | int
+    msg: Unexpected number of matching active swaps
   when: storage_test_volume.fs_type == "swap"
 
 #

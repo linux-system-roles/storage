@@ -15,7 +15,7 @@
 - name: Exit playbook when there's not enough unused disks in the system
   fail:
     msg: "Unable to find enough unused disks. Exiting playbook."
-  when: unused_disks is undefined or unused_disks|length < disks_needed|default(1)
+  when: unused_disks | d([]) | length < disks_needed | d(1)
 
 - name: Print unused disks
   debug:

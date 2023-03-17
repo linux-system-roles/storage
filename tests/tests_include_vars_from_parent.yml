@@ -1,7 +1,9 @@
-- hosts: all
+---
+- name: Test role variable override
+  hosts: all
   gather_facts: true
   tasks:
-    - name: create var file in caller that can override the one in called role
+    - name: Create var file in caller that can override the one in called role
       delegate_to: localhost
       copy:
         # usually the fake file will cause the called role to crash of
@@ -24,7 +26,7 @@
         versions:
           - "{{ facts['distribution_version'] }}"
           - "{{ facts['distribution_major_version'] }}"
-        separators: [ "-", "_" ]
+        separators: ["-", "_"]
         # create all variants like CentOS, CentOS_8.1, CentOS-8.1,
         # CentOS-8, CentOS-8.1
         # more formally:
@@ -37,7 +39,8 @@
           map('join') | product(versions) | map('join') | list +
           [facts['distribution'], facts['os_family']] }}"
 
-    - import_role:
+    - name: Import role
+      import_role:
         name: caller
       vars:
         roletoinclude: linux-system-roles.storage

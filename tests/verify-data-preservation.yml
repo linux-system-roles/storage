@@ -1,3 +1,4 @@
+---
 # Verify that a file still exists and no data loss has occurred.
 # To use:
 # - set testfile to a path under the mountpoint being tested
@@ -7,12 +8,12 @@
 #   data in the filesystem where testfile is located
 # - include this file (verify-data-preservation.yml)
 
-- name: stat the file
+- name: Stat the file
   stat:
     path: "{{ testfile }}"
   register: stat_r
 
-- name: assert file presence
+- name: Assert file presence
   assert:
     that:
       stat_r.stat.isreg is defined and stat_r.stat.isreg

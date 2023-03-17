@@ -1,7 +1,13 @@
+---
 - name: Get the backing device path
-  command: realpath /dev/disk/by-uuid/{{ _storage_test_pool_member_path|regex_replace('^.*/luks-', '') }}
+  command: >-
+    realpath /dev/disk/by-uuid/{{ _storage_test_pool_member_path |
+      regex_replace('^.*/luks-', '') }}
   register: _storage_test_member_backing_dev
-  when: storage_test_pool.encryption and storage_test_pool.state == 'present'
+  changed_when: false
+  when:
+    - storage_test_pool.encryption
+    - storage_test_pool.state =='present'
 
 - name: Ensure cryptsetup is present
   package:
@@ -11,23 +17,45 @@
 - name: Collect LUKS info for this member
   command: cryptsetup luksDump {{ _storage_test_member_backing_dev.stdout }}
   register: _storage_test_luks_dump
-  when: storage_test_pool.encryption and storage_test_pool.state == 'present'
+  when:
+    - storage_test_pool.encryption
+    - storage_test_pool.state == 'present'
   changed_when: false
 
 - name: Check LUKS version
   assert:
-    that: "{{ _storage_test_luks_dump.stdout|regex_search('^\\s+Version: ' + storage_test_pool.encryption_luks_version + '$') }}"
-    msg: "Wrong LUKS version for pool {{ storage_test_pool.name }}"
-  when: storage_test_pool.state == 'present' and storage_test_pool.encryption and storage_test_pool.encryption_luks_version
+    that: _storage_test_luks_dump.stdout is search(__pattern, multiline=True)
+    msg: Wrong LUKS version for pool {{ storage_test_pool.name }}
+  vars:
+    __ver: "{{ storage_test_pool.encryption_luks_version |
+      replace('luks', '') }}"
+    __pattern: "^Version:\\s+{{ __ver }}$"
+  when:
+    - storage_test_pool.state == 'present'
+    - storage_test_pool.encryption
+    - storage_test_pool.encryption_luks_version
 
 - name: Check LUKS key size
   assert:
-    that: "{{ _storage_test_luks_dump.stdout|regex_search('^\\s+Key: ' + storage_test_pool.encryption_key_size|string + ' bits$') }}"
-    msg: "Wrong key size for pool {{ storage_test_pool.name }}"
-  when: storage_test_pool.state == 'present' and storage_test_pool.encryption and storage_test_pool.encryption_key_size
+    that: _storage_test_luks_dump.stdout is search(__pattern, multiline=True)
+    msg: Wrong key size for pool {{ storage_test_pool.name }}
+  vars:
+    __pattern: >-
+      ^MK bits:\s+{{ storage_test_pool.encryption_key_size }}$
+  when:
+    - storage_test_pool.state == 'present'
+    - storage_test_pool.encryption
+    - storage_test_pool.encryption_key_size
 
 - name: Check LUKS cipher
   assert:
-    that: "{{ _storage_test_luks_dump.stdout|regex_search('^\\s+Cipher: ' + storage_test_pool.encryption_cipher + '$') }}"
-    msg: "Wrong key size for pool {{ storage_test_pool.name }}"
-  when: storage_test_pool.state == 'present' and storage_test_pool.encryption and storage_test_pool.encryption_cipher
+    that: _storage_test_luks_dump.stdout is search(__pattern, multiline=True)
+    msg: Wrong cipher for pool {{ storage_test_pool.name }}
+  vars:
+    __cipher: "{{ storage_test_pool.encryption_cipher.split('-')[1:] |
+      join('-') }}"
+    __pattern: "^Cipher mode:\\s+{{ __cipher }}$"
+  when:
+    - storage_test_pool.state == 'present'
+    - storage_test_pool.encryption
+    - storage_test_pool.encryption_cipher

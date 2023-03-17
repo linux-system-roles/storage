@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test lv size equal to vg
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -7,13 +8,14 @@
     volume_group_size: '10g'
     lv_size: '10g'
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
-    disk_size: '{{ unused_disk_subfact.sectors|int *
-                   unused_disk_subfact.sectorsize|int }}'
+    disk_size: '{{ unused_disk_subfact.sectors | int *
+                   unused_disk_subfact.sectorsize | int }}'
   tags:
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -23,7 +25,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 1
@@ -40,7 +43,8 @@
                 size: "{{ lv_size }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -54,4 +58,5 @@
               - name: test1
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

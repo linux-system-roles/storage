@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test change disk mount
+  hosts: all
   become: true
   vars:
     mount_location_before: '/opt/test1'
@@ -7,7 +8,8 @@
     volume_size: '5g'
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -17,7 +19,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
         max_return: 1
@@ -32,9 +35,10 @@
             mount_point: "{{ mount_location_before }}"
             disks: "{{ unused_disks }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change the disk device mount location to "{{ mount_location_after }}"
+    - name: Change the disk device mount location to {{ mount_location_after }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -44,7 +48,8 @@
             mount_point: "{{ mount_location_after }}"
             disks: "{{ unused_disks }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
@@ -56,7 +61,8 @@
             mount_point: "{{ mount_location_after }}"
             disks: "{{ unused_disks }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -69,4 +75,5 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

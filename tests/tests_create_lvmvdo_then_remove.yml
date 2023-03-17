@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test VDO creation and remove
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -12,7 +13,8 @@
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -24,26 +26,34 @@
 
     - name: Gather package facts
       package_facts:
-        # gather information about packages
 
     - name: Set blivet package name
       set_fact:
-        blivet_pkg_name: "{{ ansible_facts.packages | select('search','blivet') | select('search', 'python') | list }}"
+        blivet_pkg_name: "{{ ansible_facts.packages |
+          select('search', 'blivet') | select('search', 'python') | list }}"
 
     - name: Set blivet package version
       set_fact:
-        blivet_pkg_version: "{{ ansible_facts.packages[blivet_pkg_name[0]][0]['version'] + '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+        blivet_pkg_version: "{{
+          ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
+          '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
 
     - name: Check if kvdo is loadable
       shell: |
         set -euo pipefail
         modprobe --dry-run kvdo
-      ignore_errors: true
+      ignore_errors: true  # noqa ignore-errors
       changed_when: false
       register: __storage_kvdo_loadable
 
-    - block:
-        - include_tasks: get_unused_disk.yml
+    - name: Run tests if VDO is available
+      when:
+        - blivet_pkg_version is version("3.2.2-10", ">=")
+        - ansible_facts["distribution"] != "Fedora"
+        - __storage_kvdo_loadable is success
+      block:
+        - name: Get unused disks
+          include_tasks: get_unused_disk.yml
           vars:
             min_size: "{{ volume_group_size }}"
             max_return: 1
@@ -63,7 +73,8 @@
                     size: "{{ volume_size }}"
                     mount_point: "{{ mount_location }}"
 
-        - include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
         - name: Repeat the previous invocation to verify idempotence
           include_role:
@@ -80,7 +91,8 @@
                     size: "{{ volume_size }}"
                     mount_point: "{{ mount_location }}"
 
-        - include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
         - name: Remove LVM VDO volume in 'pool1' created above
           include_role:
@@ -89,7 +101,7 @@
             storage_pools:
               - name: pool1
                 disks: "{{ unused_disks }}"
-                state: "absent"
+                state: absent
                 volumes:
                   - name: volume1
                     compression: true
@@ -98,9 +110,12 @@
                     size: "{{ volume_size }}"
                     mount_point: "{{ mount_location }}"
 
-        - include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
-        - name: Create LVM VDO volume under volume group 'pool1' (this time default size)
+        - name: >-
+            Create LVM VDO volume under volume group 'pool1' (this time
+            default size)
           include_role:
             name: linux-system-roles.storage
           vars:
@@ -114,7 +129,8 @@
                     size: "{{ volume_size }}"
                     mount_point: "{{ mount_location }}"
 
-        - include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
         - name: Remove LVM VDO volume in 'pool1' created above
           include_role:
@@ -123,7 +139,7 @@
             storage_pools:
               - name: pool1
                 disks: "{{ unused_disks }}"
-                state: "absent"
+                state: absent
                 volumes:
                   - name: volume1
                     compression: true
@@ -131,9 +147,5 @@
                     size: "{{ volume_size }}"
                     mount_point: "{{ mount_location }}"
 
-        - include_tasks: verify-role-results.yml
-
-      when:
-        - blivet_pkg_version is version("3.2.2-10", ">=")
-        - ansible_facts["distribution"] != "Fedora"
-        - __storage_kvdo_loadable is success
+        - name: Verify role results
+          include_tasks: verify-role-results.yml

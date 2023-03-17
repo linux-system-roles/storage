@@ -1,14 +1,18 @@
 ---
-- hosts: all
+- name: Test change disk fs
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
     mount_location: '/opt/test'
     volume_size: '5g'
-    fs_type_after: "{{ 'ext3' if (ansible_distribution == 'RedHat' and ansible_distribution_major_version == '6') else 'ext4' }}"
-
+    fs_type_after: "{{ 'ext3'
+      if (ansible_distribution == 'RedHat' and
+          ansible_distribution_major_version == '6')
+      else 'ext4' }}"
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -18,7 +22,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
         max_return: 1
@@ -33,9 +38,10 @@
             mount_point: "{{ mount_location }}"
             disks: "{{ unused_disks }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change the disk device file system type to "{{ fs_type_after }}"
+    - name: Change the disk device file system type to {{ fs_type_after }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -46,7 +52,8 @@
             fs_type: "{{ fs_type_after }}"
             disks: "{{ unused_disks }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
       include_role:
@@ -59,7 +66,8 @@
             fs_type: "{{ fs_type_after }}"
             disks: "{{ unused_disks }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -72,4 +80,5 @@
             mount_point: "{{ mount_location }}"
             state: absent
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

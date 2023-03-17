@@ -1,14 +1,25 @@
 ---
-- set_fact:
-    _storage_volume_tests: ['mount', 'fstab', 'fs', 'device', 'encryption', 'md', 'size', 'cache'] # fs: type, label  device: name, type, disks
-  # future:
-  #   device:
-  #     compression
-  #     deduplication
-    _storage_test_volume_present: "{{ storage_test_volume.state == 'present' and (not storage_test_pool|default() or storage_test_pool.state == 'present') }}"
+- name: Set storage volume test variables
+  set_fact:
+    _storage_volume_tests:  # fs: type, label  device: name, type, disks
+      - mount
+      - fstab
+      - fs
+      - device
+      - encryption
+      - md
+      - size
+      - cache
+    # future:
+    #   device:
+    #     compression
+    #     deduplication
+    _storage_test_volume_present: "{{ storage_test_volume.state == 'present' and
+      (not storage_test_pool | default() or
+       storage_test_pool.state == 'present') }}"
 
-- name:
-  include_tasks: "test-verify-volume-{{ storage_test_volume_subset }}.yml"
+- name: Run test verify for {{ storage_test_volume_subset }}
+  include_tasks: test-verify-volume-{{ storage_test_volume_subset }}.yml
   loop: "{{ _storage_volume_tests }}"
   loop_control:
     loop_var: storage_test_volume_subset

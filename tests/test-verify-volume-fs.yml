@@ -1,17 +1,19 @@
 ---
-
 # type
 - name: Verify fs type
   assert:
-    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].fstype == storage_test_volume.fs_type }}"
+    that: storage_test_blkinfo.info[storage_test_volume._device].fstype ==
+      storage_test_volume.fs_type
   when: storage_test_volume.fs_type and _storage_test_volume_present
 
 # label
 - name: Verify fs label
   assert:
-    that: "{{ storage_test_blkinfo.info[storage_test_volume._device].label == storage_test_volume.fs_label }}"
+    that: storage_test_blkinfo.info[storage_test_volume._device].label ==
+      storage_test_volume.fs_label
     msg: >-
-      Volume '{{ storage_test_volume.name }}' labels do not match when they should
+      Volume '{{ storage_test_volume.name }}' labels do not match when they
+      should
       ('{{ storage_test_blkinfo.info[storage_test_volume._device].label }}',
       '{{ storage_test_volume.fs_label }}')
-  when: _storage_test_volume_present
+  when: _storage_test_volume_present | bool

@@ -1,48 +1,69 @@
 ---
 
-- name: parse the actual size of the volume
+- name: Parse the actual size of the volume
   bsize:
     size: "{{ storage_test_blkinfo.info[storage_test_volume._device].size }}"
   register: storage_test_actual_size
-  when: _storage_test_volume_present and storage_test_volume.type not in ('partition', 'disk')
+  when:
+    - _storage_test_volume_present | bool
+    - storage_test_volume.type not in ['partition', 'disk']
 
-- name: parse the requested size of the volume
+- name: Parse the requested size of the volume
   bsize:
     size: "{{ storage_test_volume.size }}"
   register: storage_test_requested_size
-  when: _storage_test_volume_present and storage_test_volume.type == "lvm" and "%" not in storage_test_volume.size|string
+  when:
+    - _storage_test_volume_present | bool
+    - storage_test_volume.type == "lvm"
+    - "'%' not in storage_test_volume.size | string"
 
 - name: Establish base value for expected size
   set_fact:
     storage_test_expected_size: "{{ storage_test_requested_size.bytes }}"
-  when: _storage_test_volume_present and storage_test_volume.type == "lvm" and "%" not in storage_test_volume.size|string
+  when:
+    - _storage_test_volume_present | bool
+    - storage_test_volume.type == "lvm"
+    - "'%' not in storage_test_volume.size | string"
 
-- debug:
+- name: Show expected size
+  debug:
     var: storage_test_expected_size
 
 - name: Get the size of parent/pool device
   bsize:
     size: "{{ ansible_lvm.vgs[storage_test_pool.name].size_g + 'G' }}"
   register: storage_test_pool_size
-  when: _storage_test_volume_present and storage_test_volume.type == "lvm"
+  when:
+    - _storage_test_volume_present | bool
+    - storage_test_volume.type == "lvm"
 
 - name: Convert percentage-based size to normal size as needed
+  when:
+    - _storage_test_volume_present | bool
+    - storage_test_volume.type == "lvm"
+    - "'%' in storage_test_volume.size | string"
   block:
-    - debug:
+    - name: Show test pool
+      debug:
         var: storage_test_pool
 
-    - debug:
+    - name: Show test blockinfo
+      debug:
         var: storage_test_blkinfo
 
-    - debug:
+    - name: Show test pool size
+      debug:
         var: storage_test_pool_size
 
     - name: Calculate the expected size based on pool size and percentage value
       set_fact:
-        storage_test_expected_size: "{{ (storage_test_pool_size.bytes * ((storage_test_volume.size[:-1]|int)/100.0)) }}"
-  when: _storage_test_volume_present and storage_test_volume.type == "lvm" and "%" in storage_test_volume.size|string
+        storage_test_expected_size: "{{ (storage_test_pool_size.bytes *
+          ((storage_test_volume.size[:-1] | int) / 100.0)) }}"
 
 - name: Process thin pool sizes when applicable
+  when:
+    - storage_test_volume.thin
+    - _storage_test_volume_present | bool
   block:
     - name: Default thin pool reserved space values
       set_fact:
@@ -61,55 +82,70 @@
     # Cannot use Size type yet, it would complicate following logic
     - name: Calculate maximum usable space in thin pool
       set_fact:
-        _storage_test_max_thin_pool_size: "{{ storage_test_pool_size.bytes * (1 - (_storage_test_default_thpool_reserve_percent|int)/100.0) }}"
+        _storage_test_max_thin_pool_size: "{{ storage_test_pool_size.bytes *
+          (1 - (_storage_test_default_thpool_reserve_percent | int) / 100.0) }}"
 
     - name: Apply upper size limit to max usable thin pool space
       set_fact:
-        _storage_test_max_thin_pool_size: "{{ storage_test_pool_size.bytes - _storage_test_default_thpool_reserve_max.bytes }}"
-      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size|int > _storage_test_default_thpool_reserve_max.bytes
+        _storage_test_max_thin_pool_size: "{{ storage_test_pool_size.bytes -
+          _storage_test_default_thpool_reserve_max.bytes }}"
+      when: storage_test_pool_size.bytes -
+        _storage_test_max_thin_pool_size | int >
+        _storage_test_default_thpool_reserve_max.bytes
 
     - name: Apply lower size limit to max usable thin pool space
       set_fact:
-        _storage_test_max_thin_pool_size: "{{storage_test_pool_size.bytes - _storage_test_default_thpool_reserve_min.bytes}}"
-      when: storage_test_pool_size.bytes - _storage_test_max_thin_pool_size|int < _storage_test_default_thpool_reserve_min.bytes
+        _storage_test_max_thin_pool_size: "{{ storage_test_pool_size.bytes -
+          _storage_test_default_thpool_reserve_min.bytes }}"
+      when: storage_test_pool_size.bytes -
+        _storage_test_max_thin_pool_size | int <
+        _storage_test_default_thpool_reserve_min.bytes
 
     - name: Convert maximum usable thin pool space from int to Size
       bsize:
         size: "{{ _storage_test_max_thin_pool_size }}B"
       register: _storage_test_max_thin_pool_size
 
-    - debug:
+    - name: Show max thin pool size
+      debug:
         var: _storage_test_max_thin_pool_size
 
-    - debug:
+    - name: Show volume thin pool size
+      debug:
         var: storage_test_volume.thin_pool_size
 
-    - debug:
+    - name: Show test volume size
+      debug:
         var: storage_test_volume.size
 
     - name: Establish base value for expected thin pool size
       set_fact:
-        storage_test_expected_thin_pool_size: "{{ storage_test_pool_size.bytes }}"
+        storage_test_expected_thin_pool_size: "{{
+          storage_test_pool_size.bytes }}"
       when:
         - storage_test_volume.thin_pool_size is not none
-        - true and '%' not in storage_test_volume.thin_pool_size  # workaround - starting condition with '%' leads to a syntax error
+        - "'%' not in storage_test_volume.thin_pool_size"
 
     - name: Calculate the expected size based on pool size and percentage value
       set_fact:
-        storage_test_expected_thin_pool_size: "{{ (_storage_test_max_thin_pool_size.bytes * ((storage_test_volume.thin_pool_size[:-1]|int)/100.0)) }}"
+        storage_test_expected_thin_pool_size: "{{
+          (_storage_test_max_thin_pool_size.bytes *
+          ((storage_test_volume.thin_pool_size[:-1] | int) / 100.0)) }}"
       when:
         - storage_test_volume.thin_pool_size is not none
-        - true and '%' in storage_test_volume.thin_pool_size|string  # workaround - starting condition with '%' leads to a syntax error
+        - "'%' in storage_test_volume.thin_pool_size | string"
 
     - name: Establish base value for expected thin pool volume size
       set_fact:
         storage_test_expected_tp_volume_size: "{{ storage_test_expected_size }}"
 
-    - name: Calculate the expected thin pool volume size based on percentage value
+    - name: >-
+        Calculate the expected thin pool volume size based on percentage value
       set_fact:
-        storage_test_expected_tp_volume_size: "{{ ((storage_test_expected_thin_pool_size|int) * ((storage_test_volume.size[:-1]|int)/100.0)) }}"
-      when:
-        - true and '%' in storage_test_volume.size|string  # workaround - starting condition with '%' leads to a syn:tax error
+        storage_test_expected_tp_volume_size: "{{
+          ((storage_test_expected_thin_pool_size | int) *
+          ((storage_test_volume.size[:-1] | int) / 100.0)) }}"
+      when: "'%' in storage_test_volume.size | string"
 
     - name: Replace expected volume size with calculated value
       set_fact:
@@ -117,17 +153,22 @@
       when:
         - storage_test_volume.thin_pool_size is not none
 
-  when:
-    - storage_test_volume.thin
-    - _storage_test_volume_present
-
-- debug:
+- name: Show actual size
+  debug:
     var: storage_test_actual_size
 
-- debug:
+- name: Show expected size
+  debug:
     var: storage_test_expected_size
 
-- assert:
-    that: (storage_test_expected_size|int - storage_test_actual_size.bytes)|abs / storage_test_expected_size|int < 0.02
-    msg: "Volume {{ storage_test_volume.name }} has unexpected size (expected: {{ storage_test_expected_size|int }} / actual: {{ storage_test_actual_size.bytes }})"
-  when: _storage_test_volume_present and storage_test_volume.type == "lvm"
+- name: Assert expected size is actual size
+  assert:
+    that: (storage_test_expected_size | int - storage_test_actual_size.bytes) |
+      abs / storage_test_expected_size | int < 0.02
+    msg: >-
+      Volume {{ storage_test_volume.name }} has unexpected size
+      (expected: {{ storage_test_expected_size | int }} /
+      actual: {{ storage_test_actual_size.bytes }})
+  when:
+    - _storage_test_volume_present | bool
+    - storage_test_volume.type == "lvm"

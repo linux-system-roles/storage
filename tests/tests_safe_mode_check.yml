@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Test safe mode
+  hosts: all
   become: true
   vars:
     storage_safe_mode: true
@@ -12,7 +13,8 @@
     - tests::lvm
 
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -22,7 +24,8 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 1
@@ -35,51 +38,47 @@
               - nilfs-utils
             state: present
       rescue:
-        - set_fact:
-            storage_test_skip_rest: True
+        - name: Set skip rest true
+          set_fact:
+            storage_test_skip_rest: true
 
-    - block:
+    - name: Run test if nilfs is available
+      when: storage_test_skip_rest is not defined or not storage_test_skip_rest
+      block:
         - name: Create nilfs2 partition (1/2)
-          command:
-            cmd: "parted -s /dev/{{ unused_disks[0] }} mklabel gpt"
+          command: parted -s /dev/{{ unused_disks[0] }} mklabel gpt
+          changed_when: false
 
         - name: Create nilfs2 partition (1/2)
-          command:
-            cmd: "parted -s /dev/{{ unused_disks[0] }} mkpart primary 0% 100%"
+          command: parted -s /dev/{{ unused_disks[0] }} mkpart primary 0% 100%
+          changed_when: false
 
-        - name: create nilfs2 partition (2/2)
-          command:
-            cmd: "mkfs -t nilfs2 -f /dev/{{ unused_disks[0] }}1"
+        - name: Create nilfs2 partition (2/2)
+          command: mkfs -t nilfs2 -f /dev/{{ unused_disks[0] }}1
+          changed_when: false
 
         - name: Verify that the play fails with expected error message
-          block:
-            - name: Create two LVM logical volumes under volume group 'foo'
-              include_role:
-                name: linux-system-roles.storage
-              vars:
-                storage_pools:
-                  - name: foo
-                    disks: "{{ unused_disks }}"
-                    volumes:
-                      - name: test1
-                        size: "{{ volume1_size }}"
-                      - name: test2
-                        size: "{{ volume2_size }}"
-
-            - name: unreachable task
-              fail:
-                msg: UNREACH
-          rescue:
-            - name: Check that we failed in the role
-              assert:
-                that:
-                  - ansible_failed_result.msg != 'UNREACH'
-                msg: "Role has not failed when it should have"
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: >-
+              cannot remove existing formatting .+? and/or devices on
+              disk .+?pool .+?in safe mode
+            __storage_failed_msg: >-
+              Role did not report correct message about making changes in safe
+              mode
+            __storage_failed_params:
+              storage_pools:
+                - name: foo
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      size: "{{ volume1_size }}"
+                    - name: test2
+                      size: "{{ volume2_size }}"
 
         - name: Cleanup - remove nilfs2 partition
-          command:
-            cmd: "wipefs -a /dev/{{ unused_disks[0] }}"
-      when: storage_test_skip_rest is not defined or not storage_test_skip_rest
+          command: wipefs -a /dev/{{ unused_disks[0] }}
+          changed_when: false
 
     #
     # Clean up.

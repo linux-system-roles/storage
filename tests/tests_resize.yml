@@ -1,4 +1,6 @@
-- hosts: all
+---
+- name: Test resize
+  hosts: all
   become: true
   vars:
     storage_safe_mode: false
@@ -6,18 +8,18 @@
     volume_group_size: '10g'
     volume_size_before: '5g'
     volume_size_after: '9g'
-    invalid_size1: 'xyz GiB'
-    invalid_size2: 'none'
+    invalid_size1: xyz GiB
+    invalid_size2: none
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
-    too_large_size: '{{ unused_disk_subfact.sectors|int * 1.2 *
-                        unused_disk_subfact.sectorsize|int }}'
-    disk_size: '{{ unused_disk_subfact.sectors|int *
-                   unused_disk_subfact.sectorsize|int }}'
+    too_large_size: '{{ unused_disk_subfact.sectors | int * 1.2 *
+                        unused_disk_subfact.sectorsize | int }}'
+    disk_size: '{{ unused_disk_subfact.sectors | int *
+                   unused_disk_subfact.sectorsize | int }}'
   tags:
     - tests::lvm
-
   tasks:
-    - include_role:
+    - name: Run the role
+      include_role:
         name: linux-system-roles.storage
 
     - name: Mark tasks to be skipped
@@ -27,14 +29,17 @@
           - packages_installed
           - service_facts
 
-    - include_tasks: get_unused_disk.yml
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
     # For ext4 FS
 
-    - name: Create one LVM logical volume with "{{ volume_size_before }}" under one volume group
+    - name: >-
+        Create one LVM logical volume under one volume group with size
+        {{ volume_size_before }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -45,13 +50,14 @@
             volumes:
               - name: test1
                 # resizing is currently supported only for ext2/3/4
-                fs_type: 'ext4'
+                fs_type: ext4
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change volume_size to "{{ volume_size_after }}"
+    - name: Change volume_size to {{ volume_size_after }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -65,9 +71,10 @@
                 size: "{{ volume_size_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change volume size to "{{ volume_size_before }}"
+    - name: Change volume size to {{ volume_size_before }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -77,48 +84,34 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
-                fs_type: 'ext4'
+                fs_type: ext4
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Test for correct handling of too-large volume size
-      block:
-        - name: Try to create LVM with a too-large volume size, resize to "{{ too_large_size }}"
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    fs_type: 'ext4'
-                    size: "{{ too_large_size }}"
-                    mount_point: "{{ mount_location }}"
-
-        - name: Unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output
-          assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('volume.+cannot be resized to.+') and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ invalid volume size"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: volume.+cannot be resized to.+
+        __storage_failed_msg: >-
+          Unexpected behavior w/ invalid volume size
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  fs_type: ext4
+                  size: "{{ too_large_size }}"
+                  mount_point: "{{ mount_location }}"
 
     - name: Test for correct handling of volume size equal disk's size
       block:
-        - name: Try to create LVM with volume size equal disk's size, resize to "{{ disk_size }}"
+        - name: >-
+            Try to create LVM with volume size equal disk's size, resize to
+            {{ disk_size }}
           include_role:
             name: linux-system-roles.storage
           vars:
@@ -127,77 +120,44 @@
                 disks: "{{ unused_disks }}"
                 volumes:
                   - name: test1
-                    fs_type: 'ext4'
+                    fs_type: ext4
                     size: "{{ disk_size }}"
                     mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Test for correct handling of invalid size specification
-      block:
-        - name: Try to create LVM with an invalid size specification, resize to "{{ invalid_size1 }}"
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    fs_type: 'ext4'
-                    size: "{{ invalid_size1 }}"
-                    mount_point: "{{ mount_location }}"
-
-        - name: Unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output
-          assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('invalid.+size') and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ invalid volume size"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: invalid.+size
+        __storage_failed_msg: >-
+          Unexpected behavior w/ invalid volume size
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  fs_type: ext4
+                  size: "{{ invalid_size1 }}"
+                  mount_point: "{{ mount_location }}"
 
     - name: Test for correct handling of invalid size specification
-      block:
-        - name: Try to create LVM with an invalid size specification, resize to "{{ invalid_size2 }}"
-          include_role:
-            name: linux-system-roles.storage
-          vars:
-            storage_pools:
-              - name: foo
-                disks: "{{ unused_disks }}"
-                volumes:
-                  - name: test1
-                    fs_type: 'ext4'
-                    size: "{{ invalid_size2 }}"
-                    mount_point: "{{ mount_location }}"
-
-        - name: Unreachable task
-          fail:
-            msg: UNREACH
-
-      rescue:
-        - name: Check that we failed in the role
-          assert:
-            that:
-              - ansible_failed_result.msg != 'UNREACH'
-            msg: "Role has not failed when it should have"
-
-        - name: Verify the output
-          assert:
-            that: "blivet_output.failed and
-                   blivet_output.msg|regex_search('invalid.+size') and
-                   not blivet_output.changed"
-            msg: "Unexpected behavior w/ invalid volume size"
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: invalid.+size
+        __storage_failed_msg: >-
+          Unexpected behavior w/ invalid volume size
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  fs_type: ext4
+                  size: "{{ invalid_size2 }}"
+                  mount_point: "{{ mount_location }}"
 
     - name: Clean up
       include_role:
@@ -212,11 +172,14 @@
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     # For ext3 FS
 
-    - name: Create a LVM logical volume with "{{ volume_size_before }}" for ext3 FS
+    - name: >-
+        Create a LVM logical volume with for ext3 FS size
+        {{ volume_size_before }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -226,13 +189,14 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
-                fs_type: 'ext3'
+                fs_type: ext3
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change volume size to "{{ volume_size_after }}"
+    - name: Change volume size to {{ volume_size_after }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -242,13 +206,14 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
-                fs_type: 'ext3'
+                fs_type: ext3
                 size: "{{ volume_size_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change volume size to "{{ volume_size_before }}"
+    - name: Change volume size to {{ volume_size_before }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -258,11 +223,12 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
-                fs_type: 'ext3'
+                fs_type: ext3
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -277,11 +243,14 @@
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     # For ext2 FS
 
-    - name: Create a LVM logical volume with "{{ volume_size_before }}" for ext2 FS
+    - name: >-
+        Create a LVM logical volume with for ext2 FS size
+        {{ volume_size_before }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -291,13 +260,14 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
-                fs_type: 'ext2'
+                fs_type: ext2
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change volume size to "{{ volume_size_after }}"
+    - name: Change volume size to {{ volume_size_after }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -307,13 +277,14 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
-                fs_type: 'ext2'
+                fs_type: ext2
                 size: "{{ volume_size_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
-    - name: Change volume size to "{{ volume_size_before }}"
+    - name: Change volume size to {{ volume_size_before }}
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -323,11 +294,12 @@
             disks: "{{ unused_disks }}"
             volumes:
               - name: test1
-                fs_type: 'ext2'
+                fs_type: ext2
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
 
     - name: Clean up
       include_role:
@@ -342,4 +314,5 @@
                 size: "{{ volume_size_before }}"
                 mount_point: "{{ mount_location }}"
 
-    - include_tasks: verify-role-results.yml
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
