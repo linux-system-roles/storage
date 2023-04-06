@@ -1,6 +1,14 @@
 Changelog
 =========
 
+[1.9.7] - 2023-04-06
+--------------------
+
+### Other Changes
+
+- Fix ansible-lint issues in tests (#340)
+- Add README-ansible.md to refer Ansible intro page on linux-system-roles.github.io (#342)
+
 [1.9.6] - 2023-02-01
 --------------------
 
