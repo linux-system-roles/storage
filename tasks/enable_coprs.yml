@@ -8,12 +8,12 @@
   when:
     - _storage_copr_packages is defined
     - copr_packages is defined
-    - repo.packages|intersect(copr_packages)|length
+    - repo.packages | intersect(copr_packages) | length > 0
 
 - name: Make sure COPR support packages are present
   package:
     name: "{{ _storage_copr_support_packages }}"
-  when: install_copr is defined and install_copr | bool
+  when: install_copr | d(false) | bool
 
 - name: Enable COPRs
   include_tasks: enable_copr.yml
@@ -23,4 +23,4 @@
   when:
     - _storage_copr_packages is defined
     - copr_packages is defined
-    - repo.packages | intersect(copr_packages) | length
+    - repo.packages | intersect(copr_packages) | length > 0
