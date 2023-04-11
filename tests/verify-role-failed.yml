@@ -33,19 +33,13 @@
         - __storage_failed_regex is defined
         - __storage_failed_msg is defined
 
-    - name: Verify module raised the correct exception
+    - name: Verify correct exception or error message
       assert:
-        that: ansible_failed_result.msg.exception is
-          search(__storage_failed_exception)
-      when:
-        - __storage_failed_exception is defined
-        - ansible_failed_result.msg.exception is defined
-
-    - name: Verify module raised the correct exception
-      assert:
-        that: ansible_failed_result.msg.module_stdout is
-          search(__storage_failed_exception)
-      when:
-        - __storage_failed_exception is defined
-        - not ansible_failed_result.msg.exception is defined
-        - ansible_failed_result.msg.module_stdout is defined
+        that: exception is search(__storage_failed_exception) or
+          stdout is search(__storage_failed_exception) or
+          stderr is search(__storage_failed_exception)
+      when: __storage_failed_exception is defined
+      vars:
+        exception: "{{ ansible_failed_result.msg.exception | d('') }}"
+        stdout: "{{ ansible_failed_result.msg.module_stdout | d('') }}"
+        stderr: "{{ ansible_failed_result.msg.module_stderr | d('') }}"
