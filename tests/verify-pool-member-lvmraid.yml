@@ -6,13 +6,14 @@
     - storage_test_lvmraid_volume.state != "absent"
   block:
     - name: Get information about LVM RAID
-      # noqa yaml[line-length]
+      # yamllint disable rule:line-length
       command: >-
         lvs --noheading -o lv_name --select
         'lv_name={{ storage_test_lvmraid_volume.name }}&&lv_layout={{ storage_test_lvmraid_volume.raid_level }}'
         {{ storage_test_pool.name }}
       register: storage_test_lvmraid_status
       changed_when: false
+      # yamllint enable rule:line-length
 
     - name: Check that volume is LVM RAID
       assert:
