@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.9.8] - 2023-04-13
+--------------------
+
+### Other Changes
+
+- ansible-lint - use changed_when for conditional tasks; add line length comment (#344)
+
 [1.9.7] - 2023-04-06
 --------------------
 
