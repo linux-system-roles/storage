@@ -1851,109 +1851,19 @@ def manage_pool(b, pool):
         volume['_mount_id'] = bvolume._volume.get('_mount_id', '')
 
 
-class FSTab(object):
-    def __init__(self, blivet_obj):
-        self._blivet = blivet_obj
-        self._entries = list()
-        self.parse()
-
-    def lookup(self, key, value):
-        return next((e for e in self._entries if e.get(key) == value), None)
-
-    def reset(self):
-        self._entries = list()
-
-    def parse(self):
-        if self._entries:
-            self.reset()
-
-        with open('/etc/fstab') as f:
-            for line in f.readlines():
-                if line.lstrip().startswith("#"):
-                    continue
-
-                fields = line.split()
-                if len(fields) < 6:
-                    continue
-
-                device = self._blivet.devicetree.resolve_device(fields[0])
-                self._entries.append(dict(device_id=fields[0],
-                                          device_path=getattr(device, 'path', None),
-                                          fs_type=fields[2],
-                                          mount_point=fields[1],
-                                          mount_options=fields[3]))
-
-
-def get_mount_info(pools, volumes, actions, fstab):
-    """ Return a list of argument dicts to pass to the mount module to manage mounts.
-
-        The overall approach is to remove existing mounts associated with file systems
-        we are removing and those with changed mount points, re-adding them with the
-        new mount point later.
-
-        Removed mounts go directly into the mount_info list, which is the return value,
-        while added/active mounts to a list that gets appended to the mount_info list
-        at the end to ensure that removals happen first.
-    """
-    mount_info = list()
-    mount_vols = list()
-
-    # account for mounts removed by removing or reformatting volumes
-    if actions:
-        for action in actions:
-            if action.is_destroy and action.is_format and action.format.type is not None:
-                mount = fstab.lookup('device_path', action.device.path)
-                if mount is not None:
-                    mount_info.append({"src": mount['device_id'], "path": mount['mount_point'],
-                                       'state': 'absent', 'fstype': mount['fs_type']})
-
-    def handle_new_mount(volume, fstab):
-        replace = None
-        mounted = False
-
-        mount = fstab.lookup('device_path', volume['_device'])
-        if (volume['mount_point'] and volume['mount_point'].startswith('/')) \
-           or volume['fs_type'] == 'swap':
-            mounted = True
-
-        # handle removal of existing mounts of this volume
-        if mount and mount['fs_type'] != 'swap' and mount['mount_point'] != volume['mount_point']:
-            replace = dict(path=mount['mount_point'], state="absent")
-
-        return mounted, replace
-
+def update_mounts(b, pools, volumes, actions):
     # account for mounts that we set up or are replacing in pools
     for pool in pools:
         for volume in pool['volumes']:
             if pool['state'] == 'present' and volume['state'] == 'present':
-                mounted, replace = handle_new_mount(volume, fstab)
-                if replace:
-                    mount_info.append(replace)
-                if mounted:
-                    mount_vols.append(volume)
+                dev = b.devicetree.resolve_device(volume['_device'])
+                dev.format.mount(mountpoint=volume['mount_point'], options=volume['mount_options'])
 
     # account for mounts that we set up or are replacing in standalone volumes
     for volume in volumes:
         if volume['state'] == 'present':
-            mounted, replace = handle_new_mount(volume, fstab)
-            if replace:
-                mount_info.append(replace)
-            if mounted:
-                mount_vols.append(volume)
-
-    for volume in mount_vols:
-        mount_info.append({'src': volume['_mount_id'],
-                           'path': volume['mount_point'] if volume['fs_type'] != "swap" else "none",
-                           'fstype': volume['fs_type'],
-                           'opts': volume['mount_options'],
-                           'dump': volume['mount_check'],
-                           'passno': volume['mount_passno'],
-                           'state': 'mounted' if volume['fs_type'] != "swap" else "present",
-                           'owner': volume['mount_user'],
-                           'group': volume['mount_group'],
-                           'mode': volume['mount_mode']})
-
-    return mount_info
+            dev = b.devicetree.resolve_device(volume['_device'])
+            dev.format.mount(mountpoint=volume['mount_point'], options=volume['mount_options'])
 
 
 def get_crypt_info(actions):
@@ -2210,8 +2120,8 @@ def run_module():
         volume_defaults = module.params['volume_defaults']
 
     b = Blivet()
+    b.fstab.dest_file = "/etc/fstab"
     b.reset()
-    fstab = FSTab(b)
     actions = list()
 
     if module.params['packages_only']:
@@ -2277,7 +2187,7 @@ def run_module():
         callbacks.action_executed.add(record_action)
         callbacks.action_executed.add(ensure_udev_update)
         try:
-            b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
+            b.devicetree.actions.process(devices=b.devicetree.devices, fstab=b.fstab, dry_run=module.check_mode)
         except Exception as e:
             module.fail_json(msg="Failed to commit changes to disk: %s" % str(e), **result)
         finally:
@@ -2286,8 +2196,8 @@ def run_module():
 
     update_fstab_identifiers(b, module.params['pools'], module.params['volumes'])
     activate_swaps(b, module.params['pools'], module.params['volumes'])
+    update_mounts(b, module.params['pools'], module.params['volumes'], actions)
 
-    result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
     result['crypts'] = get_crypt_info(actions)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']

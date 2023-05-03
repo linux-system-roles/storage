@@ -36,13 +36,24 @@
     __mount_options: "{{ storage_test_volume.mount_options }}"
     __pattern: ' {{ __mount_point }} .* {{ __mount_options }} +'
 
+- name: Execute script to find if there is a device alias in fstab
+  script: scripts/test_fstab_dev_ids.py {{ storage_test_volume._mount_id }} {{ storage_test_fstab.stdout_lines }}
+  args:
+    executable: python3
+  register: storage_test_dev_id_results
+  changed_when: false
+
+- name: Clarify the results by assigning them into variables
+  set_fact:
+    storage_test_exact_id_matches: "{{ storage_test_dev_id_results.stdout.split(' ')[0] }}"
+    storage_test_partial_id_matches: "{{ storage_test_dev_id_results.stdout.split(' ')[1] }}"
+
 # device id
 - name: Verify that the device identifier appears in /etc/fstab
   assert:
-    that: storage_test_fstab_id_matches | length ==
-      storage_test_fstab_expected_id_matches | int
-    msg: Expected device identifier not found in /etc/fstab.
-  when: _storage_test_volume_present | bool
+    that: "{{ storage_test_exact_id_matches|int + storage_test_partial_id_matches|int == storage_test_fstab_expected_id_matches|int }}"
+    msg: "Expected device identifier not found in /etc/fstab. (expected {{ storage_test_fstab_expected_id_matches }} matches for {{ storage_test_volume._mount_id }})"
+  when: _storage_test_volume_present
 
 # mount point
 - name: Verify the fstab mount point
@@ -71,8 +82,11 @@
 - name: Clean up variables
   set_fact:
     storage_test_fstab_id_matches: null
+    storage_test_fstab_uuid_matches: null
     storage_test_fstab_mount_point_matches: null
     storage_test_fstab_expected_id_matches: null
+    storage_test_fstab_exact_id_matches: null
+    storage_test_fstab_partial_id_matches: null
     storage_test_fstab_expected_mount_point_matches: null
     storage_test_fstab_mount_options_matches: null
     storage_test_fstab_expected_mount_options_matches: null
