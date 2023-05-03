@@ -26,6 +26,32 @@
           - packages_installed
           - service_facts
 
+    - name: Gather package facts
+      package_facts:
+
+    - name: Set blivet package name
+      set_fact:
+        blivet_pkg_name: "{{ ansible_facts.packages |
+          select('search', 'blivet') | select('search', 'python') | list }}"
+
+    - name: Set blivet package version
+      set_fact:
+        blivet_pkg_version: "{{
+          ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
+          '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+
+    - name: Set distribution version
+      set_fact:
+        is_rhel9: "{{ (ansible_facts.distribution == 'CentOS' or
+                    ansible_facts.distribution == 'Enterprise Linux' or
+                    ansible_facts.distribution == 'RedHat') and
+                    ansible_facts.distribution_major_version == '9' }}"
+        is_rhel8: "{{ (ansible_facts.distribution == 'CentOS' or
+                    ansible_facts.distribution == 'Enterprise Linux' or
+                    ansible_facts.distribution == 'RedHat') and
+                    ansible_facts.distribution_major_version == '8' }}"
+        is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
+
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
       vars:
@@ -217,3 +243,47 @@
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
+
+    - name: Run test on supported platforms
+      when: ((is_fedora and blivet_pkg_version is version("3.7.1-2", ">=")) or
+             (is_rhel8 and blivet_pkg_version is version("3.6.0-5", ">=")) or
+             (is_rhel9 and blivet_pkg_version is version("3.6.0-6", ">=")))
+      block:
+        - name: Create a RAID0 lvm raid device with custom chunk (stripe) size
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: vg1
+                disks: "{{ unused_disks }}"
+                type: lvm
+                state: present
+                volumes:
+                  - name: lv1
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
+                    raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+                    raid_level: raid0
+                    raid_chunk_size: "256 KiB"
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+        - name: Remove the device created above
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: vg1
+                disks: "{{ unused_disks }}"
+                type: lvm
+                state: absent
+                volumes:
+                  - name: lv1
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
+                    raid_level: raid0
+                    raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml

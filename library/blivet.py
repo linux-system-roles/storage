@@ -760,7 +760,11 @@ class BlivetLVMVolume(BlivetVolume):
         else:
             pvs = parent_device.pvs
 
-        return dict(seg_type=self._volume['raid_level'], pvs=pvs)
+        # get stripe size (chunk size in our terminology)
+        stripe_size = self._spec_dict.get("raid_chunk_size")
+        stripe_size = Size(stripe_size) if stripe_size is not None else None
+
+        return dict(seg_type=self._volume['raid_level'], pvs=pvs, stripe_size=stripe_size)
 
     def _detach_cache(self):
         """ Detach cache from the volume and remove the unused cache pool """
@@ -1749,6 +1753,7 @@ def run_module():
              compression=dict(type='bool'),
              deduplication=dict(type='bool'),
              raid_disks=dict(type='list', elements='str', default=list()),
+             raid_chunk_size=dict(type='str'),
              thin_pool_name=dict(type='str'),
              thin_pool_size=dict(type='str'),
              thin=dict(type='bool', default=False),
