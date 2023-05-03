@@ -117,3 +117,37 @@
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
+
+    - name: Create a RAID0 device
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            raid_level: "raid0"
+            raid_device_count: 3
+            raid_metadata_version: "1.0"
+            raid_chunk_size: "1024 KiB"
+            state: present
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Remove the pool created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: vg1
+            disks: "{{ unused_disks }}"
+            type: lvm
+            raid_level: "raid0"
+            raid_device_count: 3
+            raid_metadata_version: "1.0"
+            raid_chunk_size: "1024 KiB"
+            state: absent
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

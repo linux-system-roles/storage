@@ -83,3 +83,39 @@
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
+
+    - name: Create a RAID0 device mounted on "{{ mount_location }}"
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test0
+            type: raid
+            raid_level: "raid0"
+            raid_device_count: 3
+            raid_metadata_version: "1.0"
+            raid_chunk_size: "1024K"
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: present
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Remove the disk device created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test0
+            type: raid
+            raid_level: "raid0"
+            raid_device_count: 3
+            raid_metadata_version: "1.0"
+            raid_chunk_size: "1024K"
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            state: absent
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml

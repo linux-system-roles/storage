@@ -1745,7 +1745,8 @@ def run_module():
         dict(disks=dict(type='list'),
              raid_device_count=dict(type='int'),
              raid_spare_count=dict(type='int'),
-             raid_metadata_version=dict(type='str')))
+             raid_metadata_version=dict(type='str'),
+             raid_chunk_size=dict(type='str')))
     pool_volume_opts = copy.deepcopy(common_volume_opts)
     pool_volume_opts.update(
         dict(cached=dict(type='bool'),
@@ -1774,6 +1775,7 @@ def run_module():
                                 raid_device_count=dict(type='int'),
                                 raid_spare_count=dict(type='int'),
                                 raid_metadata_version=dict(type='str'),
+                                raid_chunk_size=dict(type='str'),
                                 state=dict(type='str', default='present', choices=['present', 'absent']),
                                 type=dict(type='str'),
                                 volumes=dict(type='list', elements='dict', default=list(),
