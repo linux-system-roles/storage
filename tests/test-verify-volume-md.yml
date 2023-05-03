@@ -32,6 +32,25 @@
           regex_escape() }}"
       when: storage_test_volume.raid_metadata_version is defined
 
+    - name: Set chunk size regex
+      set_fact:
+        storage_test_md_chunk_size_re: "{{
+          storage_test_mdadm.stdout | regex_search('Chunk Size : ([0-9]+[KMG])',
+          '\\1') }}"
+      when:
+        - storage_test_volume.raid_chunk_size is defined
+        - storage_test_volume.raid_chunk_size is not none
+        - storage_test_volume.raid_chunk_size | string != "0 B"
+
+    - name: Parse the chunk size
+      bsize:
+        size: "{{ storage_test_md_chunk_size_re[0] }}"
+      register: storage_test_parsed_md_chunk_size
+      when:
+        - storage_test_volume.raid_chunk_size is defined
+        - storage_test_volume.raid_chunk_size is not none
+        - storage_test_volume.raid_chunk_size | string != "0 B"
+
     - name: Check RAID active devices count
       assert:
         that: storage_test_mdadm.stdout is
@@ -58,3 +77,13 @@
           Expected {{ storage_test_volume.raid_metadata_version }} RAID metadata
           version.
       when: storage_test_volume.raid_metadata_version is not none
+
+    - name: Check RAID chunk size
+      assert:
+        that: storage_test_parsed_md_chunk_size | int ==
+          storage_test_volume.raid_chunk_size | int
+        msg: Expected {{ storage_test_volume.raid_chunk_size }} RAID chunk size.
+      when:
+        - storage_test_volume.raid_chunk_size is defined
+        - storage_test_volume.raid_chunk_size is not none
+        - storage_test_volume.raid_chunk_size | string != "0 B"
