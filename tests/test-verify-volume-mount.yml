@@ -30,6 +30,16 @@
       _storage_test_volume_present and
       storage_test_volume.fs_type == 'swap' else 0 }}"
 
+- name: Get information about the mountpoint directory
+  stat:
+    path: "{{ storage_test_volume.mount_point }}"
+  register: storage_test_found_mount_stat
+  when: _storage_test_volume_present and
+        storage_test_volume.mount_point and
+        (storage_test_volume.mount_user or
+         storage_test_volume.mount_group or
+         storage_test_volume.mount_mode)
+
 #
 # Verify mount presence.
 #
@@ -43,7 +53,7 @@
   when: _storage_test_volume_present and storage_test_volume.mount_point
 
 #
-# Verify mount directory.
+# Verify mount directory (state, owner, group, permissions).
 #
 - name: Verify the current mount state by mount point
   assert:
@@ -52,6 +62,42 @@
     msg: >-
       Found unexpected mount state for volume
       '{{ storage_test_volume.name }}' mount point
+
+- name: Verify mount directory user
+  assert:
+    that: storage_test_volume.mount_user ==
+          storage_test_found_mount_stat.stat.pw_name
+    msg: "Mount directory {{ storage_test_volume.mount_point }} of volume
+          {{ storage_test_volume.name }}) has unexpected owner
+          (expected: {{ storage_test_volume.mount_user }}, found:
+          {{ storage_test_found_mount_stat.stat.pw_name }})"
+  when: _storage_test_volume_present and
+        storage_test_volume.mount_point and
+        storage_test_volume.mount_user
+
+- name: Verify mount directory group
+  assert:
+    that: storage_test_volume.mount_group ==
+          storage_test_found_mount_stat.stat.gr_name
+    msg: "Mount directory {{ storage_test_volume.mount_point }} of volume
+          {{ storage_test_volume.name }}) has unexpected group
+          (expected: {{ storage_test_volume.mount_group }}, found:
+          {{ storage_test_found_mount_stat.stat.gr_name }})"
+  when: _storage_test_volume_present and
+        storage_test_volume.mount_point and
+        storage_test_volume.mount_group
+
+- name: Verify mount directory permissions
+  assert:
+    that: storage_test_volume.mount_mode ==
+          storage_test_found_mount_stat.stat.mode
+    msg: "Mount directory {{ storage_test_volume.mount_point }} of volume
+          {{ storage_test_volume.name }}) has unexpected permissions (expected:
+          {{ storage_test_volume.mount_mode }}, found:
+          {{ storage_test_found_mount_stat.stat.mode }})"
+  when: _storage_test_volume_present and
+        storage_test_volume.mount_point and
+        storage_test_volume.mount_mode
 
 #
 # Verify mount fs type.
@@ -100,3 +146,4 @@
     storage_test_swap_expected_matches: null
     storage_test_sys_node: null
     storage_test_swaps: null
+    storage_test_found_mount_stat: null

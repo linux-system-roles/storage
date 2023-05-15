@@ -1632,7 +1632,10 @@ def get_mount_info(pools, volumes, actions, fstab):
                            'opts': volume['mount_options'],
                            'dump': volume['mount_check'],
                            'passno': volume['mount_passno'],
-                           'state': 'mounted' if volume['fs_type'] != "swap" else "present"})
+                           'state': 'mounted' if volume['fs_type'] != "swap" else "present",
+                           'owner': volume['mount_user'],
+                           'group': volume['mount_group'],
+                           'mode': volume['mount_mode']})
 
     return mount_info
 
@@ -1729,6 +1732,9 @@ def run_module():
                               fs_type=dict(type='str'),
                               mount_options=dict(type='str'),
                               mount_point=dict(type='str'),
+                              mount_user=dict(type='str'),
+                              mount_group=dict(type='str'),
+                              mount_mode=dict(type='str'),
                               name=dict(type='str'),
                               raid_level=dict(type='str'),
                               size=dict(type='str'),

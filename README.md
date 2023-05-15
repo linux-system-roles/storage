@@ -135,6 +135,15 @@ The `mount_point` specifies the directory on which the file system will be mount
 ##### `mount_options`
 The `mount_options` specifies custom mount options as a string, e.g.: 'ro'.
 
+##### `mount_user`
+The `mount_user` specifies desired owner of the mount directory.
+
+##### `mount_group`
+The `mount_group` specifies desired group of the mount directory.
+
+##### `mount_mode`
+The `mount_mode` specifies desired permissions of the mount directory.
+
 ##### `raid_level`
 Specifies RAID level. LVM RAID can be created as well.
 "Regular" RAID volume requires type to be `raid`.
