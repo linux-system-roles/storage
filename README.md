@@ -1,7 +1,6 @@
-Linux Storage Role
-==================
-![CI Testing](https://github.com/linux-system-roles/storage/workflows/tox/badge.svg)
+# Linux Storage Role
 
+![CI Testing](https://github.com/linux-system-roles/storage/workflows/tox/badge.svg)
 
 This role allows users to configure local storage with minimal input.
 
@@ -9,19 +8,23 @@ As of now, the role supports managing file systems and mount entries on
 - unpartitioned disks
 - lvm (unpartitioned whole-disk physical volumes only)
 
-Requirements
-------------
+## Requirements
+
+See below
+
+### Collection requirements
 
 The role requires the `mount` module from `ansible.posix`.  If you are using
 `ansible-core`, you must install the `ansible.posix` collection.
+
 ```
 ansible-galaxy collection install -vv -r meta/collection-requirements.yml
 ```
+
 If you are using Ansible Engine 2.9, or are using an Ansible bundle which
 includes these collections/modules, you should have to do nothing.
 
-Role Variables
---------------
+## Role Variables
 
 __NOTE__: Beginning with version 1.3.0, unspecified parameters are interpreted
 differently for existing and non-existing pools/volumes. For new/non-existent
@@ -260,12 +263,11 @@ When true (the default is false), the role will use udevadm trigger
 to cause udev changes to take effect immediately.  This may help on some
 platforms with "buggy" udev.
 
-Example Playbook
-----------------
+## Example Playbook
 
 ```yaml
-- hosts: all
-
+- name: Manage storage
+  hosts: all
   roles:
     - name: linux-system-roles.storage
       storage_pools:
@@ -292,8 +294,6 @@ Example Playbook
 
 ```
 
-
-License
--------
+## License
 
 MIT
