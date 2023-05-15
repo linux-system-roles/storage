@@ -139,11 +139,6 @@
   loop_control:
     loop_var: mount_info
 
-- name: Tell systemd to refresh its view of /etc/fstab
-  systemd:
-    daemon_reload: true
-  when: blivet_output['mounts']
-
 - name: Set up new/current mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
@@ -151,6 +146,21 @@
     fstype: "{{ mount_info['fstype'] | default(omit) }}"
     opts: "{{ mount_info['opts'] | default(omit) }}"
     state: "{{ mount_info['state'] }}"
+  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
+            rejectattr('state', 'match', '^absent$') | list }}"
+  loop_control:
+    loop_var: mount_info
+
+- name: Manage mount ownership/permissions
+  file:
+    path: "{{ mount_info['path'] }}"
+    owner: "{{ mount_info['owner'] if 'owner' in mount_info else omit }}"
+    group: "{{ mount_info['group'] if 'group' in mount_info else omit }}"
+    mode: "{{ mount_info['mode'] if 'mode' in mount_info else omit }}"
+    state: directory
+  when: mount_info['owner'] != none or
+        mount_info['group'] != none or
+        mount_info['mode'] != none
   loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
             rejectattr('state', 'match', '^absent$') | list }}"
   loop_control:

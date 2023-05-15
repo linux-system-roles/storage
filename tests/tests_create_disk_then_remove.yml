@@ -35,6 +35,9 @@
             disks: "{{ unused_disks[0] }}"
             fs_type: ext4
             mount_point: "{{ mount_location }}"
+            mount_user: "nobody"
+            mount_group: "nobody"
+            mount_mode: "0777"
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
@@ -48,6 +51,9 @@
             type: disk
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
+            mount_user: "root"
+            mount_group: "root"
+            mount_mode: "0755"
 
     - name: Assert file system is preserved on existing partition volume
       assert:
