@@ -760,6 +760,12 @@ class BlivetLVMVolume(BlivetVolume):
         else:
             pvs = parent_device.pvs
 
+        # get stripe size
+        stripe_size = self._spec_dict.get("raid_stripe_size")
+        if stripe_size is not None:
+            stripe_size = Size(stripe_size)
+            return dict(seg_type=self._volume['raid_level'], pvs=pvs, stripe_size=stripe_size)
+
         return dict(seg_type=self._volume['raid_level'], pvs=pvs)
 
     def _detach_cache(self):
@@ -1756,6 +1762,7 @@ def run_module():
              compression=dict(type='bool'),
              deduplication=dict(type='bool'),
              raid_disks=dict(type='list', elements='str', default=list()),
+             raid_stripe_size=dict(type='str'),
              thin_pool_name=dict(type='str'),
              thin_pool_size=dict(type='str'),
              thin=dict(type='bool', default=False),

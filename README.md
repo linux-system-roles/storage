@@ -174,6 +174,9 @@ When type is `raid` specifies RAID metadata version as a string, e.g.: '1.0'.
 When type is `raid` specifies RAID chunk size as a string, e.g.: '512 KiB'.
 Chunk size has to be multiple of 4 KiB.
 
+##### `raid_stripe_size`
+When type is `lvm` specifies LVM RAID stripe size as a string, e.g.: '512 KiB'.
+
 ##### `raid_disks`
 Specifies which disks should be used for LVM RAID volume.
 `raid_level` needs to be specified and volume has to have `storage_pools` parent with type `lvm`.
