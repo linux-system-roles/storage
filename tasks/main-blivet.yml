@@ -139,6 +139,11 @@
   loop_control:
     loop_var: mount_info
 
+- name: Tell systemd to refresh its view of /etc/fstab
+  systemd:
+    daemon_reload: true
+  when: blivet_output['mounts']
+
 - name: Set up new/current mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
