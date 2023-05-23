@@ -5,21 +5,50 @@
     - storage_test_pool.state != "absent"
     - storage_test_lvmraid_volume.state != "absent"
   block:
-    - name: Get information about LVM RAID
-      # yamllint disable rule:line-length
-      command: >-
-        lvs --noheading -o lv_name --select
-        'lv_name={{ storage_test_lvmraid_volume.name }}&&lv_layout={{ storage_test_lvmraid_volume.raid_level }}'
-        {{ storage_test_pool.name }}
-      register: storage_test_lvmraid_status
+    - name: Get information about the LV
+      command: >
+          lvs --noheadings --nameprefixes --units=b --nosuffix --unquoted
+          -o name,segtype,stripe_size
+          {{ storage_test_pool.name }}/{{ storage_test_lvmraid_volume.name }}
+      register: lvs
       changed_when: false
-      # yamllint enable rule:line-length
 
-    - name: Check that volume is LVM RAID
+    - name: Set LV segment type
+      set_fact:
+        storage_test_lv_segtype: "{{ lvs.stdout |
+          regex_search('LVM2_SEGTYPE=(\\S+)', '\\1') }}"
+
+    - name: Check segment type
       assert:
-        that: storage_test_lvmraid_status.stdout | trim ==
-          storage_test_lvmraid_volume.name
+        that: storage_test_lv_segtype[0] ==
+              storage_test_lvmraid_volume.raid_level
+        msg: >-
+          Unexpected segtype {{ storage_test_lv_segtype }}
+          for {{ storage_test_lvmraid_volume.name }}
 
-- name: Reset variable used by test
-  set_fact:
-    storage_test_lvmraid_status: null
+    - name: Set LV stripe size
+      set_fact:
+        storage_test_lv_stripe_size: "{{ lvs.stdout |
+          regex_search('LVM2_STRIPE_SIZE=(\\S+)', '\\1') }}"
+
+    - name: Parse the requested stripe size
+      bsize:
+        size: "{{ storage_test_lvmraid_volume.raid_stripe_size }}"
+      register: storage_test_requested_stripe_size
+      when: storage_test_lvmraid_volume.raid_stripe_size is not none
+
+    - name: Set expected stripe size
+      set_fact:
+        storage_test_expected_stripe_size: "{{
+          storage_test_requested_stripe_size.bytes }}"
+      when: storage_test_lvmraid_volume.raid_stripe_size is not none
+
+    - name: Check stripe size
+      assert:
+        that: storage_test_expected_stripe_size | int ==
+              storage_test_lv_stripe_size[0] | int
+        msg: >
+            Unexpected stripe size, expected
+            {{ storage_test_expected_stripe_size }},
+            got {{ storage_test_lv_stripe_size[0] }}
+      when: storage_test_lvmraid_volume.raid_stripe_size is not none

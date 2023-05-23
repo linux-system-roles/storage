@@ -48,6 +48,7 @@ storage_volume_defaults:
   raid_device_count: null
   raid_spare_count: null
   raid_chunk_size: null
+  raid_stripe_size: null
   raid_metadata_version: null
 
   encryption: false
