@@ -122,7 +122,7 @@ try:
     from blivet3.deviceaction import ActionConfigureFormat, ActionAddMember, ActionRemoveMember
     from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
     from blivet3.flags import flags as blivet_flags
-    from blivet3.formats import get_format
+    from blivet3.formats import fslib, get_format
     from blivet3.partitioning import do_partitioning
     from blivet3.size import Size
     from blivet3.udev import trigger
@@ -138,7 +138,7 @@ except ImportError:
         from blivet.deviceaction import ActionConfigureFormat, ActionAddMember, ActionRemoveMember
         from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
         from blivet.flags import flags as blivet_flags
-        from blivet.formats import get_format
+        from blivet.formats import fslib, get_format
         from blivet.partitioning import do_partitioning
         from blivet.size import Size
         from blivet.udev import trigger
@@ -152,6 +152,7 @@ from ansible.module_utils.storage_lsr.argument_validator import validate_paramet
 
 if BLIVET_PACKAGE:
     blivet_flags.debug = True
+    blivet_flags.allow_online_fs_resize = True
     set_up_logging()
     log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
 
@@ -511,6 +512,40 @@ class BlivetVolume(BlivetBase):
 
             if not self._device.min_size <= size <= self._device.max_size:
                 raise BlivetAnsibleError("volume '%s' cannot be resized to '%s'" % (self._volume['name'], size))
+
+            def _fs_unmount():
+                if safe_mode:
+                    raise BlivetAnsibleError("device '%s' must be unmounted to be resized in safe mode" %
+                                             self._device.name)
+
+                log.info("unmounting device %s for offline resize", self._device.name)
+
+                try:
+                    self._device.format.teardown()
+                except Exception as e:
+                    raise BlivetAnsibleError("failed to unmount '%s' to allow offline resize: %s" % (self._device.name, str(e)))
+
+            if self._device.format.status and self._device.format.mountable:
+                if hasattr(self._device.format, "_resize_support") and hasattr(fslib, "FSResize"):
+                    if size > self._device.size:
+                        # online grow
+                        if self._device.format._resize_support & fslib.FSResize.ONLINE_GROW:
+                            log.debug("filesystem '%s' supports online grow, will attempt to resize '%s' while mounted",
+                                      self._device.format.type, self._device.name)
+                        else:
+                            # online grow not supported, try unmount the device
+                            _fs_unmount()
+                    elif size < self._device.size:
+                        # online shrink
+                        if self._device.format._resize_support & fslib.FSResize.ONLINE_SHRINK:
+                            log.debug("filesystem '%s' supports online shrink, will attempt to resize '%s' while mounted",
+                                      self._device.format.type, self._device.name)
+                        else:
+                            # online shrink not supported, try unmount the device
+                            _fs_unmount()
+                else:
+                    # online resize not supported by blivet
+                    _fs_unmount()
 
             try:
                 self._blivet.resize_device(self._device, size)
@@ -1899,7 +1934,7 @@ def run_module():
     result['packages'] = b.packages[:]
 
     for action in scheduled:
-        if (action.is_destroy or action.is_resize) and action.is_format and action.format.exists and \
+        if action.is_destroy and action.is_format and action.format.exists and \
            (action.format.mountable or action.format.type == "swap"):
             action.format.teardown()
 
