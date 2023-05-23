@@ -318,3 +318,102 @@
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
+
+    - name: Gather package facts
+      package_facts:
+
+    - name: Set blivet package name
+      set_fact:
+        blivet_pkg_name: "{{ ansible_facts.packages |
+          select('search', 'blivet') | select('search', 'python') | list }}"
+
+    - name: Set blivet package version
+      set_fact:
+        blivet_pkg_version: "{{
+          ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
+          '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+
+    - name: Set distribution version
+      set_fact:
+        is_rhel9: "{{ (ansible_facts.distribution == 'CentOS' or
+                    ansible_facts.distribution == 'RedHat') and
+                    ansible_facts.distribution_major_version == '9' }}"
+        is_rhel8: "{{ (ansible_facts.distribution == 'CentOS' or
+                    ansible_facts.distribution == 'RedHat') and
+                    ansible_facts.distribution_major_version == '8' }}"
+        is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
+
+    # For ext4 FS -- online resize
+
+    - name: Run test on supported platforms
+      when: ((is_fedora and blivet_pkg_version is version("3.7.1-3", ">=")) or
+             (is_rhel8 and blivet_pkg_version is version("3.6.0-6", ">=")) or
+             (is_rhel9 and blivet_pkg_version is version("3.6.0-8", ">=")))
+      block:
+        - name: >-
+            Create one LVM logical volume under one volume group with size
+            {{ volume_size_before }}
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                type: lvm
+                volumes:
+                  - name: test1
+                    fs_type: ext4
+                    size: "{{ volume_size_before }}"
+                    mount_point: "{{ mount_location }}"
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+        - name: Change volume_size to {{ volume_size_after }}
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    fs_type: ext4
+                    size: "{{ volume_size_after }}"
+                    mount_point: "{{ mount_location }}"
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+        - name: Test for correct handling of offline resize in safe mode
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: must be unmounted to be resized in safe mode
+            __storage_failed_msg: >-
+              Unexpected behavior w/ resize in safe mode
+            __storage_failed_params:
+              storage_pools:
+                - name: foo
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      fs_type: ext4
+                      size: "{{ volume_size_before }}"
+                      mount_point: "{{ mount_location }}"
+
+        - name: Clean up
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                state: absent
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size_before }}"
+                    mount_point: "{{ mount_location }}"
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
