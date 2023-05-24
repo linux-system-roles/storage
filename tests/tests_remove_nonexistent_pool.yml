@@ -20,7 +20,9 @@
       set_fact:
         storage_skip_checks:
           - blivet_available
-          - packages_installed
+          - "{{ (lookup('env',
+                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
+                ternary('packages_installed', '') }}"
           - service_facts
 
     - name: Get unused disks
