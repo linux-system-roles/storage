@@ -1,6 +1,23 @@
 Changelog
 =========
 
+[1.10.0] - 2023-05-30
+--------------------
+
+### New Features
+
+- feat: User-specified mount point owner and permissions
+
+### Bug Fixes
+
+- fix: Allow using raid_chunk_size for RAID pools and volumes
+
+### Other Changes
+
+- docs: Consistent contributing.md for all roles - allow role specific contributing.md section
+- docs: add Collection requirements section to README
+- test: use SYSTEM_ROLES_REMOVE_CLOUD_INIT=1 with remove-cloud-init
+
 [1.9.8] - 2023-04-13
 --------------------
 
