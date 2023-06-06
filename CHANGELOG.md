@@ -1,6 +1,17 @@
 Changelog
 =========
 
+[1.11.0] - 2023-06-06
+--------------------
+
+### New Features
+
+- feat: Add support for setting stripe size for LVM RAID (#357)
+
+### Other Changes
+
+- test: enable FIPS testing; configurable LUKS cipher (#361)
+
 [1.10.0] - 2023-05-30
 --------------------
 
