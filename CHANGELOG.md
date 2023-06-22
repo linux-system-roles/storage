@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.12.0] - 2023-06-22
+--------------------
+
+### New Features
+
+- feat: Add support for filesystem online resize (#356)
+
+### Other Changes
+
+- ci: Add pull request template and run commitlint on PR title only (#363)
+- ci: Rename commitlint to PR title Lint, echo PR titles from env var (#364)
+
 [1.11.0] - 2023-06-06
 --------------------
 
