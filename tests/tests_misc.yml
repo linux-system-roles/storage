@@ -218,3 +218,13 @@
               disks: "{{ [__swap_disk] }}"
               fs_type: swap
               mount_point: "{{ mount_location }}"
+
+    - name: Remove the disk volume created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            disks: "{{ [__swap_disk] }}"
+            state: absent

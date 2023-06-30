@@ -1,6 +1,10 @@
 ---
 - name: Verify role raises correct error
   block:
+    - name: Store global variable value copy
+      set_fact:
+        storage_safe_mode_global: "{{ storage_safe_mode }}"
+
     - name: Verify role raises correct error
       include_role:
         name: linux-system-roles.storage
@@ -10,7 +14,8 @@
         storage_volumes: "{{
           __storage_failed_params.get('storage_volumes', []) }}"
         storage_safe_mode: "{{
-          __storage_failed_params.get('storage_safe_mode', true) }}"
+          __storage_failed_params.get('storage_safe_mode',
+          storage_safe_mode_global) }}"
 
     - name: Unreachable task
       fail:
