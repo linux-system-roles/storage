@@ -393,6 +393,7 @@
             __storage_failed_msg: >-
               Unexpected behavior w/ resize in safe mode
             __storage_failed_params:
+              storage_safe_mode: true
               storage_pools:
                 - name: foo
                   disks: "{{ unused_disks }}"
