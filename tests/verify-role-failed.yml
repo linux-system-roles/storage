@@ -3,16 +3,20 @@
   block:
     - name: Store global variable value copy
       set_fact:
-        storage_safe_mode_global: "{{ storage_safe_mode }}"
+        storage_safe_mode_global: "{{ storage_safe_mode | d(true) }}"
+        storage_pools_global: "{{ storage_pools | d([]) }}"
+        storage_volumes_global: "{{ storage_volumes | d([]) }}"
 
     - name: Verify role raises correct error
       include_role:
         name: linux-system-roles.storage
       vars:
         storage_pools: "{{
-          __storage_failed_params.get('storage_pools', []) }}"
+          __storage_failed_params.get('storage_pools',
+          storage_pools_global) }}"
         storage_volumes: "{{
-          __storage_failed_params.get('storage_volumes', []) }}"
+          __storage_failed_params.get('storage_volumes',
+          storage_volumes_global) }}"
         storage_safe_mode: "{{
           __storage_failed_params.get('storage_safe_mode',
           storage_safe_mode_global) }}"
