@@ -34,10 +34,15 @@
         max_return: 2
         disks_needed: 2
 
+    - name: Set safe mode arg
+      set_fact:
+        storage_safe_mode_arg: "{{ storage_safe_mode }}"
+
     - name: Try to create a raid pool with invalid raid_level (expect failure)
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: vg1
               disks: "{{ unused_disks }}"

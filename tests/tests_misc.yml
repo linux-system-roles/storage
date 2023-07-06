@@ -63,6 +63,10 @@
     - name: Verify results
       include_tasks: verify-role-results.yml
 
+    - name: Set safe mode arg
+      set_fact:
+        storage_safe_mode_arg: "{{ storage_safe_mode }}"
+
     - name: >-
         Test for correct handling of invalid parameter when creating ext4
         filesystem
@@ -75,6 +79,7 @@
           Unexpected behavior when creating ext4 filesystem with invalid
           parameter
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: foo
               type: lvm
@@ -123,6 +128,7 @@
         __storage_failed_msg: >-
           Unexpected behavior when resizing with large size
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: foo
               type: lvm
@@ -212,6 +218,7 @@
         __storage_failed_msg: >-
           Unexpected behavior when mount swap filesystem
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_volumes:
             - name: test1
               type: disk

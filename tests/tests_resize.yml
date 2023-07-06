@@ -93,6 +93,10 @@
     - name: Verify role results
       include_tasks: verify-role-results.yml
 
+    - name: Set storage_safe_mode_arg
+      set_fact:
+        storage_safe_mode_arg: "{{ storage_safe_mode }}"
+
     - name: Test for correct handling of too-large volume size
       include_tasks: verify-role-failed.yml
       vars:
@@ -100,6 +104,7 @@
         __storage_failed_msg: >-
           Unexpected behavior w/ invalid volume size
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: foo
               disks: "{{ unused_disks }}"
@@ -136,6 +141,7 @@
         __storage_failed_msg: >-
           Unexpected behavior w/ invalid volume size
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: foo
               disks: "{{ unused_disks }}"
@@ -152,6 +158,7 @@
         __storage_failed_msg: >-
           Unexpected behavior w/ invalid volume size
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: foo
               disks: "{{ unused_disks }}"
@@ -393,6 +400,7 @@
             __storage_failed_msg: >-
               Unexpected behavior w/ resize in safe mode
             __storage_failed_params:
+              storage_safe_mode: "{{ storage_safe_mode_arg }}"
               storage_pools:
                 - name: foo
                   disks: "{{ unused_disks }}"

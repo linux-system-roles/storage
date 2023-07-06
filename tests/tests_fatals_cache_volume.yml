@@ -30,10 +30,15 @@
         max_return: 2
         disks_needed: 2
 
+    - name: Set safe mode arg
+      set_fact:
+        storage_safe_mode_arg: "{{ storage_safe_mode }}"
+
     - name: Verify that creating a cached partition volume fails
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: "{{ unused_disks[0] }}"
               type: partition
@@ -47,6 +52,7 @@
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: foo
               disks: "{{ [unused_disks[0]] }}"

@@ -24,6 +24,10 @@
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
+    - name: Set storage_safe_mode_arg
+      set_fact:
+        storage_safe_mode_arg: "{{ storage_safe_mode }}"
+
     - name: >-
         Test for correct handling of invalid percentage-based size
         specification.
@@ -33,6 +37,7 @@
         __storage_failed_msg: >-
           Unexpected error message output from invalid percentage size input
         __storage_failed_params:
+          storage_safe_mode: "{{ storage_safe_mode_arg }}"
           storage_pools:
             - name: foo
               disks: "{{ unused_disks }}"
