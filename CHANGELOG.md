@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.12.1] - 2023-07-08
+--------------------
+
+### Bug Fixes
+
+- fix: Test issue when creating fs /w invalid param (#367)
+
+### Other Changes
+
+- ci: fix python 2.7 CI tests by manually installing python2.7 package (#366)
+- test: fix undefined storage_safe_mode (#369)
+
 [1.12.0] - 2023-06-22
 --------------------
 
