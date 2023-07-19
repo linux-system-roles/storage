@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.12.2] - 2023-07-19
+--------------------
+
+### Bug Fixes
+
+- fix: RAID volume pre cleanup  (#169)
+- fix: facts being gathered unnecessarily (#374)
+
+### Other Changes
+
+- ci: ansible-lint - ignore var-naming[no-role-prefix] (#371)
+- ci: ansible-test ignores file for ansible-core 2.15 (#372)
+
 [1.12.1] - 2023-07-08
 --------------------
 
