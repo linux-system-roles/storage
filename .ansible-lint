@@ -18,6 +18,7 @@ skip_list:
 exclude_paths:
   - tests/roles/
   - .github/
+  - .markdownlint.yaml
   - examples/roles/
 mock_roles:
   - linux-system-roles.storage
