@@ -1,6 +1,17 @@
 Changelog
 =========
 
+[1.12.3] - 2023-08-17
+--------------------
+
+### Bug Fixes
+
+- fix: use stat.pw_name, stat.gr_name instead of owner, group (#377)
+
+### Other Changes
+
+- ci: Add markdownlint, test_html_build, and build_docs workflows (#376)
+
 [1.12.2] - 2023-07-19
 --------------------
 
