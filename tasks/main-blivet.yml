@@ -195,8 +195,8 @@
     state: "{{ entry.state }}"
     create: true
     mode: "{{ __storage_crypttab.stat.mode | d('0600') }}"
-    owner: "{{ __storage_crypttab.stat.owner | d('root') }}"
-    group: "{{ __storage_crypttab.stat.group | d('root') }}"
+    owner: "{{ __storage_crypttab.stat.pw_name | d('root') }}"
+    group: "{{ __storage_crypttab.stat.gr_name | d('root') }}"
   loop: "{{ blivet_output.crypts }}"
   loop_control:
     loop_var: entry
