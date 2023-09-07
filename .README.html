@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<!--
+==============================================================================
+           "GitHub HTML5 Pandoc Template" v2.2 — by Tristano Ajmone
+==============================================================================
+Copyright © Tristano Ajmone, 2017-2020, MIT License (MIT). Project's home:
+
+- https://github.com/tajmone/pandoc-goodies
+
+The CSS in this template reuses source code taken from the following projects:
+
+- GitHub Markdown CSS: Copyright © Sindre Sorhus, MIT License (MIT):
+  https://github.com/sindresorhus/github-markdown-css
+
+- Primer CSS: Copyright © 2016-2017 GitHub Inc., MIT License (MIT):
+  http://primercss.io/
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The MIT License
+
+Copyright (c) Tristano Ajmone, 2017-2020 (github.com/tajmone/pandoc-goodies)
+Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+Copyright (c) 2017 GitHub Inc.
+
+"GitHub Pandoc HTML5 Template" is Copyright (c) Tristano Ajmone, 2017-2020,
+released under the MIT License (MIT); it contains readaptations of substantial
+portions of the following third party softwares:
+
+(1) "GitHub Markdown CSS", Copyright (c) Sindre Sorhus, MIT License (MIT).
+(2) "Primer CSS", Copyright (c) 2016 GitHub Inc., MIT License (MIT).
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+==============================================================================-->
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Linux Storage Role</title>
+  <style type="text/css">
+@charset "UTF-8";.markdown-body{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#24292e;font-family:-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";font-size:16px;line-height:1.5;word-wrap:break-word;box-sizing:border-box;min-width:200px;margin:0 auto;padding:45px}.markdown-body a{color:#0366d6;background-color:transparent;text-decoration:none;-webkit-text-decoration-skip:objects}.markdown-body a:active,.markdown-body a:hover{outline-width:0}.markdown-body a:hover{text-decoration:underline}.markdown-body a:not([href]){color:inherit;text-decoration:none}.markdown-body strong{font-weight:600}.markdown-body h1,.markdown-body h2,.markdown-body h3,.markdown-body h4,.markdown-body h5,.markdown-body h6{margin-top:24px;margin-bottom:16px;font-weight:600;line-height:1.25}.markdown-body h1{font-size:2em;margin:.67em 0;padding-bottom:.3em;border-bottom:1px solid #eaecef}.markdown-body h2{padding-bottom:.3em;font-size:1.5em;border-bottom:1px solid #eaecef}.markdown-body h3{font-size:1.25em}.markdown-body h4{font-size:1em}.markdown-body h5{font-size:.875em}.markdown-body h6{font-size:.85em;color:#6a737d}.markdown-body img{border-style:none}.markdown-body svg:not(:root){overflow:hidden}.markdown-body hr{box-sizing:content-box;height:.25em;margin:24px 0;padding:0;overflow:hidden;background-color:#e1e4e8;border:0}.markdown-body hr::before{display:table;content:""}.markdown-body hr::after{display:table;clear:both;content:""}.markdown-body input{margin:0;overflow:visible;font:inherit;font-family:inherit;font-size:inherit;line-height:inherit}.markdown-body [type=checkbox]{box-sizing:border-box;padding:0}.markdown-body *{box-sizing:border-box}.markdown-body blockquote{margin:0}.markdown-body ol,.markdown-body ul{padding-left:2em}.markdown-body ol ol,.markdown-body ul ol{list-style-type:lower-roman}.markdown-body ol ol,.markdown-body ol ul,.markdown-body ul ol,.markdown-body ul ul{margin-top:0;margin-bottom:0}.markdown-body ol ol ol,.markdown-body ol ul ol,.markdown-body ul ol ol,.markdown-body ul ul ol{list-style-type:lower-alpha}.markdown-body li>p{margin-top:16px}.markdown-body li+li{margin-top:.25em}.markdown-body dd{margin-left:0}.markdown-body dl{padding:0}.markdown-body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:600}.markdown-body dl dd{padding:0 16px;margin-bottom:16px}.markdown-body code{font-family:SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace}.markdown-body pre{font:12px SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;word-wrap:normal}.markdown-body blockquote,.markdown-body dl,.markdown-body ol,.markdown-body p,.markdown-body pre,.markdown-body table,.markdown-body ul{margin-top:0;margin-bottom:16px}.markdown-body blockquote{padding:0 1em;color:#6a737d;border-left:.25em solid #dfe2e5}.markdown-body blockquote>:first-child{margin-top:0}.markdown-body blockquote>:last-child{margin-bottom:0}.markdown-body table{display:block;width:100%;overflow:auto;border-spacing:0;border-collapse:collapse}.markdown-body table th{font-weight:600}.markdown-body table td,.markdown-body table th{padding:6px 13px;border:1px solid #dfe2e5}.markdown-body table tr{background-color:#fff;border-top:1px solid #c6cbd1}.markdown-body table tr:nth-child(2n){background-color:#f6f8fa}.markdown-body img{max-width:100%;box-sizing:content-box;background-color:#fff}.markdown-body code{padding:.2em 0;margin:0;font-size:85%;background-color:rgba(27,31,35,.05);border-radius:3px}.markdown-body code::after,.markdown-body code::before{letter-spacing:-.2em;content:" "}.markdown-body pre>code{padding:0;margin:0;font-size:100%;word-break:normal;white-space:pre;background:0 0;border:0}.markdown-body .highlight{margin-bottom:16px}.markdown-body .highlight pre{margin-bottom:0;word-break:normal}.markdown-body .highlight pre,.markdown-body pre{padding:16px;overflow:auto;font-size:85%;line-height:1.45;background-color:#f6f8fa;border-radius:3px}.markdown-body pre code{display:inline;max-width:auto;padding:0;margin:0;overflow:visible;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}.markdown-body pre code::after,.markdown-body pre code::before{content:normal}.markdown-body .full-commit .btn-outline:not(:disabled):hover{color:#005cc5;border-color:#005cc5}.markdown-body kbd{box-shadow:inset 0 -1px 0 #959da5;display:inline-block;padding:3px 5px;font:11px/10px SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;color:#444d56;vertical-align:middle;background-color:#fcfcfc;border:1px solid #c6cbd1;border-bottom-color:#959da5;border-radius:3px;box-shadow:inset 0 -1px 0 #959da5}.markdown-body :checked+.radio-label{position:relative;z-index:1;border-color:#0366d6}.markdown-body .task-list-item{list-style-type:none}.markdown-body .task-list-item+.task-list-item{margin-top:3px}.markdown-body .task-list-item input{margin:0 .2em .25em -1.6em;vertical-align:middle}.markdown-body::before{display:table;content:""}.markdown-body::after{display:table;clear:both;content:""}.markdown-body>:first-child{margin-top:0!important}.markdown-body>:last-child{margin-bottom:0!important}.Alert,.Error,.Note,.Success,.Warning{padding:11px;margin-bottom:24px;border-style:solid;border-width:1px;border-radius:4px}.Alert p,.Error p,.Note p,.Success p,.Warning p{margin-top:0}.Alert p:last-child,.Error p:last-child,.Note p:last-child,.Success p:last-child,.Warning p:last-child{margin-bottom:0}.Alert{color:#246;background-color:#e2eef9;border-color:#bac6d3}.Warning{color:#4c4a42;background-color:#fff9ea;border-color:#dfd8c2}.Error{color:#911;background-color:#fcdede;border-color:#d2b2b2}.Success{color:#22662c;background-color:#e2f9e5;border-color:#bad3be}.Note{color:#2f363d;background-color:#f6f8fa;border-color:#d5d8da}.Alert h1,.Alert h2,.Alert h3,.Alert h4,.Alert h5,.Alert h6{color:#246;margin-bottom:0}.Warning h1,.Warning h2,.Warning h3,.Warning h4,.Warning h5,.Warning h6{color:#4c4a42;margin-bottom:0}.Error h1,.Error h2,.Error h3,.Error h4,.Error h5,.Error h6{color:#911;margin-bottom:0}.Success h1,.Success h2,.Success h3,.Success h4,.Success h5,.Success h6{color:#22662c;margin-bottom:0}.Note h1,.Note h2,.Note h3,.Note h4,.Note h5,.Note h6{color:#2f363d;margin-bottom:0}.Alert h1:first-child,.Alert h2:first-child,.Alert h3:first-child,.Alert h4:first-child,.Alert h5:first-child,.Alert h6:first-child,.Error h1:first-child,.Error h2:first-child,.Error h3:first-child,.Error h4:first-child,.Error h5:first-child,.Error h6:first-child,.Note h1:first-child,.Note h2:first-child,.Note h3:first-child,.Note h4:first-child,.Note h5:first-child,.Note h6:first-child,.Success h1:first-child,.Success h2:first-child,.Success h3:first-child,.Success h4:first-child,.Success h5:first-child,.Success h6:first-child,.Warning h1:first-child,.Warning h2:first-child,.Warning h3:first-child,.Warning h4:first-child,.Warning h5:first-child,.Warning h6:first-child{margin-top:0}h1.title,p.subtitle{text-align:center}h1.title.followed-by-subtitle{margin-bottom:0}p.subtitle{font-size:1.5em;font-weight:600;line-height:1.25;margin-top:0;margin-bottom:16px;padding-bottom:.3em}div.line-block{white-space:pre-line}
+  </style>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<article class="markdown-body">
+<header>
+<h1 class="title">Linux Storage Role</h1>
+</header>
+<hr>
+<nav id="TOC">
+<h1 class="toc-title">Contents</h1>
+<ul>
+<li><a href="#requirements" id="toc-requirements">Requirements</a>
+<ul>
+<li><a href="#collection-requirements"
+id="toc-collection-requirements">Collection requirements</a></li>
+</ul></li>
+<li><a href="#role-variables" id="toc-role-variables">Role Variables</a>
+<ul>
+<li><a href="#storage_pools"
+id="toc-storage_pools"><code>storage_pools</code></a></li>
+<li><a href="#storage_volumes"
+id="toc-storage_volumes"><code>storage_volumes</code></a></li>
+<li><a href="#cached" id="toc-cached"><code>cached</code></a></li>
+<li><a href="#cache_size"
+id="toc-cache_size"><code>cache_size</code></a></li>
+<li><a href="#cache_mode"
+id="toc-cache_mode"><code>cache_mode</code></a></li>
+<li><a href="#cache_devices"
+id="toc-cache_devices"><code>cache_devices</code></a></li>
+<li><a href="#thin" id="toc-thin"><code>thin</code></a></li>
+<li><a href="#thin_pool_name"
+id="toc-thin_pool_name"><code>thin_pool_name</code></a></li>
+<li><a href="#thin_pool_size"
+id="toc-thin_pool_size"><code>thin_pool_size</code></a></li>
+<li><a href="#storage_safe_mode"
+id="toc-storage_safe_mode"><code>storage_safe_mode</code></a></li>
+<li><a href="#storage_udevadm_trigger"
+id="toc-storage_udevadm_trigger"><code>storage_udevadm_trigger</code></a></li>
+</ul></li>
+<li><a href="#example-playbook" id="toc-example-playbook">Example
+Playbook</a></li>
+<li><a href="#license" id="toc-license">License</a></li>
+</ul>
+</nav>
+<hr>
+<p>This role allows users to configure local storage with minimal
+input.</p>
+<p>As of now, the role supports managing file systems and mount entries
+on</p>
+<ul>
+<li>unpartitioned disks</li>
+<li>lvm (unpartitioned whole-disk physical volumes only)</li>
+</ul>
+<h1 id="requirements">Requirements</h1>
+<p>See below</p>
+<h2 id="collection-requirements">Collection requirements</h2>
+<p>The role requires the <code>mount</code> module from
+<code>ansible.posix</code>. If you are using <code>ansible-core</code>,
+you must install the <code>ansible.posix</code> collection.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ansible-galaxy</span> collection install <span class="at">-vv</span> <span class="at">-r</span> meta/collection-requirements.yml</span></code></pre></div>
+<p>If you are using Ansible Engine 2.9, or are using an Ansible bundle
+which includes these collections/modules, you should have to do
+nothing.</p>
+<h1 id="role-variables">Role Variables</h1>
+<p><strong>NOTE</strong>: Beginning with version 1.3.0, unspecified
+parameters are interpreted differently for existing and non-existing
+pools/volumes. For new/non-existent pools and volumes, any omitted
+parameters will use the default value as described in
+<code>defaults/main.yml</code>. For existing pools and volumes, omitted
+parameters will inherit whatever setting the pool or volume already has.
+This means that to change/override role defaults in an existing pool or
+volume, you must explicitly specify the new values/settings in the role
+variables.</p>
+<h2 id="storage_pools"><code>storage_pools</code></h2>
+<p>The <code>storage_pools</code> variable is a list of pools to manage.
+Each pool contains a nested list of <code>volume</code> dicts as
+described below, as well as the following keys:</p>
+<ul>
+<li><p><code>name</code></p>
+<p>This specifies the name of the pool to manage/create as a string.
+(One example of a pool is an LVM volume group.)</p></li>
+<li><p><code>type</code></p>
+<p>This specifies the type of pool to manage. Valid values for
+<code>type</code>: <code>lvm</code>.</p></li>
+<li><p><code>disks</code></p>
+<p>A list which specifies the set of disks to use as backing storage for
+the pool. Supported identifiers include: device node (like
+<code>/dev/sda</code> or <code>/dev/mapper/mpathb</code>), device node
+basename (like <code>sda</code> or <code>mpathb</code>), /dev/disk/
+symlink (like <code>/dev/disk/by-id/wwn-0x5000c5005bc37f3f</code>).</p>
+<p>For LVM pools this can be also used to add and remove disks to/from
+an existing pool. Disks in the list that are not used by the pool will
+be added to the pool. Disks that are currently used by the pool but not
+present in the list will be removed from the pool only if
+<code>storage_safe_mode</code> is set to <code>false</code>.</p></li>
+<li><p><code>raid_level</code></p>
+<p>When used with <code>type: lvm</code> it manages a volume group with
+a mdraid array of given level on it. Input <code>disks</code> are in
+this case used as RAID members. Accepted values are:
+<code>linear</code>, <code>raid0</code>, <code>raid1</code>,
+<code>raid4</code>, <code>raid5</code>, <code>raid6</code>,
+<code>raid10</code></p></li>
+<li><p><code>volumes</code></p>
+<p>This is a list of volumes that belong to the current pool. It follows
+the same pattern as the <code>storage_volumes</code> variable, explained
+below.</p></li>
+<li><p><code>encryption</code></p>
+<p>This specifies whether the pool will be encrypted using LUKS.
+<strong>WARNING</strong>: Toggling encryption for a pool is a
+destructive operation, meaning the pool itself will be removed as part
+of the process of adding/removing the encryption layer.</p></li>
+<li><p><code>encryption_password</code></p>
+<p>This string specifies a password or passphrase used to unlock/open
+the LUKS volume(s).</p></li>
+<li><p><code>encryption_key</code></p>
+<p>This string specifies the full path to the key file on the managed
+nodes used to unlock the LUKS volume(s). It is the responsibility of the
+user of this role to securely copy this file to the managed nodes, or
+otherwise ensure that the file is on the managed nodes.</p></li>
+<li><p><code>encryption_cipher</code></p>
+<p>ifies a non-default cipher to be used by LUKS.</p></li>
+<li><p><code>encryption_key_size</code></p>
+<p>s the LUKS key size (in bytes).</p></li>
+<li><p><code>encryption_luks_version</code></p>
+<p>This integer specifies the LUKS version to use.</p></li>
+</ul>
+<h2 id="storage_volumes"><code>storage_volumes</code></h2>
+<p>The <code>storage_volumes</code> variable is a list of volumes to
+manage. Each volume has the following variables:</p>
+<ul>
+<li><p><code>name</code></p>
+<p>This specifies the name of the volume.</p></li>
+<li><p><code>type</code></p>
+<p>This specifies the type of volume on which the file system will
+reside. Valid values for <code>type</code>: <code>lvm</code>,
+<code>disk</code> or <code>raid</code>. The default is determined
+according to the OS and release (currently <code>lvm</code>).</p></li>
+<li><p><code>disks</code></p>
+<p>This specifies the set of disks to use as backing storage for the
+file system. This is currently only relevant for volumes of type
+<code>disk</code>, where the list must contain only a single
+item.</p></li>
+<li><p><code>size</code></p>
+<p>The <code>size</code> specifies the size of the file system. The
+format for this is intended to be human-readable, e.g.: "10g", "50 GiB".
+The size of LVM volumes can be specified as a percentage of the pool/VG
+size, eg: "50%" as of v1.4.2.</p>
+<p>When using <code>compression</code> or <code>deduplication</code>,
+<code>size</code> can be set higher than actual available space, e.g.: 3
+times the size of the volume, based on duplicity and/or compressibility
+of stored data.</p>
+<p><strong>NOTE</strong>: The requested volume size may be reduced as
+necessary so the volume can fit in the available pool space, but only if
+the required reduction is not more than 2% of the requested volume
+size.</p></li>
+<li><p><code>fs_type</code></p>
+<p>This indicates the desired file system type to use, e.g.: "xfs",
+"ext4", "swap". The default is determined according to the OS and
+release (currently <code>xfs</code> for all the supported
+systems).</p></li>
+<li><p><code>fs_label</code></p>
+<p>The <code>fs_label</code> is a string to be used for a file system
+label.</p></li>
+<li><p><code>fs_create_options</code></p>
+<p>The <code>fs_create_options</code> specifies custom arguments to
+<code>mkfs</code> as a string.</p></li>
+<li><p><code>mount_point</code></p>
+<p>The <code>mount_point</code> specifies the directory on which the
+file system will be mounted.</p></li>
+<li><p><code>mount_options</code></p>
+<p>The <code>mount_options</code> specifies custom mount options as a
+string, e.g.: 'ro'.</p></li>
+<li><p><code>mount_user</code></p>
+<p>The <code>mount_user</code> specifies desired owner of the mount
+directory.</p></li>
+<li><p><code>mount_group</code></p>
+<p>The <code>mount_group</code> specifies desired group of the mount
+directory.</p></li>
+<li><p><code>mount_mode</code></p>
+<p>The <code>mount_mode</code> specifies desired permissions of the
+mount directory.</p></li>
+<li><p><code>raid_level</code></p>
+<p>Specifies RAID level. LVM RAID can be created as well. "Regular" RAID
+volume requires type to be <code>raid</code>. LVM RAID needs that volume
+has <code>storage_pools</code> parent with type <code>lvm</code>,
+<code>raid_disks</code> need to be specified as well. Accepted values
+are:</p>
+<ul>
+<li>for LVM RAID volume: <code>raid0</code>, <code>raid1</code>,
+<code>raid4</code>, <code>raid5</code>, <code>raid6</code>,
+<code>raid10</code>, <code>striped</code>, <code>mirror</code></li>
+<li>for RAID volume: <code>linear</code>, <code>raid0</code>,
+<code>raid1</code>, <code>raid4</code>, <code>raid5</code>,
+<code>raid6</code>, <code>raid10</code></li>
+</ul>
+<p><strong>WARNING</strong>: Changing <code>raid_level</code> for a
+volume is a destructive operation, meaning all data on that volume will
+be lost as part of the process of removing old and adding new RAID. RAID
+reshaping is currently not supported.</p></li>
+<li><p><code>raid_device_count</code></p>
+<p>When type is <code>raid</code> specifies number of active RAID
+devices.</p></li>
+<li><p><code>raid_spare_count</code></p>
+<p>When type is <code>raid</code> specifies number of spare RAID
+devices.</p></li>
+<li><p><code>raid_metadata_version</code></p>
+<p>When type is <code>raid</code> specifies RAID metadata version as a
+string, e.g.: '1.0'.</p></li>
+<li><p><code>raid_chunk_size</code></p>
+<p>When type is <code>raid</code> specifies RAID chunk size as a string,
+e.g.: '512 KiB'. Chunk size has to be multiple of 4 KiB.</p></li>
+<li><p><code>raid_stripe_size</code></p>
+<p>When type is <code>lvm</code> specifies LVM RAID stripe size as a
+string, e.g.: '512 KiB'.</p></li>
+<li><p><code>raid_disks</code></p>
+<p>Specifies which disks should be used for LVM RAID volume.
+<code>raid_level</code> needs to be specified and volume has to have
+<code>storage_pools</code> parent with type <code>lvm</code>. Accepts
+sublist of <code>disks</code> of parent <code>storage_pools</code>. In
+case multiple LVM RAID volumes within the same storage pool, the same
+disk can be used in multiple <code>raid_disks</code>.</p></li>
+<li><p><code>encryption</code></p>
+<p>This specifies whether the volume will be encrypted using LUKS.
+<strong>WARNING</strong>: Toggling encryption for a volume is a
+destructive operation, meaning all data on that volume will be removed
+as part of the process of adding/removing the encryption layer.</p></li>
+<li><p><code>encryption_password</code></p>
+<p>This string specifies a password or passphrase used to unlock/open
+the LUKS volume.</p></li>
+<li><p><code>encryption_key</code></p>
+<p>This string specifies the full path to the key file on the managed
+nodes used to unlock the LUKS volume(s). It is the responsibility of the
+user of this role to securely copy this file to the managed nodes, or
+otherwise ensure that the file is on the managed nodes.</p></li>
+<li><p><code>encryption_cipher</code></p>
+<p>This string specifies a non-default cipher to be used by
+LUKS.</p></li>
+<li><p><code>encryption_key_size</code></p>
+<p>This integer specifies the LUKS key size (in bits).</p></li>
+<li><p><code>encryption_luks_version</code></p>
+<p>This integer specifies the LUKS version to use.</p></li>
+<li><p><code>deduplication</code></p>
+<p>This specifies whether the Virtual Data Optimizer (VDO) will be used.
+When set, duplicate data stored on storage volume will be deduplicated
+resulting in more storage capacity. Can be used together with
+<code>compression</code> and <code>vdo_pool_size</code>. Volume has to
+be part of the LVM <code>storage_pool</code>. Limit one VDO
+<code>storage_volume</code> per <code>storage_pool</code>. Underlying
+volume has to be at least 9 GB (bare minimum is around 5 GiB).</p></li>
+<li><p><code>compression</code></p>
+<p>This specifies whether the Virtual Data Optimizer (VDO) will be used.
+When set, data stored on storage volume will be compressed resulting in
+more storage capacity. Volume has to be part of the LVM
+<code>storage_pool</code>. Can be used together with
+<code>deduplication</code> and <code>vdo_pool_size</code>. Limit one VDO
+<code>storage_volume</code> per <code>storage_pool</code>.</p></li>
+<li><p><code>vdo_pool_size</code></p>
+<p>When Virtual Data Optimizer (VDO) is used, this specifies the actual
+size the volume will take on the device. Virtual size of VDO volume is
+set by <code>size</code> parameter. <code>vdo_pool_size</code> format is
+intended to be human-readable, e.g.: "30g", "50GiB". Default value is
+equal to the size of the volume.</p></li>
+</ul>
+<h2 id="cached"><code>cached</code></h2>
+<p>This specifies whether the volume should be cached or not. This is
+currently supported only for LVM volumes where dm-cache is used.</p>
+<h2 id="cache_size"><code>cache_size</code></h2>
+<p>Size of the cache. <code>cache_size</code> format is intended to be
+human-readable, e.g.: "30g", "50GiB".</p>
+<h2 id="cache_mode"><code>cache_mode</code></h2>
+<p>Mode for the cache. Supported values include
+<code>writethrough</code> (default) and <code>writeback</code>.</p>
+<h2 id="cache_devices"><code>cache_devices</code></h2>
+<p>List of devices that will be used for the cache. These should be
+either physical volumes or drives these physical volumes are allocated
+on. Generally you want to select fast devices like SSD or NVMe drives
+for cache.</p>
+<h2 id="thin"><code>thin</code></h2>
+<p>Whether the volume should be thinly provisioned or not. This is
+supported only for LVM volumes.</p>
+<h2 id="thin_pool_name"><code>thin_pool_name</code></h2>
+<p>For <code>thin</code> volumes, this can be used to specify the name
+of the LVM thin pool that will be used for the volume. If the pool with
+the provided name already exists, the volume will be added to that pool.
+If it doesn't exist a new pool named <code>thin_pool_name</code> will be
+created. If not specified:</p>
+<ul>
+<li>if there are no existing thin pools present, a new thin pool will be
+created with an automatically generated name,</li>
+<li>if there is exactly one existing thin pool, the thin volume will be
+added to it and</li>
+<li>if there are multiple thin pools present an exception will be
+raised.</li>
+</ul>
+<h2 id="thin_pool_size"><code>thin_pool_size</code></h2>
+<p>Size for the thin pool. <code>thin_pool_size</code> format is
+intended to be human-readable, e.g.: "30g", "50GiB".</p>
+<h2 id="storage_safe_mode"><code>storage_safe_mode</code></h2>
+<p>When true (the default), an error will occur instead of automatically
+removing existing devices and/or formatting.</p>
+<h2
+id="storage_udevadm_trigger"><code>storage_udevadm_trigger</code></h2>
+<p>When true (the default is false), the role will use udevadm trigger
+to cause udev changes to take effect immediately. This may help on some
+platforms with "buggy" udev.</p>
+<h1 id="example-playbook">Example Playbook</h1>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Manage storage</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">hosts</span><span class="kw">:</span><span class="at"> all</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">roles</span><span class="kw">:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> linux-system-roles.storage</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage_pools</span><span class="kw">:</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> app</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">disks</span><span class="kw">:</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> sdb</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> sdc</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">volumes</span><span class="kw">:</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> shared</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">size</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;100 GiB&quot;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">mount_point</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/mnt/app/shared&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">              #fs_type: xfs</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">state</span><span class="kw">:</span><span class="at"> present</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> users</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">size</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;400g&quot;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">fs_type</span><span class="kw">:</span><span class="at"> ext4</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">mount_point</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/mnt/app/users&quot;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage_volumes</span><span class="kw">:</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> images</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">type</span><span class="kw">:</span><span class="at"> disk</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">disks</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;mpathc&quot;</span><span class="kw">]</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mount_point</span><span class="kw">:</span><span class="at"> /opt/images</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">fs_label</span><span class="kw">:</span><span class="at"> images</span></span></code></pre></div>
+<h1 id="license">License</h1>
+<p>MIT</p>
+</article>
+</body>
+</html>
