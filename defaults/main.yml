@@ -27,6 +27,8 @@ storage_pool_defaults:
   raid_chunk_size: null
   raid_metadata_version: null
 
+  shared: false
+
 storage_volume_defaults:
   state: "present"
   type: lvm
