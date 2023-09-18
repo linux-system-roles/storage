@@ -1527,7 +1527,7 @@ class BlivetLVMPool(BlivetPool):
         if not self._device:
             members = self._manage_encryption(self._create_members())
             try:
-                pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
+                pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members, shared=self._pool['shared'])
             except Exception as e:
                 raise BlivetAnsibleError("failed to set up pool '%s': %s" % (self._pool['name'], str(e)))
 
@@ -1823,6 +1823,7 @@ def run_module():
                                 raid_spare_count=dict(type='int'),
                                 raid_metadata_version=dict(type='str'),
                                 raid_chunk_size=dict(type='str'),
+                                shared=dict(type='bool'),
                                 state=dict(type='str', default='present', choices=['present', 'absent']),
                                 type=dict(type='str'),
                                 volumes=dict(type='list', elements='dict', default=list(),

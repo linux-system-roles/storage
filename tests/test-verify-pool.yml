@@ -15,6 +15,20 @@
     #     compression
     #     deduplication
 
+- name: Get VG shared value status
+  command: vgs --noheadings --binary -o shared {{ storage_test_pool.name }}
+  register: vgs_dump
+  when: storage_test_pool.type == 'lvm' and storage_test_pool.state == 'present'
+  changed_when: false
+
+- name: Verify that VG shared value checks out
+  assert:
+    that: (storage_test_pool.shared | bool) and ('1' in vgs_dump.stdout)
+    msg: >-
+      Shared VG presence ({{ storage_test_pool.shared }})
+      does not match its expected state ({{ '1' in vgs_dump.stdout }})
+  when: storage_test_pool.type == 'lvm' and storage_test_pool.state == 'present'
+
 - name: Verify pool subset
   include_tasks: "test-verify-pool-{{ storage_test_pool_subset }}.yml"
   loop: "{{ _storage_pool_tests }}"

@@ -53,6 +53,17 @@ keys:
   This specifies the type of pool to manage.
   Valid values for `type`: `lvm`.
 
+- `shared`
+
+  If set to `true`, the role creates or manages a shared volume group. Requires lvmlockd and
+  dlm services configured and running.
+
+  Default: `false`
+
+  __WARNING__: Modifying the `shared` value on an existing pool is a
+              destructive operation. The pool itself will be removed as part of the
+              process.
+
 - `disks`
 
   A list which specifies the set of disks to use as backing storage for the pool.
