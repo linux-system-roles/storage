@@ -1647,8 +1647,6 @@ def get_mount_info(pools, volumes, actions, fstab):
         # handle removal of existing mounts of this volume
         if mount and mount['fs_type'] != 'swap' and mount['mount_point'] != volume['mount_point']:
             replace = dict(path=mount['mount_point'], state="absent")
-        elif mount and mount['fs_type'] == 'swap':
-            replace = dict(src=mount['device_id'], fstype="swap", path="none", state="absent")
 
         return mounted, replace
 
