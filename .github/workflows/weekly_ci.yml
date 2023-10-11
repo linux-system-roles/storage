@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Create and push empty commit
+      - name: Create or rebase commit, add dump_packages callback
         run: |
           set -euxo pipefail
 
