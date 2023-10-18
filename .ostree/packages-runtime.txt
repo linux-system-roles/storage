@@ -1,0 +1,10 @@
+cryptsetup
+e2fsprogs
+kpartx
+libblockdev-crypto
+libblockdev-dm
+libblockdev-lvm
+libblockdev-mdraid
+libblockdev-swap
+lvm2
+xfsprogs

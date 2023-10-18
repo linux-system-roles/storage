@@ -1,4 +1,16 @@
 ---
+- name: Ensure test packages
+  package:
+    name: "{{ test_packages }}"
+    state: present
+  vars:
+    # util-linux needed for lsblk, findmnt, etc.
+    test_packages: "{{ ['util-linux-core']
+      if (ansible_facts['os_family'] == 'RedHat' and
+          ansible_facts['distribution_major_version'] is version('8', '>'))
+      else ['util-linux'] if ansible_facts['os_family'] == 'RedHat'
+      else ['util-linux'] }}"
+
 - name: Find unused disks in the system
   find_unused_disk:
     min_size: "{{ min_size | d(omit) }}"

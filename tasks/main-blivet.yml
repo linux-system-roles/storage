@@ -38,10 +38,17 @@
 
 - name: Make sure required packages are installed
   package:
-    name: "{{ package_info.packages }}"
+    name: "{{ package_info.packages + extra_pkgs }}"
     state: present
   when: storage_skip_checks is not defined or
         not "packages_installed" in storage_skip_checks
+  vars:
+    # for some reason the blivet module does not pick up on the
+    # kpartx dependency, and I'm not sure from the role parameters
+    # how to know if kpartx is needed - so maybe this can be moved
+    # into blivet, or made conditional
+    extra_pkgs:
+      - kpartx
 
 - name: Get service facts
   service_facts:

@@ -15,15 +15,12 @@ See below
 
 ### Collection requirements
 
-The role requires the `mount` module from `ansible.posix`.  If you are using
-`ansible-core`, you must install the `ansible.posix` collection.
+The role requires external collections.  Use the following command to install
+them:
 
 ```bash
 ansible-galaxy collection install -vv -r meta/collection-requirements.yml
 ```
-
-If you are using Ansible Engine 2.9, or are using an Ansible bundle which
-includes these collections/modules, you should have to do nothing.
 
 ## Role Variables
 
@@ -357,6 +354,10 @@ platforms with "buggy" udev.
           fs_label: images
 
 ```
+
+## rpm-ostree
+
+See README-ostree.md
 
 ## License
 
