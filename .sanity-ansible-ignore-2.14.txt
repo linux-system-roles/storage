@@ -38,3 +38,4 @@ plugins/module_utils/storage_lsr/size.py pylint!skip
 tests/storage/scripts/generate_tests.py shebang!skip
 tests/storage/scripts/post-commit shebang!skip
 tests/storage/scripts/pre-commit shebang!skip
+roles/storage/.ostree/get_ostree_data.sh shebang!skip

@@ -19,9 +19,9 @@
       selectattr('device', 'match', '^' ~ storage_test_device_path ~ '$') |
       list }}"
     storage_test_mount_point_matches: "{{ ansible_mounts |
-      selectattr('mount',
-                 'match', '^' ~ storage_test_volume.mount_point ~ '$') |
-      list }}"
+      selectattr('mount', 'match',
+                 '^' ~ mount_prefix ~ storage_test_volume.mount_point ~ '$') |
+      list if storage_test_volume.mount_point else [] }}"
     storage_test_mount_expected_match_count: "{{ 1
       if _storage_test_volume_present and storage_test_volume.mount_point and
       storage_test_volume.mount_point.startswith('/')
@@ -29,6 +29,12 @@
     storage_test_swap_expected_matches: "{{ 1 if
       _storage_test_volume_present and
       storage_test_volume.fs_type == 'swap' else 0 }}"
+  vars:
+    # assumes /opt which is /var/opt in ostree
+    mount_prefix: "{{ '/var'
+      if ansible_facts.pkg_mgr == 'ansible.posix.rhel_rpm_ostree'
+      and storage_test_volume.mount_point
+      and storage_test_volume.mount_point.startswith('/opt') else '' }}"
 
 - name: Get information about the mountpoint directory
   stat:

@@ -1,0 +1,2 @@
+python-blivet3
+python-enum34
