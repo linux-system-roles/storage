@@ -1,6 +1,21 @@
 Changelog
 =========
 
+[1.12.5] - 2023-10-23
+--------------------
+
+### Bug Fixes
+
+- fix: Do not remove swap at every run (#396)
+
+### Other Changes
+
+- chore: Add support for AlmaLinux 8 & 9 (#386)
+- build(deps): Bump actions/checkout from 3 to 4 (#387)
+- ci: ensure dependabot git commit message conforms to commitlint (#392)
+- ci: use dump_packages.py callback to get packages used by role (#394)
+- ci: tox-lsr version 3.1.1 (#397)
+
 [1.12.4] - 2023-09-07
 --------------------
 
