@@ -101,6 +101,22 @@
     - name: Verify role results
       include_tasks: verify-role-results.yml
 
+    - name: Remove the FS
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                fs_type: unformatted
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+
     - name: Clean up
       include_role:
         name: linux-system-roles.storage

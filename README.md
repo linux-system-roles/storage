@@ -143,6 +143,9 @@ variables:
   This indicates the desired file system type to use, e.g.: "xfs", "ext4", "swap".
   The default is determined according to the OS and release
   (currently `xfs` for all the supported systems).
+  Use "unformatted" if you do not want file system to be present.
+  __WARNING__: Using "unformatted" file system type on an existing filesystem
+               is a destructive operation and will destroy all data on the volume.
 
 - `fs_label`
 

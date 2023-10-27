@@ -20,7 +20,7 @@ version_added: "2.5"
 description:
     - "WARNING: Do not use this module directly! It is only for role internal use."
     - "Module configures storage pools and volumes to match the state specified
-       in input parameters. It does not do any management of /etc/fstab entries."
+       in input parameters."
 
 options:
     pools:
@@ -435,6 +435,11 @@ class BlivetVolume(BlivetBase):
 
     def _get_format(self):
         """ Return a blivet.formats.DeviceFormat instance for this volume. """
+
+        if self._volume['fs_type'].lower() == 'unformatted':
+            # Do not create any fs when user explicitly said so
+            return None
+
         fmt = get_format(self._volume['fs_type'],
                          mountpoint=self._volume.get('mount_point'),
                          label=self._volume['fs_label'],
@@ -560,7 +565,8 @@ class BlivetVolume(BlivetBase):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
         fmt = self._get_format()
 
-        if self._device.format.type == fmt.type:
+        if ((fmt is None and self._device.format.type is None)
+                or (fmt is not None and self._device.format.type == fmt.type)):
             # format is the same, no need to run reformatting
             dev_label = '' if self._device.format.label is None else self._device.format.label
             if dev_label != fmt.label:
@@ -574,9 +580,10 @@ class BlivetVolume(BlivetBase):
 
         if self._device.format.status and (self._device.format.mountable or self._device.format.type == "swap"):
             self._device.format.teardown()
-        if not self._device.isleaf:
+        if not self._device.isleaf or fmt is None:
             self._blivet.devicetree.recursive_remove(self._device, remove_device=False)
-        self._blivet.format_device(self._device, fmt)
+        if fmt is not None:
+            self._blivet.format_device(self._device, fmt)
 
     def manage(self):
         """ Schedule actions to configure this volume according to the yaml input. """
