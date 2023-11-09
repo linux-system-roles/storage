@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.14.0] - 2023-11-09
+--------------------
+
+### New Features
+
+- feat: Support for creating volumes without a FS (#400)
+
 [1.13.0] - 2023-11-06
 --------------------
 
