@@ -13,6 +13,8 @@
   package:
     name: cryptsetup
     state: present
+    use: "{{ (__storage_is_ostree | d(false)) |
+             ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
 
 - name: Collect LUKS info for this member
   command: cryptsetup luksDump {{ _storage_test_member_backing_dev.stdout }}

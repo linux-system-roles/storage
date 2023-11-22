@@ -13,6 +13,8 @@
 - name: Make sure COPR support packages are present
   package:
     name: "{{ _storage_copr_support_packages }}"
+    use: "{{ (__storage_is_ostree | d(false)) |
+             ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
   when: install_copr | d(false) | bool
 
 - name: Enable COPRs

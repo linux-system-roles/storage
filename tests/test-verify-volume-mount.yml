@@ -31,8 +31,7 @@
       storage_test_volume.fs_type == 'swap' else 0 }}"
   vars:
     # assumes /opt which is /var/opt in ostree
-    mount_prefix: "{{ '/var'
-      if ansible_facts.pkg_mgr == 'ansible.posix.rhel_rpm_ostree'
+    mount_prefix: "{{ '/var' if __storage_is_ostree | d(false)
       and storage_test_volume.mount_point
       and storage_test_volume.mount_point.startswith('/opt') else '' }}"
 

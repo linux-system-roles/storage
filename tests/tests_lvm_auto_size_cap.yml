@@ -39,6 +39,8 @@
       package:
         name: bc
         state: present
+        use: "{{ (__storage_is_ostree | d(false)) |
+                 ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
 
     - name: Run bc 2 * {{ test_disk_size }}
       command:

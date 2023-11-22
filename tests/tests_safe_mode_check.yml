@@ -36,9 +36,10 @@
       block:
         - name: Install package
           package:
-            name:
-              - nilfs-utils
+            name: nilfs-utils
             state: present
+            use: "{{ (__storage_is_ostree | d(false)) |
+                     ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
       rescue:
         - name: Set skip rest true
           set_fact:

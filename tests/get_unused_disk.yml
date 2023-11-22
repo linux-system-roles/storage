@@ -3,6 +3,8 @@
   package:
     name: "{{ test_packages }}"
     state: present
+    use: "{{ (__storage_is_ostree | d(false)) |
+             ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
   vars:
     # util-linux needed for lsblk, findmnt, etc.
     test_packages: "{{ ['util-linux-core']
