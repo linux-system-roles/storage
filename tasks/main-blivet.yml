@@ -3,6 +3,8 @@
   package:
     name: "{{ blivet_package_list }}"
     state: present
+    use: "{{ (__storage_is_ostree | d(false)) |
+             ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
   when: storage_skip_checks is not defined or
         not "blivet_available" in storage_skip_checks
 
@@ -40,6 +42,8 @@
   package:
     name: "{{ package_info.packages + extra_pkgs }}"
     state: present
+    use: "{{ (__storage_is_ostree | d(false)) |
+             ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
   when: storage_skip_checks is not defined or
         not "packages_installed" in storage_skip_checks
   vars:

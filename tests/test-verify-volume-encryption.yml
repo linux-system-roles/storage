@@ -11,6 +11,8 @@
   package:
     name: cryptsetup
     state: present
+    use: "{{ (__storage_is_ostree | d(false)) |
+             ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
 
 - name: Collect LUKS info for this volume
   command: cryptsetup luksDump {{ storage_test_volume._raw_device }}

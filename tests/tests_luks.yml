@@ -36,6 +36,8 @@
           package:
             name: dracut-fips
             state: present
+            use: "{{ (__storage_is_ostree | d(false)) |
+                     ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
 
         - name: Configure boot for FIPS
           changed_when: false
