@@ -1527,7 +1527,14 @@ class BlivetLVMPool(BlivetPool):
         if not self._device:
             members = self._manage_encryption(self._create_members())
             try:
-                pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members, shared=self._pool['shared'])
+                if self._pool['shared']:
+                    pool_device = self._blivet.new_vg(name=self._pool['name'],
+                                                      parents=members,
+                                                      shared=self._pool['shared'])
+                else:
+                    # Makes it compatible with older blivet versions that does not support shared VGs
+                    pool_device = self._blivet.new_vg(name=self._pool['name'],
+                                                      parents=members)
             except Exception as e:
                 raise BlivetAnsibleError("failed to set up pool '%s': %s" % (self._pool['name'], str(e)))
 
