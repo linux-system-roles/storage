@@ -23,7 +23,7 @@
 
 - name: Verify that VG shared value checks out
   assert:
-    that: (storage_test_pool.shared | bool) and ('1' in vgs_dump.stdout)
+    that: (storage_test_pool.shared | bool) == ('1' in vgs_dump.stdout)
     msg: >-
       Shared VG presence ({{ storage_test_pool.shared }})
       does not match its expected state ({{ '1' in vgs_dump.stdout }})
