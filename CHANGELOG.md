@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.14.1] - 2023-11-29
+--------------------
+
+### Other Changes
+
+- refactor: improve support for ostree systems (#403)
+
 [1.14.0] - 2023-11-09
 --------------------
 
