@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.15.0] - 2023-12-12
+--------------------
+
+### New Features
+
+- feat: Added support for creating shared LVM setups (#388)
+
+### Other Changes
+
+- ci: Bump actions/github-script from 6 to 7 (#405)
+- refactor: get_ostree_data.sh use env shebang - remove from .sanity* (#406)
+
 [1.14.1] - 2023-11-29
 --------------------
 
