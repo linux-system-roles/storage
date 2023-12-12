@@ -206,6 +206,14 @@ described below, as well as the following keys:</p>
 <li><p><code>type</code></p>
 <p>This specifies the type of pool to manage. Valid values for
 <code>type</code>: <code>lvm</code>.</p></li>
+<li><p><code>shared</code></p>
+<p>If set to <code>true</code>, the role creates or manages a shared
+volume group. Requires lvmlockd and dlm services configured and
+running.</p>
+<p>Default: <code>false</code></p>
+<p><strong>WARNING</strong>: Modifying the <code>shared</code> value on
+an existing pool is a destructive operation. The pool itself will be
+removed as part of the process.</p></li>
 <li><p><code>disks</code></p>
 <p>A list which specifies the set of disks to use as backing storage for
 the pool. Supported identifiers include: device node (like
