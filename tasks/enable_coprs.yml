@@ -1,3 +1,4 @@
+
 ---
 - name: Check if the COPR support packages should be installed
   set_fact:
@@ -15,7 +16,9 @@
     name: "{{ _storage_copr_support_packages }}"
     use: "{{ (__storage_is_ostree | d(false)) |
              ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
-  when: install_copr | d(false) | bool
+  when: 
+    - _storage_copr_packages is defined
+    - install_copr | d(false) | bool
 
 - name: Enable COPRs
   include_tasks: enable_copr.yml
