@@ -23,11 +23,13 @@
 
 - name: Verify that VG shared value checks out
   assert:
-    that: (storage_test_pool.shared | bool) == ('1' in vgs_dump.stdout)
+    that: storage_test_pool.shared == actual
     msg: >-
-      Shared VG presence ({{ storage_test_pool.shared }})
-      does not match its expected state ({{ '1' in vgs_dump.stdout }})
+      Shared VG presence expected state ({{ storage_test_pool.shared }})
+      does not match its actual state ({{ actual }})
   when: storage_test_pool.type == 'lvm' and storage_test_pool.state == 'present'
+  vars:
+    actual: "{{ '1' in vgs_dump.stdout }}"
 
 - name: Verify pool subset
   include_tasks: "test-verify-pool-{{ storage_test_pool_subset }}.yml"
