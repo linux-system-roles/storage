@@ -56,9 +56,13 @@ def generate_file(org_filename, iface):
         f.write(TEST_FILE_CONTENTS % (org_filename, iface, iface, iface, org_filename, iface))
 
 
+# These are files for which we do not need scsi and nvme testing
+SKIP_FILES = set(("tests_lvm_pool_shared.yml",))
+
+
 # will new test be generated based on this item?
 def is_test_file(filename):
-    return regex.match(filename) is not None
+    return filename not in SKIP_FILES and regex.match(filename) is not None
 
 
 if __name__ == "__main__":
