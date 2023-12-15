@@ -15,7 +15,7 @@ module: blivet
 
 short_description: Module for management of linux block device stacks
 
-version_added: "2.5"
+version_added: "2.13.0"
 
 description:
     - "WARNING: Do not use this module directly! It is only for role internal use."
@@ -24,51 +24,304 @@ description:
 
 options:
     pools:
-        description:
-            - list of dicts describing pools
+        description: pools
+        type: list
+        elements: dict
+        suboptions:
+            disks:
+                description: disks
+                type: list
+                default: []
+                elements: str
+            encryption:
+                description: encryption
+                type: bool
+            encryption_cipher:
+                description: encryption_cipher
+                type: str
+            encryption_key:
+                description: encryption_key
+                type: str
+            encryption_key_size:
+                description: encryption_key_size
+                type: int
+            encryption_luks_version:
+                description: encryption_luks_version
+                type: str
+            encryption_password:
+                description: encryption_password
+                type: str
+            name:
+                description: name
+                type: str
+            raid_level:
+                description: raid_level
+                type: str
+            raid_device_count:
+                description: raid_device_count
+                type: int
+            raid_spare_count:
+                description: raid_spare_count
+                type: int
+            raid_metadata_version:
+                description: raid_metadata_version
+                type: str
+            raid_chunk_size:
+                description: raid_chunk_size
+                type: str
+            shared:
+                description: shared
+                type: bool
+            state:
+                description: state
+                type: str
+                default: present
+                choices: ['present', 'absent']
+            type:
+                description: type
+                type: str
+            volumes:
+                description: volumes
+                type: list
+                default: []
+                elements: dict
+                suboptions:
+                    encryption:
+                        description: encryption
+                        type: bool
+                    encryption_cipher:
+                        description: encryption_cipher
+                        type: str
+                    encryption_key:
+                        description: encryption_key
+                        type: str
+                    encryption_key_size:
+                        description: encryption_key_size
+                        type: int
+                    encryption_luks_version:
+                        description: encryption_luks_version
+                        type: str
+                    encryption_password:
+                        description: encryption_password
+                        type: str
+                    fs_create_options:
+                        description: fs_create_options
+                        type: str
+                    fs_label:
+                        description: fs_label
+                        type: str
+                        default: ''
+                    fs_type:
+                        description: fs_type
+                        type: str
+                    mount_options:
+                        description: mount_options
+                        type: str
+                    mount_point:
+                        description: mount_point
+                        type: str
+                    mount_user:
+                        description: mount_user
+                        type: str
+                    mount_group:
+                        description: mount_group
+                        type: str
+                    mount_mode:
+                        description: mount_mode
+                        type: str
+                    name:
+                        description: name
+                        type: str
+                    raid_level:
+                        description: raid_level
+                        type: str
+                    size:
+                        description: size
+                        type: str
+                    state:
+                        description: state
+                        type: str
+                        default: present
+                        choices: ['present', 'absent']
+                    type:
+                        description: type
+                        type: str
+                    cached:
+                        description: cached
+                        type: bool
+                    cache_devices:
+                        description: cache_devices
+                        type: list
+                        default: []
+                        elements: str
+                    cache_mode:
+                        description: cache_mode
+                        type: str
+                    cache_size:
+                        description: cache_size
+                        type: str
+                    compression:
+                        description: compression
+                        type: bool
+                    deduplication:
+                        description: deduplication
+                        type: bool
+                    raid_disks:
+                        description: raid_disks
+                        type: list
+                        default: []
+                        elements: str
+                    raid_stripe_size:
+                        description: raid_stripe_size
+                        type: str
+                    thin_pool_name:
+                        description: thin_pool_name
+                        type: str
+                    thin_pool_size:
+                        description: thin_pool_size
+                        type: str
+                    thin:
+                        description: thin
+                        type: bool
+                        default: false
+                    vdo_pool_size:
+                        description: vdo_pool_size
+                        type: str
     volumes:
-        description:
-            - list of dicts describing volumes
-    use_partitions:
-        description:
-            - boolean indicating whether to create partitions on disks for pool backing devices
+        description: volumes
+        type: list
+        elements: dict
+        suboptions:
+            encryption:
+                description: encryption
+                type: bool
+            encryption_cipher:
+                description: encryption_cipher
+                type: str
+            encryption_key:
+                description: encryption_key
+                type: str
+            encryption_key_size:
+                description: encryption_key_size
+                type: int
+            encryption_luks_version:
+                description: encryption_luks_version
+                type: str
+            encryption_password:
+                description: encryption_password
+                type: str
+            fs_create_options:
+                description: fs_create_options
+                type: str
+            fs_label:
+                description: fs_label
+                type: str
+                default: ''
+            fs_type:
+                description: fs_type
+                type: str
+            mount_options:
+                description: mount_options
+                type: str
+            mount_point:
+                description: mount_point
+                type: str
+            mount_user:
+                description: mount_user
+                type: str
+            mount_group:
+                description: mount_group
+                type: str
+            mount_mode:
+                description: mount_mode
+                type: str
+            name:
+                description: name
+                type: str
+            raid_level:
+                description: raid_level
+                type: str
+            size:
+                description: size
+                type: str
+            state:
+                description: state
+                type: str
+                default: present
+                choices: ['present', 'absent']
+            type:
+                description: type
+                type: str
+            disks:
+                description: disks
+                type: list
+                default: []
+                elements: str
+            raid_device_count:
+                description: raid_device_count
+                type: int
+            raid_spare_count:
+                description: raid_spare_count
+                type: int
+            raid_metadata_version:
+                description: raid_metadata_version
+                type: str
+            raid_chunk_size:
+                description: raid_chunk_size
+                type: str
+    packages_only:
+        description: packages_only
+        type: bool
+        default: false
     disklabel_type:
         description:
             - |
               disklabel type string (eg: 'gpt') to use, overriding the built-in logic in blivet
+        type: str
     safe_mode:
         description:
             - boolean indicating that we should fail rather than implicitly/automatically
               removing devices or formatting
+        type: bool
+        default: true
+    pool_defaults:
+        description: pool_defaults
+        type: dict
+    volume_defaults:
+        description: volume_defaults
+        type: dict
+    use_partitions:
+        description: boolean indicating whether to create partitions on disks for pool backing devices
+        type: bool
     diskvolume_mkfs_option_map:
         description:
             - dict which maps filesystem names to additional mkfs options that should be used
               when creating a disk volume (that is, a whole disk filesystem)
-
+        type: dict
+        default: {}
 author:
     - David Lehman (@dwlehman)
 '''
 
 EXAMPLES = '''
-
 - name: Manage devices
   blivet:
     pools:
-        - name: "{{ app_pool }}"
-          disks: ["sdd", "sde"]
-          volumes:
-            - name: shared
-              size: "10 GiB"
-              mount_point: /opt/{{ app_pool }}/shared
-            - name: web
-              size: 8g
-              mount_point: /opt/{{ app_pool }}/web
+      - name: "{{ app_pool }}"
+        disks: ["sdd", "sde"]
+        volumes:
+          - name: shared
+            size: "10 GiB"
+            mount_point: /opt/{{ app_pool }}/shared
+          - name: web
+            size: 8g
+            mount_point: /opt/{{ app_pool }}/web
     volumes:
-        - name: whole_disk1
-          disks: ['sdc']
-          mount_point: /whole_disk1
-          fs_type: ext4
-          mount_options: journal_checksum,async,noexec
+      - name: whole_disk1
+        disks: ['sdc']
+        mount_point: /whole_disk1
+        fs_type: ext4
+        mount_options: journal_checksum,async,noexec
 '''
 
 RETURN = '''
@@ -146,6 +399,12 @@ except ImportError:
         BLIVET_PACKAGE = 'blivet'
     except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
+        # make ansible-test import and compile tests happy
+
+        class FakeDevices(object):
+            def __getattr__(self, val):
+                return val
+        devices = FakeDevices()
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage_lsr.argument_validator import validate_parameters
@@ -1777,14 +2036,59 @@ def activate_swaps(b, pools, volumes):
                 device.format.setup()
 
 
+def format_option(name, option, input, indent):
+    output = input
+    space = " " * indent
+    output = output + space + name + ":\n"
+    space = space + (" " * 4)
+    opt_type = option.get("type")
+    opt_description = option.get("description", name)
+    output = output + space + "description: " + opt_description + "\n"
+    output = output + space + "type: " + opt_type + "\n"
+    opt_default = option.get("default")
+    if opt_default is not None:
+        if opt_type == "list" and not opt_default:
+            opt_default = "[]"
+        elif opt_type == "dict" and not opt_default:
+            opt_default = "{}"
+        elif opt_type == "bool":
+            if opt_default is True or opt_default is False:
+                opt_default = str(opt_default).lower()
+        elif opt_type == "str" and opt_default == "":
+            opt_default = "''"
+        output = output + space + "default: " + opt_default + "\n"
+    if option.get("required"):
+        output = output + space + "required: true\n"
+    if "choices" in option:
+        output = output + space + "choices: " + str(option["choices"]) + "\n"
+    if "elements" in option:
+        output = output + space + "elements: " + str(option["elements"]) + "\n"
+    if "aliases" in option:
+        output = output + space + "aliases: " + str(option["aliases"]) + "\n"
+    return output
+
+
+def generate_module_doc(module_args, input="", indent=4):
+    init_space = " " * indent
+    opt_space = init_space + (" " * 4)
+    output = input
+    for key, value in module_args.items():
+        output = format_option(key, value, output, indent)
+        suboptions = value.get("options")
+        if suboptions:
+            output = output + opt_space + "suboptions:\n"
+            output = generate_module_doc(suboptions, output, indent + 8)
+    return output
+
+
 def run_module():
     # available arguments/parameters that a user can pass
     common_volume_opts = dict(encryption=dict(type='bool'),
                               encryption_cipher=dict(type='str'),
-                              encryption_key=dict(type='str'),
+                              encryption_key=dict(type='str', no_log=True),
                               encryption_key_size=dict(type='int'),
                               encryption_luks_version=dict(type='str'),
-                              encryption_password=dict(type='str'),
+                              encryption_password=dict(type='str', no_log=True),
                               fs_create_options=dict(type='str'),
                               fs_label=dict(type='str', default=''),
                               fs_type=dict(type='str'),
@@ -1800,7 +2104,7 @@ def run_module():
                               type=dict(type='str'))
     volume_opts = copy.deepcopy(common_volume_opts)
     volume_opts.update(
-        dict(disks=dict(type='list'),
+        dict(disks=dict(type='list', elements='str', default=list()),
              raid_device_count=dict(type='int'),
              raid_spare_count=dict(type='int'),
              raid_metadata_version=dict(type='str'),
@@ -1825,10 +2129,10 @@ def run_module():
                    options=dict(disks=dict(type='list', elements='str', default=list()),
                                 encryption=dict(type='bool'),
                                 encryption_cipher=dict(type='str'),
-                                encryption_key=dict(type='str'),
+                                encryption_key=dict(type='str', no_log=True),
                                 encryption_key_size=dict(type='int'),
                                 encryption_luks_version=dict(type='str'),
-                                encryption_password=dict(type='str'),
+                                encryption_password=dict(type='str', no_log=True),
                                 name=dict(type='str'),
                                 raid_level=dict(type='str'),
                                 raid_device_count=dict(type='int'),
@@ -1850,6 +2154,9 @@ def run_module():
         use_partitions=dict(type='bool', required=False),
         diskvolume_mkfs_option_map=dict(type='dict', required=False, default={}))
 
+    # comment this out if not generating module docs
+    # mod_arg_str = generate_module_doc(module_args)
+
     # seed the result dict in the object
     result = dict(
         changed=False,
@@ -1860,6 +2167,7 @@ def run_module():
         pools=list(),
         volumes=list(),
         packages=list(),
+        # mod_arg_str=mod_arg_str,
     )
 
     module = AnsibleModule(argument_spec=module_args,

@@ -42,15 +42,15 @@ options:
 '''
 
 EXAMPLES = '''
-- name: test finding first unused device module
+- name: Test finding first unused device module
   hosts: localhost
   tasks:
-    - name: run module
+    - name: Run module
       find_unused_disk:
         min_size: '10g'
       register: testout
 
-    - name: dump test output
+    - name: Dump test output
       debug:
         msg: '{{ testout }}'
 '''
@@ -65,12 +65,12 @@ disk_name:
             description: Unused disk(s) that have been found
             returned: On success
             type: list
-            samples: |
+            sample: |
               ["sda1", "dm-0", "dm-3"]
-        none:
+        empty:
             description: No unused disks were found
             returned: On success
-            type: string
+            type: str
             sample: "Unable to find unused disk"
 '''
 

@@ -118,6 +118,10 @@
     var: blivet_output
     verbosity: 1
 
+# - name: Print mod args
+#   debug:
+#     msg: mod_args {{ blivet_output.mod_arg_str }}
+
 - name: Set the list of pools for test verification
   set_fact:
     _storage_pools_list: "{{ blivet_output.pools }}"

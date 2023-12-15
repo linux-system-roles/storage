@@ -16,7 +16,7 @@ module: bsize
 
 short_description: Module for basic manipulation with byte sizes
 
-version_added: "2.5"
+version_added: "2.13.0"
 
 description:
     - "WARNING: Do not use this module directly! It is only for role internal use."

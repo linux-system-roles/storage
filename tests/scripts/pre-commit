@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script is intended to be used as git pre-commit hook.
 # Make sure file is executable and copy it into <your repo>/.git/hooks/
