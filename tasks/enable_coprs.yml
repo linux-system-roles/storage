@@ -17,7 +17,7 @@
     use: "{{ (__storage_is_ostree | d(false)) |
              ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
   when: 
-    - _storage_copr_packages is defined
+    - _storage_copr_support_packages is defined
     - install_copr | d(false) | bool
 
 - name: Enable COPRs
