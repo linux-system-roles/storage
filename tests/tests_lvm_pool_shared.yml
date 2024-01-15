@@ -7,146 +7,185 @@
     storage_use_partitions: true
     mount_location1: '/opt/test1'
     volume1_size: '4g'
+    lvm_conf: /etc/lvm/lvm.conf
 
   tasks:
-    - name: Change node from 'localhost' to '127.0.0.1'
-      set_fact:
-        inventory_hostname: "127.0.0.1"  # noqa: var-naming
-      when: inventory_hostname == "localhost"
+    - name: Run the test
+      block:
+        - name: See if lvm.conf exists
+          stat:
+            path: "{{ lvm_conf }}"
+          register: __lvm_conf_stat
 
-    - name: Run the role to install blivet
-      include_role:
-        name: linux-system-roles.storage
+        - name: Create a tempfile
+          tempfile:
+            prefix: storage_
+            suffix: _lvm_shared
+          register: __storage_save_conf
+          when: __lvm_conf_stat.stat.exists
 
-    - name: Gather package facts
-      package_facts:
+        - name: Copy lvm.conf to tempfile
+          copy:
+            src: "{{ lvm_conf }}"
+            dest: "{{  __storage_save_conf.path }}"
+            remote_src: true
+            mode: "{{ __lvm_conf_stat.stat.mode }}"
+          when: __lvm_conf_stat.stat.exists
 
-    - name: Set blivet package name
-      set_fact:
-        blivet_pkg_name: "{{ ansible_facts.packages |
-          select('search', 'blivet') | select('search', 'python') | list }}"
+        - name: Change node from 'localhost' to '127.0.0.1'
+          set_fact:
+            inventory_hostname: "127.0.0.1"  # noqa: var-naming
+          when: inventory_hostname == "localhost"
 
-    - name: Set blivet package version
-      set_fact:
-        blivet_pkg_version: "{{
-          ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
-          '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+        - name: Run the role to install blivet
+          include_role:
+            name: linux-system-roles.storage
 
-    - name: Set distribution version
-      set_fact:
-        is_rhel9: "{{ (ansible_facts.distribution == 'CentOS' or
-                    ansible_facts.distribution == 'Enterprise Linux' or
-                    ansible_facts.distribution == 'RedHat') and
-                    ansible_facts.distribution_major_version == '9' }}"
-        is_rhel8: "{{ (ansible_facts.distribution == 'CentOS' or
-                    ansible_facts.distribution == 'Enterprise Linux' or
-                    ansible_facts.distribution == 'RedHat') and
-                    ansible_facts.distribution_major_version == '8' }}"
-        is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
+        - name: Gather package facts
+          package_facts:
 
-    - name: Skip test if the blivet version does not support shared VGs
-      meta: end_host
-      when: ((is_fedora and blivet_pkg_version is version("3.8.2-1", "<")) or
-             (is_rhel8 and blivet_pkg_version is version("3.6.0-8", "<")) or
-             (is_rhel9 and blivet_pkg_version is version("3.6.0-11", "<")))
+        - name: Set blivet package name
+          set_fact:
+            blivet_pkg_name: "{{ ansible_facts.packages |
+              select('search', 'blivet') | select('search', 'python') | list }}"
 
-    - name: Create cluster
-      ansible.builtin.include_role:
-        name: fedora.linux_system_roles.ha_cluster
-      vars:
-        ha_cluster_cluster_name: rhel9-1node
-        # Users should vault-encrypt the password
-        ha_cluster_hacluster_password: hapasswd
-        ha_cluster_extra_packages:
-          - dlm
-          - lvm2-lockd
-        ha_cluster_cluster_properties:
-          - attrs:
-              # Don't do this in production
-              - name: stonith-enabled
-                value: 'false'
-        ha_cluster_resource_primitives:
-          - id: dlm
-            agent: 'ocf:pacemaker:controld'
-            instance_attrs:
+        - name: Set blivet package version
+          set_fact:
+            blivet_pkg_version: "{{
+              ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
+              '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+
+        - name: Set distribution version
+          set_fact:
+            is_rhel9: "{{ (ansible_facts.distribution == 'CentOS' or
+                        ansible_facts.distribution == 'Enterprise Linux' or
+                        ansible_facts.distribution == 'RedHat') and
+                        ansible_facts.distribution_major_version == '9' }}"
+            is_rhel8: "{{ (ansible_facts.distribution == 'CentOS' or
+                        ansible_facts.distribution == 'Enterprise Linux' or
+                        ansible_facts.distribution == 'RedHat') and
+                        ansible_facts.distribution_major_version == '8' }}"
+            is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
+
+        - name: Skip test if the blivet version does not support shared VGs
+          meta: end_host
+          when: ((is_fedora and blivet_pkg_version is version("3.8.2-1", "<"))
+                 or (is_rhel8 and blivet_pkg_version is version("3.6.0-8", "<"))
+                 or (is_rhel9 and
+                     blivet_pkg_version is version("3.6.0-11", "<")))
+
+        - name: Create cluster
+          ansible.builtin.include_role:
+            name: fedora.linux_system_roles.ha_cluster
+          vars:
+            ha_cluster_cluster_name: rhel9-1node
+            # Users should vault-encrypt the password
+            ha_cluster_hacluster_password: hapasswd
+            ha_cluster_extra_packages:
+              - dlm
+              - lvm2-lockd
+            ha_cluster_cluster_properties:
               - attrs:
                   # Don't do this in production
-                  - name: allow_stonith_disabled
-                    value: 'true'
-          - id: lvmlockd
-            agent: 'ocf:heartbeat:lvmlockd'
-        ha_cluster_resource_groups:
-          - id: locking
-            resource_ids:
-              - dlm
-              - lvmlockd
+                  - name: stonith-enabled
+                    value: 'false'
+            ha_cluster_resource_primitives:
+              - id: dlm
+                agent: 'ocf:pacemaker:controld'
+                instance_attrs:
+                  - attrs:
+                      # Don't do this in production
+                      - name: allow_stonith_disabled
+                        value: 'true'
+              - id: lvmlockd
+                agent: 'ocf:heartbeat:lvmlockd'
+            ha_cluster_resource_groups:
+              - id: locking
+                resource_ids:
+                  - dlm
+                  - lvmlockd
 
-    - name: Get unused disks
-      include_tasks: get_unused_disk.yml
-      vars:
-        max_return: 1
+        - name: Get unused disks
+          include_tasks: get_unused_disk.yml
+          vars:
+            max_return: 1
 
-    - name: >-
-        Create a disk device; specify disks as non-list mounted on
-        {{ mount_location }}
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: vg1
-            disks: "{{ unused_disks }}"
-            type: lvm
-            shared: true
-            state: present
-            volumes:
-              - name: lv1
-                size: "{{ volume1_size }}"
-                mount_point: "{{ mount_location1 }}"
+        - name: >-
+            Create a disk device; specify disks as non-list mounted on
+            {{ mount_location }}
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: vg1
+                disks: "{{ unused_disks }}"
+                type: lvm
+                shared: true
+                state: present
+                volumes:
+                  - name: lv1
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
 
-    - name: Verify role results
-      include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous step to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: vg1
-            disks: "{{ unused_disks }}"
-            type: lvm
-            shared: true
-            state: present
-            volumes:
-              - name: lv1
-                size: "{{ volume1_size }}"
-                mount_point: "{{ mount_location1 }}"
+        - name: Repeat the previous step to verify idempotence
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: vg1
+                disks: "{{ unused_disks }}"
+                type: lvm
+                shared: true
+                state: present
+                volumes:
+                  - name: lv1
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
 
-    - name: Verify role results
-      include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
-    - name: >-
-        Remove the device created above
-        {{ mount_location }}
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: vg1
-            disks: "{{ unused_disks }}"
-            type: lvm
-            shared: true
+        - name: >-
+            Remove the device created above
+            {{ mount_location }}
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: vg1
+                disks: "{{ unused_disks }}"
+                type: lvm
+                shared: true
+                state: absent
+                volumes:
+                  - name: lv1
+                    size: "{{ volume1_size }}"
+                    mount_point: "{{ mount_location1 }}"
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+      always:
+        - name: Remove cluster
+          ansible.builtin.include_role:
+            name: fedora.linux_system_roles.ha_cluster
+          vars:
+            ha_cluster_cluster_name: rhel9-1node
+            ha_cluster_cluster_present: false
+
+        - name: Restore lvm.conf from tempfile
+          copy:
+            src: "{{  __storage_save_conf.path }}"
+            dest: "{{ lvm_conf }}"
+            remote_src: true
+            mode: "{{ __lvm_conf_stat.stat.mode }}"
+          when: __lvm_conf_stat.stat.exists
+
+        - name: Remove tempfile
+          file:
+            path: "{{  __storage_save_conf.path }}"
             state: absent
-            volumes:
-              - name: lv1
-                size: "{{ volume1_size }}"
-                mount_point: "{{ mount_location1 }}"
-
-    - name: Verify role results
-      include_tasks: verify-role-results.yml
-
-    - name: Remove cluster
-      ansible.builtin.include_role:
-        name: fedora.linux_system_roles.ha_cluster
-      vars:
-        ha_cluster_cluster_name: rhel9-1node
-        ha_cluster_cluster_present: false
+          when: __lvm_conf_stat.stat.exists
