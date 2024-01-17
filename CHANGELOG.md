@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.15.1] - 2024-01-16
+--------------------
+
+### Other Changes
+
+- ci: Use supported ansible-lint action; run ansible-lint against the collection (#410)
+- test: make comparison work with ansible 2.9/jinja 2.7 (#411)
+- ci: Bump actions/setup-python from 4 to 5 (#412)
+- ci: Bump github/codeql-action from 2 to 3 (#413)
+- ci: Use supported ansible-lint action; run ansible-lint against the collection (#414)
+- test: Ensure lvm pool shared test cleanup (#415)
+
 [1.15.0] - 2023-12-12
 --------------------
 
