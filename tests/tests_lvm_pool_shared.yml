@@ -126,6 +126,8 @@
                   - name: lv1
                     size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
+                    fs_type: gfs2
+                    fs_create_options: -p lock_nolock
 
         - name: Verify role results
           include_tasks: verify-role-results.yml
@@ -144,6 +146,8 @@
                   - name: lv1
                     size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
+                    fs_type: gfs2
+                    fs_create_options: -p lock_nolock
 
         - name: Verify role results
           include_tasks: verify-role-results.yml
