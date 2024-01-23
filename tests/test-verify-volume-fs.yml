@@ -18,4 +18,9 @@
       should
       ('{{ storage_test_blkinfo.info[storage_test_volume._device].label }}',
       '{{ storage_test_volume.fs_label }}')
-  when: _storage_test_volume_present | bool
+  when:
+    - _storage_test_volume_present | bool
+    # label for GFS2 is set manually with the extra `-t` fs_create_options
+    # so we can't verify it here because it was not set with fs_label so
+    # the label from blkinfo doesn't match the expected "empty" fs_label
+    - storage_test_volume.fs_type != "gfs2"

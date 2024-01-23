@@ -412,6 +412,7 @@ from ansible.module_utils.storage_lsr.argument_validator import validate_paramet
 if BLIVET_PACKAGE:
     blivet_flags.debug = True
     blivet_flags.allow_online_fs_resize = True
+    blivet_flags.gfs2 = True
     set_up_logging()
     log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
 
