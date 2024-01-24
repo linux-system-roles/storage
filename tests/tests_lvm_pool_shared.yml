@@ -127,7 +127,7 @@
                     size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
                     fs_type: gfs2
-                    fs_create_options: -p lock_nolock
+                    fs_create_options: -j 2 -t rhel9-1node:myfs
 
         - name: Verify role results
           include_tasks: verify-role-results.yml
@@ -147,7 +147,7 @@
                     size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
                     fs_type: gfs2
-                    fs_create_options: -p lock_nolock
+                    fs_create_options: -j 2 -t rhel9-1node:myfs
 
         - name: Verify role results
           include_tasks: verify-role-results.yml

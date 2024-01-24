@@ -110,7 +110,6 @@ options:
                     fs_label:
                         description: fs_label
                         type: str
-                        default: ''
                     fs_type:
                         description: fs_type
                         type: str
@@ -216,7 +215,6 @@ options:
             fs_label:
                 description: fs_label
                 type: str
-                default: ''
             fs_type:
                 description: fs_type
                 type: str
@@ -2091,7 +2089,7 @@ def run_module():
                               encryption_luks_version=dict(type='str'),
                               encryption_password=dict(type='str', no_log=True),
                               fs_create_options=dict(type='str'),
-                              fs_label=dict(type='str', default=''),
+                              fs_label=dict(type='str'),
                               fs_type=dict(type='str'),
                               mount_options=dict(type='str'),
                               mount_point=dict(type='str'),
