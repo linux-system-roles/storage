@@ -77,6 +77,40 @@
     - name: Verify role results
       include_tasks: verify-role-results.yml
 
+    - name: Relabel without explicitly setting the label
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location }}"
+            fs_type: ext4
+            disks: "{{ unused_disks }}"
+
+    - name: Check for default value
+      assert:
+        that: not blivet_output.changed
+        msg: "Volume relabeling doesn't preserve existing label."
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Remove label
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            mount_point: "{{ mount_location }}"
+            fs_type: ext4
+            disks: "{{ unused_disks }}"
+            fs_label: ""
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
     - name: Clean up
       include_role:
         name: linux-system-roles.storage
