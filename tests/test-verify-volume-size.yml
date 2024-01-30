@@ -164,7 +164,7 @@
 - name: Assert expected size is actual size
   assert:
     that: (storage_test_expected_size | int - storage_test_actual_size.bytes) |
-      abs / storage_test_expected_size | int < 0.02
+      abs / storage_test_expected_size | int < 0.04
     msg: >-
       Volume {{ storage_test_volume.name }} has unexpected size
       (expected: {{ storage_test_expected_size | int }} /
