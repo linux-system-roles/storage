@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.16.1] - 2024-01-31
+--------------------
+
+### Other Changes
+
+- test: disk size is ok if less than 4 percent of expected (#420)
+
 [1.16.0] - 2024-01-27
 --------------------
 
