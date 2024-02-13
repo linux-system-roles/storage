@@ -10,6 +10,10 @@
     lvm_conf: /etc/lvm/lvm.conf
 
   tasks:
+    - name: Skip this test if test system does not support
+      meta: end_host
+      when: lookup("env", "SYSTEM_ROLES_STORAGE_SHARED_TEST") != "true"
+
     - name: Run the test
       block:
         - name: See if lvm.conf exists
