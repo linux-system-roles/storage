@@ -1,6 +1,15 @@
 Changelog
 =========
 
+[1.16.2] - 2024-02-13
+--------------------
+
+### Other Changes
+
+- ci: Bump codecov/codecov-action from 3 to 4 (#422)
+- ci: fix python unit test - copy pytest config to tests/unit (#423)
+- test: skip lvm pool shared test if not supported (#426)
+
 [1.16.1] - 2024-01-31
 --------------------
 
