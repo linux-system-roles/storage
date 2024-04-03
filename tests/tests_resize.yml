@@ -11,10 +11,8 @@
     invalid_size1: xyz GiB
     invalid_size2: none
     unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
-    too_large_size: '{{ unused_disk_subfact.sectors | int * 1.2 *
-                        unused_disk_subfact.sectorsize | int }}'
-    disk_size: '{{ unused_disk_subfact.sectors | int *
-                   unused_disk_subfact.sectorsize | int }}'
+    too_large_size: '{{ unused_disk_subfact.sectors | int * 1.2 * 512 }}'
+    disk_size: '{{ unused_disk_subfact.sectors | int * 512 }}'
   tags:
     - tests::lvm
   tasks:
