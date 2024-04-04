@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.16.4] - 2024-04-04
+--------------------
+
+### Other Changes
+
+- test: fix sector-based disk size calculation from ansible_devices (#433)
+
 [1.16.3] - 2024-04-04
 --------------------
 
