@@ -1,6 +1,14 @@
 Changelog
 =========
 
+[1.16.3] - 2024-04-04
+--------------------
+
+### Other Changes
+
+- ci: Bump ansible/ansible-lint from 6 to 24 (#429)
+- ci: Bump mathieudutour/github-tag-action from 6.1 to 6.2 (#431)
+
 [1.16.2] - 2024-02-13
 --------------------
 
@@ -104,7 +112,6 @@ Changelog
   - Remove badges from README.md prior to converting to HTML
   
   Signed-off-by: Sergei Petrosian <spetrosi@redhat.com>
-
 
 [1.12.3] - 2023-08-17
 --------------------
