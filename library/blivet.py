@@ -826,6 +826,9 @@ class BlivetVolume(BlivetBase):
         if ((fmt is None and self._device.format.type is None)
                 or (fmt is not None and self._device.format.type == fmt.type)):
             # format is the same, no need to run reformatting
+            if not hasattr(self._device.format, "label"):
+                # not all formats support labels
+                return
             dev_label = '' if self._device.format.label is None else self._device.format.label
             if dev_label != fmt.label:
                 # ...but the label has changed - schedule modification action
