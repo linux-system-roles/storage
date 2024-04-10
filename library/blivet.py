@@ -630,7 +630,7 @@ class BlivetVolume(BlivetBase):
             device.original_format._key_file = self._volume.get('encryption_key')
             device.original_format.passphrase = self._volume.get('encryption_password')
             if device.isleaf:
-                self._blivet.populate()
+                self._blivet.devicetree.populate()
 
             if not device.isleaf:
                 device = device.children[0]
