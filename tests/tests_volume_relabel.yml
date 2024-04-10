@@ -111,6 +111,26 @@
     - name: Verify role results
       include_tasks: verify-role-results.yml
 
+    - name: Format the device to LVMPV which doesn't support labels
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            fs_type: lvmpv
+            disks: "{{ unused_disks }}"
+
+    - name: Rerun to check we don't try to relabel preexisitng LVMPV (regression test for RHEL-29874)
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: test1
+            type: disk
+            fs_type: lvmpv
+            disks: "{{ unused_disks }}"
+
     - name: Clean up
       include_role:
         name: linux-system-roles.storage
