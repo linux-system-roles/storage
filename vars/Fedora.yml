@@ -6,6 +6,8 @@ blivet_package_list:
   - libblockdev-lvm
   - libblockdev-mdraid
   - libblockdev-swap
+  - stratisd
+  - stratis-cli
 _storage_copr_packages:
   - repository: "rhawalsh/dm-vdo"
     packages:

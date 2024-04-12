@@ -1,0 +1,38 @@
+---
+# Only when pool is stratis
+- name: Check Stratis options
+  when: storage_test_pool.type == 'stratis'
+  block:
+    - name: Run 'stratis report'
+      command: stratis report
+      register: storage_test_stratis_report
+      changed_when: false
+
+    - name: Get information about Stratis
+      set_fact:
+        _stratis_pool_info: "{{ storage_test_stratis_report.stdout | from_json }}"
+
+    - name: Verify that the pools was created
+      assert:
+        that: _stratis_pool_info.pools | length == 1 and
+              _stratis_pool_info.pools[0].name == storage_test_pool.name
+        msg: >-
+          Stratis pool '{{ storage_test_pool.name }}' not found
+      when: storage_test_pool.state == 'present'
+
+    # Stratis internally uses LUKS so verify-pool-member-encryption will also
+    # cover this we just need to make sure this is encrypted Stratis pool
+    # and not Stratis on top of "normal LUKS
+    - name: Verify that encryption is correctly set
+      assert:
+        that: storage_test_pool.name in
+          _stratis_pool_info[0]['blockdevs']['datadevs'][0]['key_description']
+        msg: >-
+          Stratis pool '{{ storage_test_pool.name }}' is not encrypted
+      when:
+        - storage_test_pool.state == 'present'
+        - storage_test_pool.encryption
+
+- name: Reset variable used by test
+  set_fact:
+    storage_test_stratis_report: null
