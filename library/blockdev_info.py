@@ -44,12 +44,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 LSBLK_DEVICE_TYPES = {"part": "partition"}
 DEV_MD_DIR = '/dev/md'
+DEV_STRATIS_DIR = '/dev/stratis'
 
 
-def fixup_md_path(path):
-    if not path.startswith("/dev/md"):
-        return path
-
+def _fixup_md_path(path):
     if not os.path.exists(DEV_MD_DIR):
         return path
 
@@ -61,6 +59,29 @@ def fixup_md_path(path):
             break
 
     return ret
+
+
+def _fixup_stratis_path(path):
+    if not os.path.exists(DEV_STRATIS_DIR):
+        return path
+
+    ret = path
+    for pool in os.listdir(DEV_STRATIS_DIR):
+        for fs in os.listdir(os.path.join(DEV_STRATIS_DIR, pool)):
+            stratis_path = os.path.join(DEV_STRATIS_DIR, pool, fs)
+            if os.path.realpath(stratis_path) == os.path.realpath(path):
+                ret = stratis_path
+                break
+    return ret
+
+
+def fixup_path(path):
+    if path.startswith("/dev/md"):
+        return _fixup_md_path(path)
+    elif path.startswith("/dev/mapper/stratis-"):
+        return _fixup_stratis_path(path)
+    else:
+        return path
 
 
 def get_block_info(module):
@@ -76,7 +97,7 @@ def get_block_info(module):
                 raise
             if key:
                 if key.lower() == "name":
-                    value = fixup_md_path(value)
+                    value = fixup_path(value)
 
                 dev[key.lower()] = LSBLK_DEVICE_TYPES.get(value, value)
         if dev:

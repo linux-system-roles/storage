@@ -1320,11 +1320,89 @@ class BlivetMDRaidVolume(BlivetVolume):
             leaves = [a for a in ancestors if a.isleaf]
 
 
+class BlivetStratisVolume(BlivetVolume):
+    blivet_device_class = devices.StratisFilesystemDevice
+
+    def _update_from_device(self, param_name):
+        if param_name == 'fs_type':
+            # Blivet internally uses "stratis xfs" as filesystem type for stratis to distinguish
+            # between "xfs" and "xfs on stratis" but we want to use "xfs" here because that's
+            # the type used for mounting and what the other system tools see
+            self._volume['fs_type'] = self._device.format.mount_type
+            return True
+        else:
+            return super()._update_from_device(param_name)
+
+    def _get_device_id(self):
+        if not self._blivet_pool._device:
+            return None
+        return "%s/%s" % (self._blivet_pool._device.name, self._volume['name'])
+
+    def _get_size(self):
+        size = super(BlivetStratisVolume, self)._get_size()
+        if isinstance(self._volume['size'], str) and '%' in self._volume['size']:
+            size = self._blivet_pool._device.align(size, roundup=True)
+        return size
+
+    def _trim_size(self, size, parent_device):
+        trim_percent = (1.0 - float(parent_device.free_space / size)) * 100
+        log.debug("size: %s ; %s", size, trim_percent)
+
+        if size > parent_device.free_space:
+            if trim_percent > MAX_TRIM_PERCENT:
+                raise BlivetAnsibleError("specified size for volume '%s' '%s' exceeds available space in pool '%s' (%s)" % (self._volume['name'],
+                                                                                                                            size,
+                                                                                                                            parent_device.name,
+                                                                                                                            parent_device.free_space))
+            else:
+                log.info("adjusting %s size from %s to %s to fit in %s free space",
+                         self._volume['name'],
+                         size,
+                         parent_device.free_space,
+                         parent_device.name)
+                return parent_device.free_space
+        return size
+
+    def _get_format(self):
+        if self._volume['fs_type'] and self._volume['fs_type'] not in ('xfs', 'stratis xfs'):
+            raise BlivetAnsibleError("format cannot be specified for Stratis volumes")
+
+    def _reformat(self):
+        if self._volume['fs_type'] and self._volume['fs_type'] not in ('xfs', 'stratis xfs'):
+            raise BlivetAnsibleError("format cannot be changed for Stratis volumes")
+
+    def _manage_cache(self):
+        if self._volume['cached']:
+            raise BlivetAnsibleError("caching is not supported for Stratis volumes")
+
+    def _create(self):
+        if self._device:
+            return
+
+        parent_device = self._blivet_pool._device
+        if parent_device is None:
+            raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool._device.name,
+                                                                                   self._volume['name']))
+
+        size = self._trim_size(self._get_size(), parent_device)
+
+        try:
+            device = self._blivet.new_stratis_filesystem(name=self._volume['name'],
+                                                         parents=[parent_device],
+                                                         size=size)
+        except Exception as e:
+            raise BlivetAnsibleError("failed to set up volume '%s': %s" % (self._volume['name'], str(e)))
+
+        self._blivet.create_device(device)
+        self._device = device
+
+
 _BLIVET_VOLUME_TYPES = {
     "disk": BlivetDiskVolume,
     "lvm": BlivetLVMVolume,
     "partition": BlivetPartitionVolume,
-    "raid": BlivetMDRaidVolume
+    "raid": BlivetMDRaidVolume,
+    "stratis": BlivetStratisVolume,
 }
 
 
@@ -1823,9 +1901,63 @@ class BlivetLVMPool(BlivetPool):
             self._thinpools = [d for d in self._device.children if d.type == 'lvmthinpool']
 
 
+class BlivetStratisPool(BlivetPool):
+    blivet_device_class = devices.StratisPoolDevice
+
+    def _type_check(self):
+        return self._device.type == "stratis pool"
+
+    def _update_from_device(self, param_name):
+        """ Return True if param_name's value was retrieved from a looked-up device. """
+        log.debug("BlivetStratisPool._update_from_device: %s", self._device)
+
+        if param_name == 'disks':
+            self._pool['disks'] = [d.name for d in self._device.disks]
+        elif param_name == 'encryption':
+            self._pool['encryption'] = self._device.encrypted
+        else:
+            return False
+
+        return True
+
+    def _member_management_is_destructive(self):
+        if self._device is None:
+            return False
+
+        if self._pool['encryption'] and not self._device.encrypted:
+            return True
+        elif not self._pool['encryption'] and self._device.encrypted:
+            return True
+
+        return False
+
+    def _get_format(self):
+        fmt = get_format("stratis")
+        if not fmt.supported or not fmt.formattable:
+            raise BlivetAnsibleError("required tools for managing Stratis are missing")
+
+        return fmt
+
+    def _create(self):
+        if not self._device:
+            members = self._create_members()
+            try:
+                pool_device = self._blivet.new_stratis_pool(name=self._pool['name'],
+                                                            parents=members,
+                                                            encrypted=self._spec_dict['encryption'],
+                                                            passphrase=self._spec_dict.get('encryption_password') or None,
+                                                            key_file=self._spec_dict.get('encryption_key') or None)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to set up pool '%s': %s" % (self._pool['name'], str(e)))
+
+            self._blivet.create_device(pool_device)
+            self._device = pool_device
+
+
 _BLIVET_POOL_TYPES = {
     "partition": BlivetPartitionPool,
-    "lvm": BlivetLVMPool
+    "lvm": BlivetLVMPool,
+    "stratis": BlivetStratisPool,
 }
 
 

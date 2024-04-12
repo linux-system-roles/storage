@@ -9,3 +9,5 @@ blivet_package_list:
   - vdo
   - kmod-kvdo
   - xfsprogs
+  - stratisd
+  - stratis-cli

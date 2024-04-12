@@ -85,6 +85,9 @@
 - name: Check VDO
   include_tasks: verify-pool-members-vdo.yml
 
+- name: Check Stratis
+  include_tasks: verify-pool-stratis.yml
+
 - name: Clean up test variables
   set_fact:
     _storage_test_expected_pv_type: null

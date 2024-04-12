@@ -1,0 +1,165 @@
+---
+- name: Test stratis pool management
+  hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test1'
+    mount_location_2: '/opt/test2'
+    volume_group_size: '5g'
+    volume_size: '4g'
+  tags:
+    - tests::stratis
+
+  tasks:
+    - name: Run the role
+      include_role:
+        name: linux-system-roles.storage
+
+    - name: Mark tasks to be skipped
+      set_fact:
+        storage_skip_checks:
+          - blivet_available
+          - "{{ (lookup('env',
+                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
+                ternary('packages_installed', '') }}"
+          - service_facts
+
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_group_size }}"
+        disks_needed: 2
+
+    # stratisd is not started automatically and doesn't support DBus activation
+    # this will be covered by Blivet in the next build
+    - name: Start stratisd service
+      service:
+        name: stratisd
+        state: started
+
+    - name: Create one Stratis pool with one volume
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: stratis
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: stratis
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Add second filesystem to the pool
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: stratis
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location_2 }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: stratis
+            state: absent
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+                state: absent
+              - name: test2
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location_2 }}"
+                state: absent
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Create encrypted Stratis pool
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: stratis
+            encryption: true
+            encryption_password: yabbadabbadoo
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: stratis
+            encryption: true
+            encryption_password: yabbadabbadoo
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            type: stratis
+            state: absent
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+                state: absent
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
