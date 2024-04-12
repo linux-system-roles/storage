@@ -15,20 +15,13 @@
 
 - name: Set some facts
   set_fact:
-    storage_test_mount_device_matches: "{{ ansible_mounts |
-      selectattr('device', 'match', '^' ~ storage_test_device_path ~ '$') |
-      list }}"
-    storage_test_mount_point_matches: "{{ ansible_mounts |
-      selectattr('mount', 'match',
-                 '^' ~ mount_prefix ~ storage_test_volume.mount_point ~ '$') |
-      list if storage_test_volume.mount_point else [] }}"
-    storage_test_mount_expected_match_count: "{{ 1
-      if _storage_test_volume_present and storage_test_volume.mount_point and
-      storage_test_volume.mount_point.startswith('/')
-      else 0 }}"
     storage_test_swap_expected_matches: "{{ 1 if
       _storage_test_volume_present and
       storage_test_volume.fs_type == 'swap' else 0 }}"
+    storage_test_mount_expected_mount_point: "{{
+      '[SWAP]' if storage_test_volume.fs_type == 'swap' else
+      '' if storage_test_volume.mount_point == 'none' else
+      mount_prefix + storage_test_volume.mount_point if storage_test_volume.mount_point else '' }}"
   vars:
     # assumes /opt which is /var/opt in ostree
     mount_prefix: "{{ '/var' if __storage_is_ostree | d(false)
@@ -50,23 +43,12 @@
 #
 - name: Verify the current mount state by device
   assert:
-    that: storage_test_mount_device_matches | length ==
-      storage_test_mount_expected_match_count | int
+    that: storage_test_blkinfo.info[storage_test_volume._device].mountpoint ==
+      storage_test_mount_expected_mount_point
     msg: >-
       Found unexpected mount state for volume
       '{{ storage_test_volume.name }}' device
-  when: _storage_test_volume_present and storage_test_volume.mount_point
-
-#
-# Verify mount directory (state, owner, group, permissions).
-#
-- name: Verify the current mount state by mount point
-  assert:
-    that: storage_test_mount_point_matches | length ==
-      storage_test_mount_expected_match_count | int
-    msg: >-
-      Found unexpected mount state for volume
-      '{{ storage_test_volume.name }}' mount point
+  when: _storage_test_volume_present
 
 - name: Verify mount directory user
   assert:
@@ -105,18 +87,6 @@
         storage_test_volume.mount_mode
 
 #
-# Verify mount fs type.
-#
-- name: Verify the mount fs type
-  assert:
-    that: storage_test_mount_point_matches[0].fstype ==
-      storage_test_volume.fs_type
-    msg: >-
-      Found unexpected mount state for volume
-      '{{ storage_test_volume.name }} fs type
-  when: storage_test_mount_expected_match_count | int == 1
-
-#
 # Verify swap status.
 #
 - name: Get path of test volume device
@@ -145,10 +115,8 @@
 
 - name: Unset facts
   set_fact:
-    storage_test_mount_device_matches: null
-    storage_test_mount_point_matches: null
-    storage_test_mount_expected_match_count: null
     storage_test_swap_expected_matches: null
     storage_test_sys_node: null
     storage_test_swaps: null
     storage_test_found_mount_stat: null
+    storage_test_mount_expected_mount_point: null

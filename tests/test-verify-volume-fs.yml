@@ -1,26 +1,31 @@
 ---
 # type
-- name: Verify fs type
-  assert:
-    that: storage_test_blkinfo.info[storage_test_volume._device].fstype ==
-      storage_test_volume.fs_type or
-      (storage_test_blkinfo.info[storage_test_volume._device].fstype | length
-       == 0 and storage_test_volume.fs_type == "unformatted")
-  when: storage_test_volume.fs_type and _storage_test_volume_present
+- name: Check volume filesystem
+  when: storage_test_volume.type != "stratis"
+  block:
+  - name: Verify fs type
+    assert:
+      that: storage_test_blkinfo.info[storage_test_volume._device].fstype ==
+        storage_test_volume.fs_type or
+        (storage_test_blkinfo.info[storage_test_volume._device].fstype | length
+        == 0 and storage_test_volume.fs_type == "unformatted")
+    when:
+      - storage_test_volume.fs_type
+      - _storage_test_volume_present
 
-# label
-- name: Verify fs label
-  assert:
-    that: storage_test_blkinfo.info[storage_test_volume._device].label ==
-      storage_test_volume.fs_label
-    msg: >-
-      Volume '{{ storage_test_volume.name }}' labels do not match when they
-      should
-      ('{{ storage_test_blkinfo.info[storage_test_volume._device].label }}',
-      '{{ storage_test_volume.fs_label }}')
-  when:
-    - _storage_test_volume_present | bool
-    # label for GFS2 is set manually with the extra `-t` fs_create_options
-    # so we can't verify it here because it was not set with fs_label so
-    # the label from blkinfo doesn't match the expected "empty" fs_label
-    - storage_test_volume.fs_type != "gfs2"
+  # label
+  - name: Verify fs label
+    assert:
+      that: storage_test_blkinfo.info[storage_test_volume._device].label ==
+        storage_test_volume.fs_label
+      msg: >-
+        Volume '{{ storage_test_volume.name }}' labels do not match when they
+        should
+        ('{{ storage_test_blkinfo.info[storage_test_volume._device].label }}',
+        '{{ storage_test_volume.fs_label }}')
+    when:
+      - _storage_test_volume_present | bool
+      # label for GFS2 is set manually with the extra `-t` fs_create_options
+      # so we can't verify it here because it was not set with fs_label so
+      # the label from blkinfo doesn't match the expected "empty" fs_label
+      - storage_test_volume.fs_type != "gfs2"
