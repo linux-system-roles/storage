@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.16.5] - 2024-04-22
+--------------------
+
+### Bug Fixes
+
+- fix: Fix recreate check for formats without labelling support (#435)
+
 [1.16.4] - 2024-04-04
 --------------------
 
