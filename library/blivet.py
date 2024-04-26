@@ -1931,6 +1931,33 @@ class BlivetStratisPool(BlivetPool):
 
         return False
 
+    def _manage_members(self):
+        """ Schedule actions as needed to configure this pool's members. """
+        if not self._device:
+            return
+
+        add_disks = [d for d in self._disks if d not in self._device.ancestors]
+        remove_disks = [bd for bd in self._device.blockdevs if not any(d in bd.ancestors for d in self._disks)]
+
+        if remove_disks:
+            raise BlivetAnsibleError("cannot remove members '%s' from pool '%s': Stratis doesn't "
+                                     "support removing members from existing pools" %
+                                     (", ".join(d.name for d in remove_disks),
+                                      self._device.name))
+
+        if not add_disks:
+            return
+
+        for disk in add_disks:
+            member = self._create_one_member(disk)
+            try:
+                ac = ActionAddMember(self._device, member)
+                self._blivet.devicetree.actions.add(ac)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to add disk '%s' to pool '%s': %s" % (disk.name,
+                                                                                       self._pool['name'],
+                                                                                       str(e)))
+
     def _get_format(self):
         fmt = get_format("stratis")
         if not fmt.supported or not fmt.formattable:

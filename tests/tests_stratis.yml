@@ -163,3 +163,49 @@
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
+
+    # XXX blivet supporting this is not yet released
+    - name: Run test only if blivet supports this functionality
+      when: false
+      block:
+        - name: Create one Stratis pool on one disk
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks[0] }}"
+                type: stratis
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+        - name: Add the second disk to the pool
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ [unused_disks[0], unused_disks[1]] }}"
+                type: stratis
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+        - name: Clean up
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                type: stratis
+                state: absent
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    mount_point: "{{ mount_location }}"
+                    state: absent
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
