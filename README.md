@@ -48,6 +48,11 @@ keys:
   This specifies the type of pool to manage.
   Valid values for `type`: `lvm`.
 
+- `grow_to_fill`
+
+  When set, the pool Physical Volumes will be resized to match their respective device sizes.
+  (e.g. after Virtual Machine disk size increase)
+
 - `shared`
 
   If set to `true`, the role creates or manages a shared volume group. Requires lvmlockd and

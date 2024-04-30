@@ -70,6 +70,25 @@
     loop_var: pv
   when: storage_test_pool.type == 'lvm'
 
+- name: Check that blivet supports PV grow to fill
+  ansible.builtin.script: >-
+    scripts/does_library_support.py
+    blivet.formats.lvmpv.LVMPhysicalVolume.grow_to_fill
+  args:
+    executable: "{{ ansible_python.executable }}"
+  register: grow_supported
+  changed_when: false
+
+- name: Verify that PVs fill the whole devices when they should
+  include_tasks: verify-pool-member-pvsize.yml
+  loop: "{{ _storage_test_pool_pvs | default([]) }}"
+  loop_control:
+    loop_var: st_pool_pv
+  when:
+  - grow_supported.stdout | trim == 'True'
+  - storage_test_pool.type == "lvm"
+  - storage_test_pool.grow_to_fill | bool
+
 - name: Check MD RAID
   include_tasks: verify-pool-md.yml
 

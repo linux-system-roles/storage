@@ -13,6 +13,7 @@ storage_pool_defaults:
   type: lvm
   disks: []
   volumes: []
+  grow_to_fill: false
 
   encryption: false
   encryption_password: null
