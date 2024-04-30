@@ -60,6 +60,9 @@ options:
             encryption_tang_thumbprint:
                 description: encryption_tang_thumbprint
                 type: str
+            grow_to_fill:
+                description: grow_to_fill
+                type: bool
             name:
                 description: name
                 type: str
@@ -379,7 +382,7 @@ try:
     from blivet3.callbacks import callbacks
     from blivet3 import devicelibs
     from blivet3 import devices
-    from blivet3.deviceaction import ActionConfigureFormat, ActionAddMember, ActionRemoveMember
+    from blivet3.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
     from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import fslib, get_format
@@ -395,7 +398,7 @@ except ImportError:
         from blivet.callbacks import callbacks
         from blivet import devicelibs
         from blivet import devices
-        from blivet.deviceaction import ActionConfigureFormat, ActionAddMember, ActionRemoveMember
+        from blivet.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
         from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
         from blivet.flags import flags as blivet_flags
         from blivet.formats import fslib, get_format
@@ -421,6 +424,7 @@ if BLIVET_PACKAGE:
     blivet_flags.allow_online_fs_resize = True
     blivet_flags.gfs2 = True
     set_up_logging()
+
     log = logging.getLogger(BLIVET_PACKAGE + ".ansible")
 
     # XXX add support for LVM RAID raid0 level
@@ -1839,6 +1843,22 @@ class BlivetLVMPool(BlivetPool):
         add_disks = [d for d in self._disks if d not in self._device.ancestors]
         remove_disks = [pv for pv in self._device.pvs if not any(d in pv.ancestors for d in self._disks)]
 
+        if self._pool['grow_to_fill']:
+            grow_pv_candidates = [pv for pv in self._device.pvs if pv not in remove_disks and pv not in add_disks]
+
+            for pv in grow_pv_candidates:
+                if abs(self._device.size - self._device.current_size) < 2 * self._device.pe_size:
+                    continue
+
+                pv.format.update_size_info()  # set pv to be resizable
+
+                if pv.format.resizable:
+                    pv.grow_to_fill = True
+                    ac = ActionResizeFormat(pv, self._device.size)
+                    self._blivet.devicetree.actions.add(ac)
+                else:
+                    log.warning("cannot grow/resize PV '%s', format is not resizable", pv.name)
+
         if not (add_disks or remove_disks):
             return
 
@@ -2329,6 +2349,7 @@ def run_module():
                                 encryption_clevis_pin=dict(type='str'),
                                 encryption_tang_url=dict(type='str'),
                                 encryption_tang_thumbprint=dict(type='str'),
+                                grow_to_fill=dict(type='bool'),
                                 name=dict(type='str'),
                                 raid_level=dict(type='str'),
                                 raid_device_count=dict(type='int'),
@@ -2473,6 +2494,7 @@ def run_module():
         # execute the scheduled actions, committing changes to disk
         callbacks.action_executed.add(record_action)
         callbacks.action_executed.add(ensure_udev_update)
+
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         except Exception as e:

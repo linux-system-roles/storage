@@ -1,0 +1,24 @@
+---
+- name: Get actual PV size
+  command: "pvs --noheadings --nosuffix --units b -o SIZE {{ st_pool_pv }}"
+  register: actual_pv_size
+  changed_when: false
+
+- name: Convert blkinfo size to bytes
+  bsize:
+    size: "{{ storage_test_blkinfo.info[st_pool_pv]['size'] }}"
+  register: dev_size
+
+- name: Verify each PV size
+  assert:
+    that: (dev_size.bytes - actual_pv_size.stdout | int) |
+      abs / actual_pv_size.stdout | int < 0.04
+    msg: >-
+      PV resize failure; size difference too big
+      (device size: {{ dev_size.bytes }})
+      (actual PV size: {{ actual_pv_size.stdout }})
+
+- name: Clean up test variables
+  set_fact:
+    actual_pv_size: null
+    dev_size: null
