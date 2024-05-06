@@ -26,12 +26,25 @@
     - name: Verify that encryption is correctly set
       assert:
         that: storage_test_pool.name in
-          _stratis_pool_info[0]['blockdevs']['datadevs'][0]['key_description']
+          _stratis_pool_info.pools[0]['blockdevs']['datadevs'][0]['key_description']
         msg: >-
           Stratis pool '{{ storage_test_pool.name }}' is not encrypted
       when:
         - storage_test_pool.state == 'present'
         - storage_test_pool.encryption
+
+    - name: Verify that Clevis/Tang encryption is correctly set
+      assert:
+        that:
+          _stratis_pool_info.pools[0]['blockdevs']['datadevs'][0]['clevis_pin'] == 'tang' and
+          _stratis_pool_info.pools[0]['blockdevs']['datadevs'][0]['clevis_config']['url'] ==
+          storage_test_pool.encryption_tang_url
+        msg: >-
+          Stratis pool '{{ storage_test_pool.name }}' Clevis is not correctly configured
+      when:
+        - storage_test_pool.state == 'present'
+        - storage_test_pool.encryption
+        - storage_test_pool.encryption_clevis_pin == 'tang'
 
 - name: Reset variable used by test
   set_fact:

@@ -209,3 +209,40 @@
 
         - name: Verify role results
           include_tasks: verify-role-results.yml
+
+        - name: Setup Tang server on localhost for testing
+          ansible.builtin.include_role:
+            name: fedora.linux_system_roles.nbde_server
+          vars:
+            nbde_server_manage_firewall: true
+            nbde_server_manage_selinux: true
+            nbde_server_port: 7500
+
+        - name: Create encrypted Stratis pool with Clevis/Tang
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks[0] }}"
+                type: stratis
+                encryption: true
+                encryption_password: yabbadabbadoo
+                encryption_clevis_pin: tang
+                encryption_tang_url: localhost:7500
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+        - name: Clean up
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks[0] }}"
+                type: stratis
+                state: absent
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
