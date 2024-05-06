@@ -51,6 +51,15 @@ options:
             encryption_password:
                 description: encryption_password
                 type: str
+            encryption_clevis_pin:
+                description: encryption_clevis_pin
+                type: str
+            encryption_tang_url:
+                description: encryption_tang_url
+                type: str
+            encryption_tang_thumbprint:
+                description: encryption_tang_thumbprint
+                type: str
             name:
                 description: name
                 type: str
@@ -1915,6 +1924,12 @@ class BlivetStratisPool(BlivetPool):
             self._pool['disks'] = [d.name for d in self._device.disks]
         elif param_name == 'encryption':
             self._pool['encryption'] = self._device.encrypted
+        elif param_name == 'encryption_clevis_pin':
+            self._pool['encryption_clevis_pin'] = self._device._clevis.pin
+        elif param_name == 'encryption_tang_url':
+            self._pool['encryption_tang_url'] = self._device._clevis.tang_url
+        elif param_name == 'encryption_tang_thumbprint':
+            self._pool['encryption_tang_thumbprint'] = self._device._clevis.tang_thumbprint
         else:
             return False
 
@@ -1969,11 +1984,23 @@ class BlivetStratisPool(BlivetPool):
         if not self._device:
             members = self._create_members()
             try:
-                pool_device = self._blivet.new_stratis_pool(name=self._pool['name'],
-                                                            parents=members,
-                                                            encrypted=self._spec_dict['encryption'],
-                                                            passphrase=self._spec_dict.get('encryption_password') or None,
-                                                            key_file=self._spec_dict.get('encryption_key') or None)
+                if self._spec_dict['encryption'] and self._spec_dict['encryption_clevis_pin']:
+                    clevis_config = devices.stratis.StratisClevisConfig(pin=self._spec_dict['encryption_clevis_pin'],
+                                                                        tang_url=self._spec_dict['encryption_tang_url'],
+                                                                        tang_thumbprint=self._spec_dict['encryption_tang_thumbprint'])
+                    pool_device = self._blivet.new_stratis_pool(name=self._pool['name'],
+                                                                parents=members,
+                                                                encrypted=self._spec_dict['encryption'],
+                                                                passphrase=self._spec_dict.get('encryption_password') or None,
+                                                                key_file=self._spec_dict.get('encryption_key') or None,
+                                                                clevis=clevis_config)
+                else:
+                    pool_device = self._blivet.new_stratis_pool(name=self._pool['name'],
+                                                                parents=members,
+                                                                encrypted=self._spec_dict['encryption'],
+                                                                passphrase=self._spec_dict.get('encryption_password') or None,
+                                                                key_file=self._spec_dict.get('encryption_key') or None)
+
             except Exception as e:
                 raise BlivetAnsibleError("failed to set up pool '%s': %s" % (self._pool['name'], str(e)))
 
@@ -2299,6 +2326,9 @@ def run_module():
                                 encryption_key_size=dict(type='int'),
                                 encryption_luks_version=dict(type='str'),
                                 encryption_password=dict(type='str', no_log=True),
+                                encryption_clevis_pin=dict(type='str'),
+                                encryption_tang_url=dict(type='str'),
+                                encryption_tang_thumbprint=dict(type='str'),
                                 name=dict(type='str'),
                                 raid_level=dict(type='str'),
                                 raid_device_count=dict(type='int'),

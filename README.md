@@ -112,6 +112,21 @@ keys:
 
   This integer specifies the LUKS version to use.
 
+- `encryption_clevis_pin`
+
+  For Stratis pools, the clevis method that should be used to encrypt the created pool.
+  Accepted values are: `tang` and `tpm2`
+
+- `encryption_tang_url`
+
+  When creating a Stratis pool encrypted via NBDE using a tang server,
+  specifies the URL of the server.
+
+- `encryption_tang_thumbprint`
+
+  When creating a Stratis pool encrypted via NBDE using a tang server,
+  specifies the thumbprint of the server.
+
 ### `storage_volumes`
 
 The `storage_volumes` variable is a list of volumes to manage. Each volume has the following
