@@ -642,6 +642,9 @@ class BlivetVolume(BlivetBase):
             self._device = None
             return  # TODO: see if we can create this device w/ the specified name
 
+    # pylint doesn't understand that "luks_fmt" is always set when "encrypted" is true
+    # pylint: disable=unknown-option-value
+    # pylint: disable=possibly-used-before-assignment
     def _update_from_device(self, param_name):
         """ Return True if param_name's value was retrieved from a looked-up device. """
         log.debug("Updating volume settings from device: %r", self._device)
@@ -1717,6 +1720,8 @@ class BlivetLVMPool(BlivetPool):
 
         if auto_size_dev_count > 0:
             calculated_thinlv_size = available_space / auto_size_dev_count
+        else:
+            calculated_thinlv_size = available_space
 
         for thinlv in thinlvs_to_create:
 
