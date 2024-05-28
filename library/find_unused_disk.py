@@ -39,6 +39,11 @@ options:
         description: Specifies which disk interface will be accepted (scsi, virtio, nvme).
         default: null
         type: str
+
+    match_sector_size:
+        description: Specifies whether all returned disks must have the same (logical) sector size.
+        default: false
+        type: bool
 '''
 
 EXAMPLES = '''
@@ -138,13 +143,13 @@ def get_partitions(disk_path):
 
 
 def get_disks(module):
-    buf = module.run_command(["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE"])[1]
+    buf = module.run_command(["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE,LOG-SEC"])[1]
     disks = dict()
     for line in buf.splitlines():
         if not line:
             continue
 
-        m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)"', line)
+        m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)" LOG-SEC="(?P<ssize>\d+)"', line)
         if m is None:
             module.log(line)
             continue
@@ -152,31 +157,16 @@ def get_disks(module):
         if m.group('type') != "disk":
             continue
 
-        disks[m.group('path')] = {"type": m.group('type'), "size": m.group('size'), "fstype": m.group('fstype')}
+        disks[m.group('path')] = {"type": m.group('type'), "size": m.group('size'),
+                                  "fstype": m.group('fstype'), "ssize": m.group('ssize')}
 
     return disks
 
 
-def run_module():
-    """Create the module"""
-    module_args = dict(
-        max_return=dict(type='int', required=False, default=10),
-        min_size=dict(type='str', required=False, default='0'),
-        max_size=dict(type='str', required=False, default='0'),
-        with_interface=dict(type='str', required=False, default=None)
-    )
-
-    result = dict(
-        changed=False,
-        disks=[]
-    )
-
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=True
-    )
-
+def filter_disks(module):
+    disks = {}
     max_size = Size(module.params['max_size'])
+
     for path, attrs in get_disks(module).items():
         if is_ignored(path):
             continue
@@ -204,14 +194,49 @@ def run_module():
         if not can_open(path):
             continue
 
-        result['disks'].append(os.path.basename(path))
-        if len(result['disks']) >= module.params['max_return']:
-            break
+        disks[path] = attrs
 
-    if not result['disks']:
+    return disks
+
+
+def run_module():
+    """Create the module"""
+    module_args = dict(
+        max_return=dict(type='int', required=False, default=10),
+        min_size=dict(type='str', required=False, default='0'),
+        max_size=dict(type='str', required=False, default='0'),
+        with_interface=dict(type='str', required=False, default=None),
+        match_sector_size=dict(type='bool', required=False, default=False)
+    )
+
+    result = dict(
+        changed=False,
+        disks=[]
+    )
+
+    module = AnsibleModule(
+        argument_spec=module_args,
+        supports_check_mode=True
+    )
+
+    disks = filter_disks(module)
+
+    if module.params['match_sector_size']:
+        # pick the most disks with the same sector size
+        sector_sizes = dict()
+        for path, ss in [(path, disks[path]["ssize"]) for path in disks.keys()]:
+            if ss in sector_sizes.keys():
+                sector_sizes[ss].append(path)
+            else:
+                sector_sizes[ss] = [path]
+        disks = [os.path.basename(p) for p in max(sector_sizes.values(), key=len)]
+    else:
+        disks = [os.path.basename(p) for p in disks.keys()]
+
+    if not disks:
         result['disks'] = "Unable to find unused disk"
     else:
-        result['disks'].sort()
+        result['disks'] = sorted(disks)[:int(module.params['max_return'])]
 
     module.exit_json(**result)
 
