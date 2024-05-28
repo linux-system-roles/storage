@@ -10,9 +10,9 @@ import os
 blkid_data_pttype = [('/dev/sdx', '/dev/sdx: PTTYPE=\"dos\"'),
                      ('/dev/sdy', '/dev/sdy: PTTYPE=\"test\"')]
 
-blkid_data = [('/dev/sdx', 'UUID=\"hello-1234-56789\" TYPE=\"crypto_LUKS\"'),
-              ('/dev/sdy', 'UUID=\"this-1s-a-t3st-f0r-ansible\" VERSION=\"LVM2 001\" TYPE=\"LVM2_member\" USAGE=\"raid\"'),
-              ('/dev/sdz', 'LABEL=\"/data\" UUID=\"a12bcdef-345g-67h8-90i1-234j56789k10\" VERSION=\"1.0\" TYPE=\"ext4\" USAGE=\"filesystem\"')]
+blkid_data = [('/dev/sdx', 'UUID=\"hello-1234-56789\" TYPE=\"crypto_LUKS\" LOG-SEC=\"512\"'),
+              ('/dev/sdy', 'UUID=\"this-1s-a-t3st-f0r-ansible\" VERSION=\"LVM2 001\" TYPE=\"LVM2_member\" USAGE=\"raid\" LOG-SEC=\"512\"'),
+              ('/dev/sdz', 'LABEL=\"/data\" UUID=\"a12bcdef-345g-67h8-90i1-234j56789k10\" VERSION=\"1.0\" TYPE=\"ext4\" USAGE=\"filesystem\" LOG-SEC=\"512\"')]
 
 holders_data_none = [('/dev/sdx', ''),
                      ('/dev/dm-99', '')]

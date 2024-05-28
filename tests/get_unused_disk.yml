@@ -19,6 +19,7 @@
     max_size: "{{ max_size | d(omit) }}"
     max_return: "{{ max_return | d(omit) }}"
     with_interface: "{{ storage_test_use_interface | d(omit) }}"
+    match_sector_size: "{{ match_sector_size | d(omit) }}"
   register: unused_disks_return
 
 - name: Set unused_disks if necessary
