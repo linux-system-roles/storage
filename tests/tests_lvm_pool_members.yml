@@ -59,6 +59,7 @@
           vars:
             min_size: "{{ volume_group_size }}"
             disks_needed: 3
+            match_sector_size: true
 
         - name: Create volume group 'foo' with 3 PVs
           include_role:

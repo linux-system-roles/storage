@@ -29,6 +29,7 @@
       vars:
         max_return: 2
         disks_needed: 2
+        match_sector_size: true
 
     - name: Verify that creating a cached partition volume fails
       include_tasks: verify-role-failed.yml

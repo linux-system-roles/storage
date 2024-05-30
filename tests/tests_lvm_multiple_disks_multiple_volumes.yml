@@ -29,6 +29,7 @@
         min_size: "{{ volume_group_size }}"
         max_return: 2
         disks_needed: 2
+        match_sector_size: true
 
     - name: >-
         Create a logical volume spanning two physical volumes that changes its
