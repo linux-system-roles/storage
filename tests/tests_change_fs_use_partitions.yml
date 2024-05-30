@@ -31,7 +31,7 @@
       include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_size }}"
-        max_return: 2
+        max_return: 1
 
     - name: Create an LVM partition with the default file system type
       include_role:

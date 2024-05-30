@@ -23,6 +23,7 @@
       include_tasks: get_unused_disk.yml
       vars:
         max_return: 3
+        match_sector_size: true
 
     - name: Create a thinpool device
       include_role:
