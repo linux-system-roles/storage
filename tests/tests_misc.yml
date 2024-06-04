@@ -68,8 +68,9 @@
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
-          Failed to commit changes to disk.*FSError.*format failed:
-          1.*/dev/mapper/foo-test1
+          Failed to commit changes to disk.*(FSError.*format failed:
+          1.*/dev/mapper/foo-test1|
+          Process reported exit code 1: mke2fs: invalid block size - 512)
         __storage_failed_msg: >-
           Unexpected behavior when creating ext4 filesystem with invalid
           parameter
