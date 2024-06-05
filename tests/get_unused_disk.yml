@@ -22,6 +22,15 @@
     match_sector_size: "{{ match_sector_size | d(omit) }}"
   register: unused_disks_return
 
+- name: Debug why there are no unused disks
+  shell: |
+    set -x
+    exec 1>&2
+    lsblk -p --pairs --bytes -o NAME,TYPE,SIZE,FSTYPE,LOG-SEC
+    journalctl -ex
+  changed_when: false
+  when: "'Unable to find unused disk' in unused_disks_return.disks"
+
 - name: Set unused_disks if necessary
   set_fact:
     unused_disks: "{{ unused_disks_return.disks }}"

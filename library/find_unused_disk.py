@@ -149,9 +149,9 @@ def get_disks(module):
         if not line:
             continue
 
-        m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)" LOG-SEC="(?P<ssize>\d+)"', line)
+        m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)" LOG[_-]SEC="(?P<ssize>\d+)"', line)
         if m is None:
-            module.log(line)
+            module.log("Line did not match: " + line)
             continue
 
         if m.group('type') != "disk":
