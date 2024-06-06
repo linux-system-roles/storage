@@ -6,7 +6,7 @@
     storage_safe_mode: false
     storage_use_partitions: true
     volume_group_size: '10g'
-    volume_size: '20m'
+    volume_size: '300m'
   tags:
     - tests::lvm
 
