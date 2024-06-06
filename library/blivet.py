@@ -1330,7 +1330,7 @@ class BlivetMDRaidVolume(BlivetVolume):
 
 
 class BlivetStratisVolume(BlivetVolume):
-    blivet_device_class = devices.StratisFilesystemDevice
+    blivet_device_class = devices.StratisFilesystemDevice if hasattr(devices, "StratisFilesystemDevice") else None
 
     def _update_from_device(self, param_name):
         if param_name == 'fs_type':
@@ -1911,7 +1911,7 @@ class BlivetLVMPool(BlivetPool):
 
 
 class BlivetStratisPool(BlivetPool):
-    blivet_device_class = devices.StratisPoolDevice
+    blivet_device_class = devices.StratisPoolDevice if hasattr(devices, "StratisPoolDevice") else None
 
     def _type_check(self):
         return self._device.type == "stratis pool"
