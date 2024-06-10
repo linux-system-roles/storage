@@ -59,7 +59,7 @@ SOFTWARE.
   <style type="text/css">code{white-space: pre;}</style>
   <style type="text/css">
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -70,7 +70,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -255,6 +255,16 @@ otherwise ensure that the file is on the managed nodes.</p></li>
 <p>s the LUKS key size (in bytes).</p></li>
 <li><p><code>encryption_luks_version</code></p>
 <p>This integer specifies the LUKS version to use.</p></li>
+<li><p><code>encryption_clevis_pin</code></p>
+<p>For Stratis pools, the clevis method that should be used to encrypt
+the created pool. Accepted values are: <code>tang</code> and
+<code>tpm2</code></p></li>
+<li><p><code>encryption_tang_url</code></p>
+<p>When creating a Stratis pool encrypted via NBDE using a tang server,
+specifies the URL of the server.</p></li>
+<li><p><code>encryption_tang_thumbprint</code></p>
+<p>When creating a Stratis pool encrypted via NBDE using a tang server,
+specifies the thumbprint of the server.</p></li>
 </ul>
 <h2 id="storage_volumes"><code>storage_volumes</code></h2>
 <p>The <code>storage_volumes</code> variable is a list of volumes to
