@@ -1,6 +1,28 @@
 Changelog
 =========
 
+[1.17.0] - 2024-06-11
+--------------------
+
+### New Features
+
+- feat: PV resize support (#438)
+- feat: Stratis support (#439)
+
+### Bug Fixes
+
+- fix: Fix 'possibly-used-before-assignment' pylint issues (#440)
+- fix: Get same sector size disks for multi device LVM tests (#441)
+- fix: Fix expected error message in tests_misc.yml (#446)
+
+### Other Changes
+
+- ci: use tox-lsr 3.3.0 which uses ansible-test 2.17 (#442)
+- ci: tox-lsr 3.4.0 - fix py27 tests; move other checks to py310 (#445)
+- test: lsblk can return LOG_SEC or LOG-SEC (#447)
+- ci: Add supported_ansible_also to .ansible-lint (#448)
+- test: lvm pool members test fix (#449)
+
 [1.16.5] - 2024-04-22
 --------------------
 
