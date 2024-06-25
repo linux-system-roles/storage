@@ -1,0 +1,13 @@
+---
+blivet_package_list:
+  - python3-blivet
+  - libblockdev-crypto
+  - libblockdev-dm
+  - libblockdev-lvm
+  - libblockdev-mdraid
+  - libblockdev-swap
+  - xfsprogs
+  - stratisd
+  - stratis-cli
+# vdo not yet available on el10
+#  - vdo

@@ -132,29 +132,33 @@ def get_sys_name(disk_path):
     return os.path.normpath(node_dir + '/' + os.readlink(disk_path))
 
 
-def get_partitions(disk_path):
+def get_partitions(disk_path, info):
     sys_name = get_sys_name(disk_path)
     partitions = list()
     for filename in os.listdir(SYS_CLASS_BLOCK + sys_name):
         if re.match(sys_name + r'p?\d+$', filename):
+            info.append("filename [%s] is a partition" % filename)
             partitions.append(filename)
 
     return partitions
 
 
-def get_disks(module):
+def get_disks(module, info):
     buf = module.run_command(["lsblk", "-p", "--pairs", "--bytes", "-o", "NAME,TYPE,SIZE,FSTYPE,LOG-SEC"])[1]
     disks = dict()
     for line in buf.splitlines():
+        info.append("Line: %s" % line)
         if not line:
             continue
 
         m = re.search(r'NAME="(?P<path>[^"]*)" TYPE="(?P<type>[^"]*)" SIZE="(?P<size>\d+)" FSTYPE="(?P<fstype>[^"]*)" LOG[_-]SEC="(?P<ssize>\d+)"', line)
         if m is None:
             module.log("Line did not match: " + line)
+            info.append("Line did not match: %s" % line)
             continue
 
         if m.group('type') != "disk":
+            info.append("Line type [%s] is not disk: %s" % (m.group('type'), line))
             continue
 
         disks[m.group('path')] = {"type": m.group('type'), "size": m.group('size'),
@@ -165,38 +169,49 @@ def get_disks(module):
 
 def filter_disks(module):
     disks = {}
+    info = []
     max_size = Size(module.params['max_size'])
 
-    for path, attrs in get_disks(module).items():
+    for path, attrs in get_disks(module, info).items():
         if is_ignored(path):
+            info.append('Disk [%s] attrs [%s] is ignored' % (path, attrs))
             continue
 
         interface = module.params['with_interface']
 
-        if interface is not None and not is_device_interface(module, path, interface):
+        # do not use nvme unless explicitly asked to
+        if interface is not None and not is_device_interface(module, path, interface) or \
+           interface is None and is_device_interface(module, path, 'nvme'):
+            info.append('Disk [%s] attrs [%s] is not an interface [%s]' % (path, attrs, interface))
             continue
 
         if attrs["fstype"]:
+            info.append('Disk [%s] attrs [%s] has fstype' % (path, attrs))
             continue
 
         if Size(attrs["size"]).bytes < Size(module.params['min_size']).bytes:
+            info.append('Disk [%s] attrs [%s] size is less than requested' % (path, attrs))
             continue
 
         if max_size.bytes > 0 and Size(attrs["size"]).bytes > max_size.bytes:
+            info.append('Disk [%s] attrs [%s] size is greater than requested' % (path, attrs))
             continue
 
-        if get_partitions(path):
+        if get_partitions(path, info):
+            info.append('Disk [%s] attrs [%s] has partitions' % (path, attrs))
             continue
 
         if not no_holders(get_sys_name(path)):
+            info.append('Disk [%s] attrs [%s] has holders' % (path, attrs))
             continue
 
         if not can_open(path):
+            info.append('Disk [%s] attrs [%s] cannot be opened exclusively' % (path, attrs))
             continue
 
         disks[path] = attrs
 
-    return disks
+    return disks, info
 
 
 def run_module():
@@ -211,7 +226,8 @@ def run_module():
 
     result = dict(
         changed=False,
-        disks=[]
+        disks=[],
+        info=[],
     )
 
     module = AnsibleModule(
@@ -219,7 +235,7 @@ def run_module():
         supports_check_mode=True
     )
 
-    disks = filter_disks(module)
+    disks, info = filter_disks(module)
 
     if module.params['match_sector_size']:
         # pick the most disks with the same sector size
@@ -238,6 +254,7 @@ def run_module():
     else:
         result['disks'] = sorted(disks)[:int(module.params['max_return'])]
 
+    result['info'] = info
     module.exit_json(**result)
 
 
