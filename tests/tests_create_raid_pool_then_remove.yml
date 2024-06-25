@@ -44,12 +44,12 @@
 
     - name: Set distribution version
       set_fact:
-        is_rhel9: "{{ (ansible_facts.distribution == 'CentOS' or
-                    ansible_facts.distribution == 'RedHat') and
-                    ansible_facts.distribution_major_version == '9' }}"
-        is_rhel8: "{{ (ansible_facts.distribution == 'CentOS' or
-                    ansible_facts.distribution == 'RedHat') and
-                    ansible_facts.distribution_major_version == '8' }}"
+        is_rhel10: "{{ (ansible_facts['os_family'] == 'RedHat') and
+          ansible_facts.distribution_major_version == '10' }}"
+        is_rhel9: "{{ (ansible_facts['os_family'] == 'RedHat') and
+          ansible_facts.distribution_major_version == '9' }}"
+        is_rhel8: "{{ (ansible_facts['os_family'] == 'RedHat') and
+          ansible_facts.distribution_major_version == '8' }}"
         is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
 
     - name: Get unused disks
@@ -247,7 +247,8 @@
     - name: Run test on supported platforms
       when: ((is_fedora and blivet_pkg_version is version("3.7.1-2", ">=")) or
              (is_rhel8 and blivet_pkg_version is version("3.6.0-5", ">=")) or
-             (is_rhel9 and blivet_pkg_version is version("3.6.0-6", ">=")))
+             (is_rhel9 and blivet_pkg_version is version("3.6.0-6", ">=")) or
+             is_rhel10)
       block:
         - name: Create a RAID0 lvm raid device with custom stripe size
           include_role:
