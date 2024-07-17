@@ -6,8 +6,15 @@ This role allows users to configure local storage with minimal input.
 
 As of now, the role supports managing file systems and mount entries on
 
-- unpartitioned disks
-- lvm (unpartitioned whole-disk physical volumes only)
+- disks
+- LVM volume groups
+- Stratis pools
+
+Encryption (using LUKS) and RAID (using MD) is also supported. Support
+for managing pre-existing devices is limited, but new LVM volumes and
+Stratis filesystems can be added to existing setups and mount points
+and some other features can be added to (or removed from) existing
+devices.
 
 ## Requirements
 
@@ -46,12 +53,22 @@ keys:
 - `type`
 
   This specifies the type of pool to manage.
-  Valid values for `type`: `lvm`.
+  Valid values for `type`: `lvm`, `stratis`.
+
+- `state`
+
+  Valid values are `present` (default behavior) or `absent`. Pools marked as
+  `absent` will be removed by the role. Pools marked as `present` will be either
+  created (if pool with the specified `name` doesn't already exist) or preserved.
 
 - `grow_to_fill`
 
   When set, the pool Physical Volumes will be resized to match their respective device sizes.
   (e.g. after Virtual Machine disk size increase)
+
+  Default: `false`
+
+  __NOTE__: This argument is valid only for LVM pools.
 
 - `shared`
 
@@ -63,6 +80,8 @@ keys:
   __WARNING__: Modifying the `shared` value on an existing pool is a
               destructive operation. The pool itself will be removed as part of the
               process.
+
+  __NOTE__: This argument is valid only for LVM pools.
 
 - `disks`
 
@@ -107,11 +126,11 @@ keys:
 
 - `encryption_cipher`
 
-  ifies a non-default cipher to be used by LUKS.
+  This string specifies a non-default cipher to be used by LUKS.
 
 - `encryption_key_size`
 
-  s the LUKS key size (in bytes).
+  This integer specifies the LUKS key size (in bytes).
 
 - `encryption_luks_version`
 
@@ -144,8 +163,20 @@ variables:
 - `type`
 
   This specifies the type of volume on which the file system will reside.
-  Valid values for `type`: `lvm`, `disk` or `raid`.
+  Valid values for `type`: `lvm`, `disk`, `partition` or `raid`.
   The default is determined according to the OS and release (currently `lvm`).
+
+  __NOTE__: Support for managing partition volumes is currently very limited,
+            the role allows creating only a single partition spanning the
+            entire disk.
+
+- `state`
+
+  Valid values are `present` (default behavior) or `absent`. Volumes marked as
+  `absent` will be removed by the role. Volumes marked as `present` will be either
+  created (if volume with specified `name` doesn't exist) or preserved and possibly
+  changed to match other values (for example if a volume with the specified `name`
+  exists but doesn't have the required `size` it will be resized if possible).
 
 - `disks`
 
@@ -305,48 +336,47 @@ variables:
   e.g.: "30g", "50GiB".
   Default value is equal to the size of the volume.
 
-### `cached`
+- `cached`
 
-This specifies whether the volume should be cached or not.
-This is currently supported only for LVM volumes where dm-cache
-is used.
+  This specifies whether the volume should be cached or not.
+  This is currently supported only for LVM volumes where dm-cache
+  is used.
 
-### `cache_size`
+- `cache_size`
 
-Size of the cache. `cache_size` format is intended to be human-readable,
-e.g.: "30g", "50GiB".
+  Size of the cache. `cache_size` format is intended to be human-readable,
+  e.g.: "30g", "50GiB".
 
-### `cache_mode`
+- `cache_mode`
 
-Mode for the cache. Supported values include `writethrough` (default) and `writeback`.
+  Mode for the cache. Supported values include `writethrough` (default) and `writeback`.
 
-### `cache_devices`
+- `cache_devices`
 
-List of devices that will be used for the cache. These should be either physical volumes or
-drives these physical volumes are allocated on. Generally you want to select fast devices like
-SSD or NVMe drives for cache.
+  List of devices that will be used for the cache. These should be either physical volumes or
+  drives these physical volumes are allocated on. Generally you want to select fast devices like
+  SSD or NVMe drives for cache.
 
-### `thin`
+- `thin`
 
-Whether the volume should be thinly provisioned or not.
-This is supported only for LVM volumes.
+  Whether the volume should be thinly provisioned or not.
+  This is supported only for LVM volumes.
 
-### `thin_pool_name`
+- `thin_pool_name`
 
-For `thin` volumes, this can be used to specify the name of the LVM thin pool that will be used
-for the volume. If the pool with the provided name already exists, the volume will be added to that
-pool. If it doesn't exist a new pool named `thin_pool_name` will be created.
-If not specified:
+  For `thin` volumes, this can be used to specify the name of the LVM thin pool that will be used
+  for the volume. If the pool with the provided name already exists, the volume will be added to that
+  pool. If it doesn't exist a new pool named `thin_pool_name` will be created.
+  If not specified:
+  - if there are no existing thin pools present, a new thin pool will be created with an automatically
+      generated name,
+  - if there is exactly one existing thin pool, the thin volume will be added to it and
+  - if there are multiple thin pools present an exception will be raised.
 
-- if there are no existing thin pools present, a new thin pool will be created with an automatically
-    generated name,
-- if there is exactly one existing thin pool, the thin volume will be added to it and
-- if there are multiple thin pools present an exception will be raised.
+- `thin_pool_size`
 
-### `thin_pool_size`
-
-Size for the thin pool. `thin_pool_size` format is intended to be human-readable,
-e.g.: "30g", "50GiB".
+  Size for the thin pool. `thin_pool_size` format is intended to be human-readable,
+  e.g.: "30g", "50GiB".
 
 ### `storage_safe_mode`
 
