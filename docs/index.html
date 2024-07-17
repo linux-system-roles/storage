@@ -146,18 +146,6 @@ id="toc-collection-requirements">Collection requirements</a></li>
 id="toc-storage_pools"><code>storage_pools</code></a></li>
 <li><a href="#storage_volumes"
 id="toc-storage_volumes"><code>storage_volumes</code></a></li>
-<li><a href="#cached" id="toc-cached"><code>cached</code></a></li>
-<li><a href="#cache_size"
-id="toc-cache_size"><code>cache_size</code></a></li>
-<li><a href="#cache_mode"
-id="toc-cache_mode"><code>cache_mode</code></a></li>
-<li><a href="#cache_devices"
-id="toc-cache_devices"><code>cache_devices</code></a></li>
-<li><a href="#thin" id="toc-thin"><code>thin</code></a></li>
-<li><a href="#thin_pool_name"
-id="toc-thin_pool_name"><code>thin_pool_name</code></a></li>
-<li><a href="#thin_pool_size"
-id="toc-thin_pool_size"><code>thin_pool_size</code></a></li>
 <li><a href="#storage_safe_mode"
 id="toc-storage_safe_mode"><code>storage_safe_mode</code></a></li>
 <li><a href="#storage_udevadm_trigger"
@@ -175,9 +163,15 @@ input.</p>
 <p>As of now, the role supports managing file systems and mount entries
 on</p>
 <ul>
-<li>unpartitioned disks</li>
-<li>lvm (unpartitioned whole-disk physical volumes only)</li>
+<li>disks</li>
+<li>LVM volume groups</li>
+<li>Stratis pools</li>
 </ul>
+<p>Encryption (using LUKS) and RAID (using MD) is also supported.
+Support for managing pre-existing devices is limited, but new LVM
+volumes and Stratis filesystems can be added to existing setups and
+mount points and some other features can be added to (or removed from)
+existing devices.</p>
 <h1 id="requirements">Requirements</h1>
 <p>See below</p>
 <h2 id="collection-requirements">Collection requirements</h2>
@@ -205,11 +199,20 @@ described below, as well as the following keys:</p>
 (One example of a pool is an LVM volume group.)</p></li>
 <li><p><code>type</code></p>
 <p>This specifies the type of pool to manage. Valid values for
-<code>type</code>: <code>lvm</code>.</p></li>
+<code>type</code>: <code>lvm</code>, <code>stratis</code>.</p></li>
+<li><p><code>state</code></p>
+<p>Valid values are <code>present</code> (default behavior) or
+<code>absent</code>. Pools marked as <code>absent</code> will be removed
+by the role. Pools marked as <code>present</code> will be either created
+(if pool with the specified <code>name</code> doesn't already exist) or
+preserved.</p></li>
 <li><p><code>grow_to_fill</code></p>
 <p>When set, the pool Physical Volumes will be resized to match their
 respective device sizes. (e.g. after Virtual Machine disk size
-increase)</p></li>
+increase)</p>
+<p>Default: <code>false</code></p>
+<p><strong>NOTE</strong>: This argument is valid only for LVM
+pools.</p></li>
 <li><p><code>shared</code></p>
 <p>If set to <code>true</code>, the role creates or manages a shared
 volume group. Requires lvmlockd and dlm services configured and
@@ -217,7 +220,9 @@ running.</p>
 <p>Default: <code>false</code></p>
 <p><strong>WARNING</strong>: Modifying the <code>shared</code> value on
 an existing pool is a destructive operation. The pool itself will be
-removed as part of the process.</p></li>
+removed as part of the process.</p>
+<p><strong>NOTE</strong>: This argument is valid only for LVM
+pools.</p></li>
 <li><p><code>disks</code></p>
 <p>A list which specifies the set of disks to use as backing storage for
 the pool. Supported identifiers include: device node (like
@@ -254,9 +259,10 @@ nodes used to unlock the LUKS volume(s). It is the responsibility of the
 user of this role to securely copy this file to the managed nodes, or
 otherwise ensure that the file is on the managed nodes.</p></li>
 <li><p><code>encryption_cipher</code></p>
-<p>ifies a non-default cipher to be used by LUKS.</p></li>
+<p>This string specifies a non-default cipher to be used by
+LUKS.</p></li>
 <li><p><code>encryption_key_size</code></p>
-<p>s the LUKS key size (in bytes).</p></li>
+<p>This integer specifies the LUKS key size (in bytes).</p></li>
 <li><p><code>encryption_luks_version</code></p>
 <p>This integer specifies the LUKS version to use.</p></li>
 <li><p><code>encryption_clevis_pin</code></p>
@@ -279,8 +285,21 @@ manage. Each volume has the following variables:</p>
 <li><p><code>type</code></p>
 <p>This specifies the type of volume on which the file system will
 reside. Valid values for <code>type</code>: <code>lvm</code>,
-<code>disk</code> or <code>raid</code>. The default is determined
-according to the OS and release (currently <code>lvm</code>).</p></li>
+<code>disk</code>, <code>partition</code> or <code>raid</code>. The
+default is determined according to the OS and release (currently
+<code>lvm</code>).</p>
+<p><strong>NOTE</strong>: Support for managing partition volumes is
+currently very limited, the role allows creating only a single partition
+spanning the entire disk.</p></li>
+<li><p><code>state</code></p>
+<p>Valid values are <code>present</code> (default behavior) or
+<code>absent</code>. Volumes marked as <code>absent</code> will be
+removed by the role. Volumes marked as <code>present</code> will be
+either created (if volume with specified <code>name</code> doesn't
+exist) or preserved and possibly changed to match other values (for
+example if a volume with the specified <code>name</code> exists but
+doesn't have the required <code>size</code> it will be resized if
+possible).</p></li>
 <li><p><code>disks</code></p>
 <p>This specifies the set of disks to use as backing storage for the
 file system. This is currently only relevant for volumes of type
@@ -409,25 +428,25 @@ size the volume will take on the device. Virtual size of VDO volume is
 set by <code>size</code> parameter. <code>vdo_pool_size</code> format is
 intended to be human-readable, e.g.: "30g", "50GiB". Default value is
 equal to the size of the volume.</p></li>
-</ul>
-<h2 id="cached"><code>cached</code></h2>
+<li><p><code>cached</code></p>
 <p>This specifies whether the volume should be cached or not. This is
-currently supported only for LVM volumes where dm-cache is used.</p>
-<h2 id="cache_size"><code>cache_size</code></h2>
+currently supported only for LVM volumes where dm-cache is
+used.</p></li>
+<li><p><code>cache_size</code></p>
 <p>Size of the cache. <code>cache_size</code> format is intended to be
-human-readable, e.g.: "30g", "50GiB".</p>
-<h2 id="cache_mode"><code>cache_mode</code></h2>
+human-readable, e.g.: "30g", "50GiB".</p></li>
+<li><p><code>cache_mode</code></p>
 <p>Mode for the cache. Supported values include
-<code>writethrough</code> (default) and <code>writeback</code>.</p>
-<h2 id="cache_devices"><code>cache_devices</code></h2>
+<code>writethrough</code> (default) and <code>writeback</code>.</p></li>
+<li><p><code>cache_devices</code></p>
 <p>List of devices that will be used for the cache. These should be
 either physical volumes or drives these physical volumes are allocated
 on. Generally you want to select fast devices like SSD or NVMe drives
-for cache.</p>
-<h2 id="thin"><code>thin</code></h2>
+for cache.</p></li>
+<li><p><code>thin</code></p>
 <p>Whether the volume should be thinly provisioned or not. This is
-supported only for LVM volumes.</p>
-<h2 id="thin_pool_name"><code>thin_pool_name</code></h2>
+supported only for LVM volumes.</p></li>
+<li><p><code>thin_pool_name</code></p>
 <p>For <code>thin</code> volumes, this can be used to specify the name
 of the LVM thin pool that will be used for the volume. If the pool with
 the provided name already exists, the volume will be added to that pool.
@@ -440,10 +459,11 @@ created with an automatically generated name,</li>
 added to it and</li>
 <li>if there are multiple thin pools present an exception will be
 raised.</li>
-</ul>
-<h2 id="thin_pool_size"><code>thin_pool_size</code></h2>
+</ul></li>
+<li><p><code>thin_pool_size</code></p>
 <p>Size for the thin pool. <code>thin_pool_size</code> format is
-intended to be human-readable, e.g.: "30g", "50GiB".</p>
+intended to be human-readable, e.g.: "30g", "50GiB".</p></li>
+</ul>
 <h2 id="storage_safe_mode"><code>storage_safe_mode</code></h2>
 <p>When true (the default), an error will occur instead of automatically
 removing existing devices and/or formatting.</p>
