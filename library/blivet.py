@@ -2396,7 +2396,7 @@ def run_module():
 
     module.params.update(updated_params)
 
-    if not BLIVET_PACKAGE:
+    if not BLIVET_PACKAGE and not module.check_mode:
         module.fail_json(msg="Failed to import the blivet or blivet3 Python modules",
                          exception=inspect.cleandoc("""
                          blivet3 exception:
