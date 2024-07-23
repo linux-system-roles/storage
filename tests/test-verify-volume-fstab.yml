@@ -68,6 +68,12 @@
     - "'mount_options' in storage_test_volume"
     - "'mount_point' in storage_test_volume"
 
+- name: Verify fingerprint
+  assert:
+    that: __fingerprint in storage_test_fstab.stdout
+  vars:
+    __fingerprint: "system_role:storage"
+
 - name: Clean up variables
   set_fact:
     storage_test_fstab_id_matches: null

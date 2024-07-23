@@ -102,6 +102,24 @@
         - storage_udevadm_trigger | d(false)
         - blivet_output is changed
 
+    - name: Check if /etc/fstab is present
+      stat:
+        path: /etc/fstab
+      register: __storage_fstab
+
+    - name: Add fingerprint to /etc/fstab if present
+      lineinfile:
+        insertbefore: "^#"
+        firstmatch: true
+        line: "{{ __str }}"
+        regexp: "{{ __str }}"
+        path: /etc/fstab
+        state: present
+      vars:
+        __str: "# system_role:storage"
+      when:
+        - __storage_fstab.stat.exists
+        - blivet_output is changed
   rescue:
     - name: Failed message
       fail:
