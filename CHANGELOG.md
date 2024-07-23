@@ -1,6 +1,17 @@
 Changelog
 =========
 
+[1.18.0] - 2024-07-23
+--------------------
+
+### New Features
+
+- feat: write storage role fingerprint to /etc/fstab (#458)
+
+### Other Changes
+
+- docs: Fix multiple small issues in README.md (#456)
+
 [1.17.1] - 2024-07-02
 --------------------
 
