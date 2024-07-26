@@ -33,14 +33,14 @@
         min_size: "10g"
 
     - name: Create PV with a space to grow
-      command: "pvcreate --setphysicalvolumesize {{ pv_size }} /dev/{{ unused_disks[0] }}"
+      command: pvcreate -vvvvvv --setphysicalvolumesize {{ pv_size }} /dev/{{ unused_disks[0] }}
       register: pvcreate_output
       changed_when: pvcreate_output.rc != 0
 
       # VG has to be present, the role otherwise automatically reformats empty PV,
       # taking all available space
     - name: Create VG
-      command: "vgcreate foo /dev/{{ unused_disks[0] }}"
+      command: vgcreate -vvvvvv foo /dev/{{ unused_disks[0] }}
       register: vgcreate_output
       changed_when: vgcreate_output.rc != 0
 
