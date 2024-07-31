@@ -109,6 +109,15 @@
               - name: foo
                 disks: "{{ [unused_disks[0]] }}"
 
+        - name: Get the partition table type on disk removed from the VG
+          command: lsblk -o PTTYPE --noheadings --nodeps /dev/{{ unused_disks[1] }}
+          register: storage_test_removed_pttype
+          changed_when: false
+
+        - name: Verify that removing the PV from the VG also removed the partition table
+          assert:
+            that: storage_test_removed_pttype.stdout == ''
+
         - name: Verify role results
           include_tasks: verify-role-results.yml
 
@@ -278,6 +287,15 @@
                 volumes:
                   - name: test
                     size: "{{ volume_size }}"
+
+        - name: Get the partition table type on disk removed from the VG
+          command: lsblk -o PTTYPE --noheadings --nodeps /dev/{{ unused_disks[0] }}
+          register: storage_test_removed_pttype
+          changed_when: false
+
+        - name: Verify that removing the PV from the VG also removed the partition table
+          assert:
+            that: storage_test_removed_pttype.stdout == ''
 
         - name: Get UUID of the 'foo' volume group
           command: vgs --noheading -o vg_uuid foo

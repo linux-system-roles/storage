@@ -1841,10 +1841,10 @@ class BlivetLVMPool(BlivetPool):
             return
 
         add_disks = [d for d in self._disks if d not in self._device.ancestors]
-        remove_disks = [pv for pv in self._device.pvs if not any(d in pv.ancestors for d in self._disks)]
+        remove_pvs = [pv for pv in self._device.pvs if not any(d in pv.ancestors for d in self._disks)]
 
         if self._pool['grow_to_fill']:
-            grow_pv_candidates = [pv for pv in self._device.pvs if pv not in remove_disks and pv not in add_disks]
+            grow_pv_candidates = [pv for pv in self._device.pvs if pv not in remove_pvs and pv not in add_disks]
 
             for pv in grow_pv_candidates:
                 if abs(self._device.size - self._device.current_size) < 2 * self._device.pe_size:
@@ -1859,12 +1859,12 @@ class BlivetLVMPool(BlivetPool):
                 else:
                     log.warning("cannot grow/resize PV '%s', format is not resizable", pv.name)
 
-        if not (add_disks or remove_disks):
+        if not (add_disks or remove_pvs):
             return
 
-        if remove_disks and safe_mode:
+        if remove_pvs and safe_mode:
             raise BlivetAnsibleError("cannot remove members '%s' from pool '%s' in safe mode" %
-                                     (", ".join(d.name for d in remove_disks),
+                                     (", ".join(d.name for d in remove_pvs),
                                       self._device.name))
 
         if self._is_raid:
@@ -1882,26 +1882,33 @@ class BlivetLVMPool(BlivetPool):
                                                                                        self._pool['name'],
                                                                                        str(e)))
 
-        for disk in remove_disks:
-            if self._device.free_space < disk.size:
-                raise BlivetAnsibleError("disk '%s' cannot be removed from pool '%s'" % (disk.name,
-                                                                                         self._pool['name']))
+        for pv in remove_pvs:
+            if self._device.free_space < pv.size:
+                raise BlivetAnsibleError("member '%s' cannot be removed from pool '%s'" % (pv.name,
+                                                                                           self._pool['name']))
 
             try:
-                ac = ActionRemoveMember(self._device, disk)
+                ac = ActionRemoveMember(self._device, pv)
                 # XXX: scheduling ActionRemoveMember is currently broken, we need to execute
                 # the action now manually, see https://bugzilla.redhat.com/show_bug.cgi?id=2076956
                 # self._blivet.devicetree.actions.add(ac)
                 ac.apply()
                 ac.execute()
             except Exception as e:
-                raise BlivetAnsibleError("failed to remove disk '%s' from pool '%s': %s" % (disk.name,
-                                                                                            self._pool['name'],
-                                                                                            str(e)))
+                raise BlivetAnsibleError("failed to remove member '%s' from pool '%s': %s" % (pv.name,
+                                                                                              self._pool['name'],
+                                                                                              str(e)))
             # XXX workaround for https://github.com/storaged-project/blivet/pull/1040
-            disk.format.vg_name = None
+            pv.format.vg_name = None
 
-            self._blivet.devicetree.recursive_remove(disk.raw_device)
+            self._blivet.devicetree.recursive_remove(pv.raw_device)
+
+            # if we are using partitions remove also the disklabel from the disk (but make sure
+            # there aren't other partitions first)
+            if use_partitions and not pv.is_disk:
+                for disk in pv.disks:
+                    if disk.format.type == "disklabel" and not disk.format.partitions:
+                        self._blivet.devicetree.recursive_remove(disk)
 
     def _create(self):
         if not self._device:
