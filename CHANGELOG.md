@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.18.1] - 2024-08-01
+--------------------
+
+### Bug Fixes
+
+- fix: Remove partition table from disk removed from a VG (#464)
+
+### Other Changes
+
+- ci: Add tft plan and workflow (#460)
+- ci: Update fmf plan to add a separate job to prepare managed nodes (#463)
+- ci: bump sclorg/testing-farm-as-github-action from 2 to 3 (#465)
+
 [1.18.0] - 2024-07-23
 --------------------
 
