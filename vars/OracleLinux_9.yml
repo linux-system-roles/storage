@@ -1,0 +1,16 @@
+---
+blivet_package_list:
+  - python3-blivet
+  - libblockdev-crypto
+  - libblockdev-dm
+  - libblockdev-lvm
+  - libblockdev-mdraid
+  - libblockdev-swap
+  - vdo
+  - kmod-kvdo
+  - xfsprogs
+  - stratisd
+  - stratis-cli
+  # XXX libblockdev-s390 is available only on s390 so just add 'libblockdev' everywhere
+  # else, it is already brought in as dependency of blivet so it's just no-op here
+  - "{{ 'libblockdev-s390' if ansible_architecture == 's390x' else 'libblockdev' }}"
