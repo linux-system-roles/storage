@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.18.2] - 2024-08-09
+--------------------
+
+### Bug Fixes
+
+- fix: Add libblockdev s390 and FS plugins to blivet dependencies list (#467)
+
+### Other Changes
+
+- ci: Add workflow for ci_test bad, use remote fmf plan (#468)
+- ci: Fix missing slash in ARTIFACTS_URL (#470)
+
 [1.18.1] - 2024-08-01
 --------------------
 
