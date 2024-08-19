@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.18.5] - 2024-08-19
+--------------------
+
+### Other Changes
+
+- test: use pvcreate with a timeout and verbose logging (#476)
+
 [1.18.4] - 2024-08-16
 --------------------
 
