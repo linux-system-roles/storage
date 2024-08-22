@@ -1,1 +1,5 @@
 util-linux
+clevis
+clevis-luks
+tpm2-tools
+jq
