@@ -1,1 +1,5 @@
 util-linux-core
+clevis
+clevis-luks
+tpm2-tools
+jq
