@@ -110,9 +110,10 @@
                 disks: "{{ [unused_disks[0]] }}"
 
         - name: Get the partition table type on disk removed from the VG
-          command: lsblk -o PTTYPE --noheadings --nodeps /dev/{{ unused_disks[1] }}
+          command: blkid -p -ovalue -s PTTYPE /dev/{{ unused_disks[1] }}
           register: storage_test_removed_pttype
           changed_when: false
+          failed_when: not storage_test_removed_pttype.rc in [0, 2]
 
         - name: Verify that removing the PV from the VG also removed the partition table
           assert:
@@ -289,9 +290,10 @@
                     size: "{{ volume_size }}"
 
         - name: Get the partition table type on disk removed from the VG
-          command: lsblk -o PTTYPE --noheadings --nodeps /dev/{{ unused_disks[0] }}
+          command: blkid -p -ovalue -s PTTYPE /dev/{{ unused_disks[0] }}
           register: storage_test_removed_pttype
           changed_when: false
+          failed_when: not storage_test_removed_pttype.rc in [0, 2]
 
         - name: Verify that removing the PV from the VG also removed the partition table
           assert:
