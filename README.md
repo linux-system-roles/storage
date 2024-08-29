@@ -8,7 +8,7 @@ As of now, the role supports managing file systems and mount entries on
 
 - disks
 - LVM volume groups
-- Stratis pools
+- Stratis pools (with Stratis v3 and newer)
 
 Encryption (using LUKS) and RAID (using MD) is also supported. Support
 for managing pre-existing devices is limited, but new LVM volumes and
