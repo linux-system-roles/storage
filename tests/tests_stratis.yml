@@ -40,8 +40,9 @@
 
     - name: Set distribution version
       set_fact:
-        is_rhel7: "{{ (ansible_facts['os_family'] == 'RedHat') and
-                    ansible_facts.distribution_major_version == '7' }}"
+        is_rhel78: "{{ (ansible_facts['os_family'] == 'RedHat') and
+                    (ansible_facts.distribution_major_version == '7' or
+                     ansible_facts.distribution_major_version == '8') }}"
         is_rhel9: "{{ (ansible_facts['os_family'] == 'RedHat') and
                     ansible_facts.distribution_major_version == '9' }}"
         is_rhel10: "{{ (ansible_facts['os_family'] == 'RedHat') and
@@ -49,8 +50,8 @@
         is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
 
 
-    - name: Completely skip this on RHEL/CentOS 7 where Stratis isn't supported
-      when: not is_rhel7
+    - name: Completely skip this on RHEL/CentOS 7 and 8 where Stratis isn't supported by blivet
+      when: not is_rhel78
       block:
         - name: Get unused disks
           include_tasks: get_unused_disk.yml
