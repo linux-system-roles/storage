@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.18.7] - 2024-08-29
+--------------------
+
+### Bug Fixes
+
+- fix: Use blkid instead of lsblk in tests to get partition table (#480)
+- fix: Skip Stratis tests on RHEL 8 and document Stratis support (#482)
+
+### Other Changes
+
+- ci: Add tags to TF workflow, allow more [citest bad] formats (#481)
+
 [1.18.6] - 2024-08-21
 --------------------
 
