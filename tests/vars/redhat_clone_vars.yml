@@ -1,19 +1,5 @@
+# vars for handling conditionals for RedHat and clones
 ---
-# ansible_facts required by the role
-__storage_required_facts:
-  - architecture
-  - distribution
-  - distribution_major_version
-  - distribution_version
-  - os_family
-
-# the subsets of ansible_facts that need to be gathered in case any of the
-# facts in required_facts is missing; see the documentation of
-# the 'gather_subset' parameter of the 'setup' module
-__storage_required_facts_subsets: "{{ ['!all', '!min'] +
-  __storage_required_facts }}"
-
-# BEGIN redhat distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __storage_rh_distros:
   - AlmaLinux
@@ -25,7 +11,5 @@ __storage_rh_distros:
 __storage_rh_distros_fedora: "{{ __storage_rh_distros + ['Fedora'] }}"
 # Use this in conditionals to check if distro is Red Hat or clone
 __storage_is_rh_distro: "{{ ansible_distribution in __storage_rh_distros }}"
-
 # Use this in conditionals to check if distro is Red Hat or clone, or Fedora
 __storage_is_rh_distro_fedora: "{{ ansible_distribution in __storage_rh_distros_fedora }}"
-# END redhat distros variables
