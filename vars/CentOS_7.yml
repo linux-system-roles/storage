@@ -1,17 +1,1 @@
----
-blivet_package_list:
-  - python-enum34
-  - python-blivet3
-  - libblockdev-crypto
-  - libblockdev-dm
-  - libblockdev-lvm
-  - libblockdev-mdraid
-  - libblockdev-swap
-  # XXX libblockdev-s390 is available only on s390 so just add 'libblockdev' everywhere
-  # else, it is already brought in as dependency of blivet so it's just no-op here
-  - "{{ 'libblockdev-s390' if ansible_architecture == 's390x' else 'libblockdev' }}"
-# additional options for mkfs when creating a disk volume (whole disk fs)
-__storage_blivet_diskvolume_mkfs_option_map:
-  ext2: '-F'
-  ext3: '-F'
-  ext4: '-F'
+RedHat_7.yml
