@@ -40,19 +40,30 @@
           ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
           '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
 
+    - name: Set libblockdev package version
+      set_fact:
+        libblockdev_pkg_version: "{{
+          ansible_facts.packages['libblockdev'][0]['version'] +
+          '-' + ansible_facts.packages['libblockdev'][0]['release'] }}"
+
     - name: Check if kvdo is loadable
-      shell: |
-        set -euo pipefail
-        modprobe --dry-run kvdo
+      command: modprobe --dry-run kvdo
       ignore_errors: true  # noqa ignore-errors
       changed_when: false
       register: __storage_kvdo_loadable
 
+    - name: Check if dm-vdo is loadable
+      command: modprobe --dry-run dm-vdo
+      ignore_errors: true  # noqa ignore-errors
+      changed_when: false
+      register: __storage_dmvdo_loadable
+
     - name: Run tests if VDO is available
       when:
         - blivet_pkg_version is version("3.2.2-10", ">=")
-        - ansible_facts["distribution"] != "Fedora"
-        - __storage_kvdo_loadable is success
+        - ansible_facts["distribution"] != "Fedora" or
+          libblockdev_pkg_version is version("3.1.1-2", ">=")
+        - __storage_kvdo_loadable is success or __storage_dmvdo_loadable is success
       block:
         - name: Get unused disks
           include_tasks: get_unused_disk.yml
