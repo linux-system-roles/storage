@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.18.9] - 2024-12-04
+--------------------
+
+### Bug Fixes
+
+- fix: VDO tests and packages fixes for Fedora and RHEL 10 (#490)
+
+### Other Changes
+
+- ci: bump codecov/codecov-action from 4 to 5 (#491)
+- ci: Use Fedora 41, drop Fedora 39 (#492)
+- ci: Use Fedora 41, drop Fedora 39 - part two (#493)
+
 [1.18.8] - 2024-10-30
 --------------------
 
