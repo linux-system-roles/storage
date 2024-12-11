@@ -1,0 +1,540 @@
+---
+- name: Test LUKS2
+  hosts: all
+  become: true
+  vars:
+    mount_location: '/opt/test1'
+    testfile: "{{ mount_location }}/quux"
+    volume_size: '5g'
+    __luks_cipher: "{{ (__luks_cipher_env == '') |
+      ternary('aes-xts-plain64', __luks_cipher_env) }}"
+    __luks_cipher_env: "{{ lookup('env', 'SYSTEM_ROLES_LUKS_CIPHER') }}"
+  tags:
+    - tests::lvm
+  tasks:
+    - name: Enable FIPS mode (RHEL 10 and newer)
+      when:
+        - lookup("env", "SYSTEM_ROLES_TEST_FIPS") == "true"
+        - ansible_facts["os_family"] == "RedHat"
+        - ansible_facts["distribution_major_version"] | int > 9
+      block:
+        - name: Enable FIPS mode
+          changed_when: false
+          shell: |
+            set -euxo pipefail
+            kernel=$(grubby --default-kernel)
+            boot_uuid=$(blkid --output value --match-tag UUID "$(findmnt --first --noheadings -o SOURCE /boot)")
+            grubby --update-kernel=$kernel --args="fips=1 boot=UUID=$boot_uuid"
+
+        - name: Reboot
+          reboot:
+            test_command: grep 1 /proc/sys/crypto/fips_enabled
+
+    - name: Enable FIPS mode (RHEL 8 and 9)
+      when:
+        - lookup("env", "SYSTEM_ROLES_TEST_FIPS") == "true"
+        - ansible_facts["os_family"] == "RedHat"
+        - ansible_facts["distribution_major_version"] | int > 7
+        - ansible_facts["distribution_major_version"] | int < 10
+      block:
+        - name: Enable FIPS mode
+          command: fips-mode-setup --enable
+          changed_when: false
+
+        - name: Reboot
+          reboot:
+            test_command: fips-mode-setup --check
+
+    - name: Enable FIPS mode (RHEL 7)
+      when:
+        - lookup("env", "SYSTEM_ROLES_TEST_FIPS") == "true"
+        - ansible_facts["os_family"] == "RedHat"
+        - ansible_facts["distribution_major_version"] | int == 7
+      block:
+        - name: Ensure dracut-fips
+          package:
+            name: dracut-fips
+            state: present
+            use: "{{ (__storage_is_ostree | d(false)) |
+                     ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
+
+        - name: Configure boot for FIPS
+          changed_when: false
+          shell: |
+            set -euxo pipefail
+            mv -v /boot/initramfs-$(uname -r).img{,.bak}
+            dracut
+            kernel=$(grubby --default-kernel)
+            grubby --update-kernel=$kernel --args=fips=1
+
+        - name: Reboot
+          reboot:
+            test_command: grep 1 /proc/sys/crypto/fips_enabled
+
+    - name: Run the role
+      include_role:
+        name: linux-system-roles.storage
+
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+        max_return: 1
+
+    ##
+    ## Disk
+    ##
+    - name: Test for correct handling of new encrypted volume w/ no key
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: encrypted volume.*missing key
+        __storage_failed_msg: >-
+          Unexpected behavior w/ encrypted volume w/ no key
+        __storage_failed_params:
+          storage_volumes:
+            - name: foo
+              type: disk
+              disks: "{{ unused_disks }}"
+              mount_point: "{{ mount_location }}"
+              encryption: true
+              encryption_luks_version: luks2
+
+    # encrypted disk volume
+    - name: Create an encrypted disk volume w/ default fs
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            encryption: true
+            encryption_password: yabbadabbadoo
+            encryption_luks_version: luks2
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Create test file
+      import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting.*in safe mode due to encryption
+          removal
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing filesystem in safe mode
+        __storage_failed_params:
+          storage_volumes:
+            - name: foo
+              type: disk
+              disks: "{{ unused_disks }}"
+              mount_point: "{{ mount_location }}"
+              encryption: false
+              encryption_password: yabbadabbadoo
+              encryption_luks_version: luks2
+
+    - name: Verify data preservation
+      import_tasks: verify-data-preservation.yml
+
+    - name: Remove the encryption layer
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            encryption: false
+            encryption_password: yabbadabbadoo
+            encryption_luks_version: luks2
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Create test file
+      import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting.*in safe mode due to adding
+          encryption
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing filesystem in safe mode
+        __storage_failed_params:
+          storage_volumes:
+            - name: foo
+              type: disk
+              disks: "{{ unused_disks }}"
+              mount_point: "{{ mount_location }}"
+              encryption: true
+              encryption_password: yabbadabbadoo
+              encryption_luks_version: luks2
+
+    - name: Verify data preservation
+      import_tasks: verify-data-preservation.yml
+
+    - name: Add encryption to the volume
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            encryption: true
+            encryption_password: yabbadabbadoo
+            encryption_luks_version: luks2
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    ##
+    ## Partition
+    ##
+
+    - name: Test for correct handling of new encrypted volume w/ no key
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: encrypted volume.*missing key
+        __storage_failed_msg: >-
+          Unexpected behavior w/ encrypted pool w/ no key
+        __storage_failed_params:
+          storage_safe_mode: false
+          storage_pools:
+            - name: foo
+              type: partition
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  type: partition
+                  mount_point: "{{ mount_location }}"
+                  size: 4g
+                  encryption: true
+                  encryption_luks_version: luks2
+
+    - name: Create an encrypted partition volume w/ default fs
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: foo
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                type: partition
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: true
+                encryption_password: yabbadabbadoo
+                encryption_luks_version: luks2
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Create test file
+      import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting.*in safe mode due to encryption
+          removal
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing filesystem in safe mode
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              type: partition
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  type: partition
+                  mount_point: "{{ mount_location }}"
+                  size: 4g
+                  encryption: false
+                  encryption_password: yabbadabbadoo
+                  encryption_luks_version: luks2
+
+    - name: Verify data preservation
+      import_tasks: verify-data-preservation.yml
+
+    - name: Remove the encryption layer
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: foo
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                type: partition
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: false
+                encryption_password: yabbadabbadoo
+                encryption_luks_version: luks2
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Create test file
+      import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting.*in safe mode due to adding
+          encryption
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing volume in safe mode
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              type: partition
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  type: partition
+                  mount_point: "{{ mount_location }}"
+                  size: 4g
+                  encryption: true
+                  encryption_password: yabbadabbadoo
+                  encryption_luks_version: luks2
+
+    - name: Verify data preservation
+      import_tasks: verify-data-preservation.yml
+
+    - name: Test key file handling
+      block:
+        - name: Create a key file
+          tempfile:
+            prefix: storage_test
+            suffix: lukskey
+          register: storage_test_key_file
+          changed_when: false
+
+        - name: Write the key into the key file
+          copy:
+            dest: "{{ storage_test_key_file.path }}"
+            content: veryveryveryveryverysecureindeed
+            mode: "0600"
+          changed_when: false
+
+        - name: Add encryption to the volume
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_safe_mode: false
+            storage_pools:
+              - name: foo
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_key: "{{ storage_test_key_file.path }}"
+                    encryption_luks_version: luks2
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+      always:
+        - name: Remove the key file
+          file:
+            path: "{{ storage_test_key_file.path }}"
+            state: absent
+          changed_when: false
+
+    ##
+    ## LVM
+    ##
+
+    - name: Test for correct handling of new encrypted volume w/ no key
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: encrypted volume.*missing key
+        __storage_failed_msg: >-
+          Unexpected behavior w/ encrypted pool w/ no key
+        __storage_failed_params:
+          storage_safe_mode: false
+          storage_pools:
+            - name: foo
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  mount_point: "{{ mount_location }}"
+                  size: 4g
+                  encryption: true
+                  encryption_luks_version: luks2
+
+    - name: Create an encrypted lvm volume w/ default fs
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: true
+                encryption_password: yabbadabbadoo
+                encryption_luks_version: luks2
+                encryption_key_size: 512
+                encryption_cipher: "{{ __luks_cipher }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Verify preservation of encryption settings on existing LVM volume
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+
+    - name: Assert preservation of encryption settings on existing LVM volume
+      assert:
+        that:
+          - not blivet_output.changed
+          - blivet_output.pools[0].volumes[0].encryption
+          - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks2'
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Create test file
+      import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting.*in safe mode due to encryption
+          removal
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing volume in safe mode
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  mount_point: "{{ mount_location }}"
+                  size: 4g
+                  encryption: false
+                  encryption_password: yabbadabbadoo
+                  encryption_luks_version: luks2
+
+    - name: Verify data preservation
+      import_tasks: verify-data-preservation.yml
+
+    - name: Remove the encryption layer
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: false
+                encryption_password: yabbadabbadoo
+                encryption_luks_version: luks2
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Create test file
+      import_tasks: create-test-file.yml
+
+    - name: Test for correct handling of safe_mode
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          cannot remove existing formatting.*in safe mode due to adding
+          encryption
+        __storage_failed_msg: >-
+          Unexpected behavior w/ existing volume in safe mode
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              type: lvm
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: test1
+                  mount_point: "{{ mount_location }}"
+                  size: 4g
+                  encryption: true
+                  encryption_password: yabbadabbadoo
+                  encryption_luks_version: luks2
+
+    - name: Verify data preservation
+      import_tasks: verify-data-preservation.yml
+
+    - name: Add encryption to the volume
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption: true
+                encryption_password: yabbadabbadoo
+                encryption_luks_version: luks2
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
