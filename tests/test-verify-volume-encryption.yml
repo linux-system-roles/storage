@@ -71,8 +71,11 @@
     that: luks_dump.stdout is search(__pattern, multiline=True)
     msg: Wrong key size for volume {{ storage_test_volume.name }}
   vars:
-    __pattern: >-
-      ^MK bits:\s+{{ storage_test_volume.encryption_key_size }}$
+    __key_size: "{{ storage_test_volume.encryption_key_size | string }}"
+    __pattern: "{{
+      '^MK bits:\\s+' ~ __key_size ~ '$'
+      if storage_test_volume.encryption_luks_version | d('luks1') == 'luks1'
+      else '^\\s+Key:\\s+' ~ __key_size ~ ' bits$' }}"
   when:
     - _storage_test_volume_present
     - storage_test_volume.encryption
@@ -84,8 +87,12 @@
     msg: Wrong cipher for volume {{ storage_test_volume.name }}
   vars:
     __cipher: "{{ storage_test_volume.encryption_cipher.split('-')[1:] |
-      join('-') }}"
-    __pattern: "^Cipher mode:\\s+{{ __cipher }}$"
+      join('-')
+      if storage_test_volume.encryption_luks_version | d('luks1') == 'luks1'
+      else storage_test_volume.encryption_cipher }}"
+    __pattern: "{{ '^Cipher mode:\\s+' ~ __cipher ~ '$'
+      if storage_test_volume.encryption_luks_version | d('luks1') == 'luks1'
+      else '^\\s+Cipher:\\s+' ~ __cipher ~ '$' }}"
   when:
     - _storage_test_volume_present
     - storage_test_volume.encryption
