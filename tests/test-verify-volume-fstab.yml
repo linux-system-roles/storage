@@ -73,6 +73,7 @@
     that: __fingerprint in storage_test_fstab.stdout
   vars:
     __fingerprint: "system_role:storage"
+  when: not storage_test_skip_fingerprint | d(false)
 
 - name: Clean up variables
   set_fact:

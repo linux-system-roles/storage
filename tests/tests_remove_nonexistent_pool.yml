@@ -6,6 +6,7 @@
     storage_safe_mode: false
     storage_use_partitions: true
     mount_location1: '/opt/test1'
+    storage_test_skip_fingerprint: true
   tags:
     - tests::lvm
 
