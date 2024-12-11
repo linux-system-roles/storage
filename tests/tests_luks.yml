@@ -12,11 +12,30 @@
   tags:
     - tests::lvm
   tasks:
-    - name: Enable FIPS mode
+    - name: Enable FIPS mode (RHEL 10 and newer)
+      when:
+        - lookup("env", "SYSTEM_ROLES_TEST_FIPS") == "true"
+        - ansible_facts["os_family"] == "RedHat"
+        - ansible_facts["distribution_major_version"] | int > 9
+      block:
+        - name: Enable FIPS mode
+          changed_when: false
+          shell: |
+            set -euxo pipefail
+            kernel=$(grubby --default-kernel)
+            boot_uuid=$(blkid --output value --match-tag UUID "$(findmnt --first --noheadings -o SOURCE /boot)")
+            grubby --update-kernel=$kernel --args="fips=1 boot=UUID=$boot_uuid"
+
+        - name: Reboot
+          reboot:
+            test_command: grep 1 /proc/sys/crypto/fips_enabled
+
+    - name: Enable FIPS mode (RHEL 8 and 9)
       when:
         - lookup("env", "SYSTEM_ROLES_TEST_FIPS") == "true"
         - ansible_facts["os_family"] == "RedHat"
         - ansible_facts["distribution_major_version"] | int > 7
+        - ansible_facts["distribution_major_version"] | int < 10
       block:
         - name: Enable FIPS mode
           command: fips-mode-setup --enable
@@ -26,7 +45,7 @@
           reboot:
             test_command: fips-mode-setup --check
 
-    - name: Enable FIPS mode
+    - name: Enable FIPS mode (RHEL 7)
       when:
         - lookup("env", "SYSTEM_ROLES_TEST_FIPS") == "true"
         - ansible_facts["os_family"] == "RedHat"
