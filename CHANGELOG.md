@@ -1,6 +1,15 @@
 Changelog
 =========
 
+[1.18.10] - 2024-12-13
+--------------------
+
+### Other Changes
+
+- tests: Do not 'fips-mode-setup' to enable FIPS on RHEL 10 (#489)
+- test: skip fingerprint if fstab is not written (#496)
+- test: add test for LUKS version 2 (#497)
+
 [1.18.9] - 2024-12-04
 --------------------
 
