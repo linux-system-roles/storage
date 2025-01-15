@@ -4,21 +4,28 @@
   register: actual_pv_size
   changed_when: false
 
+- name: Get PE start for the PV
+  command: "pvs --noheadings --nosuffix --units b -o PESTART {{ st_pool_pv }}"
+  register: pv_pe_start
+  changed_when: false
+
 - name: Convert blkinfo size to bytes
   bsize:
     size: "{{ storage_test_blkinfo.info[st_pool_pv]['size'] }}"
   register: dev_size
 
+# the difference should be at maximum 1 PE + PE start
 - name: Verify each PV size
   assert:
-    that: (dev_size.bytes - actual_pv_size.stdout | int) |
-      abs / actual_pv_size.stdout | int < 0.04
+    that: (dev_size.bytes - actual_pv_size.stdout | int) <=
+          (4194304 + pv_pe_start.stdout | int)
     msg: >-
-      PV resize failure; size difference too big
+      Unexpected difference between PV size and block device size:
       (device size: {{ dev_size.bytes }})
       (actual PV size: {{ actual_pv_size.stdout }})
 
 - name: Clean up test variables
   set_fact:
     actual_pv_size: null
+    pv_pe_start: null
     dev_size: null

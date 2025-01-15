@@ -1853,8 +1853,8 @@ class BlivetLVMPool(BlivetPool):
                 pv.format.update_size_info()  # set pv to be resizable
 
                 if pv.format.resizable:
-                    pv.grow_to_fill = True
-                    ac = ActionResizeFormat(pv, self._device.size)
+                    pv.format.grow_to_fill = True
+                    ac = ActionResizeFormat(pv, pv.size)
                     self._blivet.devicetree.actions.add(ac)
                 else:
                     log.warning("cannot grow/resize PV '%s', format is not resizable", pv.name)
