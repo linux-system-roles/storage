@@ -4,11 +4,7 @@
   become: true
   vars:
     storage_safe_mode: false
-    mount_location1: '/opt/test1'
-    mount_location2: '/opt/test2'
     pv_size: '8g'
-    volume1_size: '2g'
-    volume2_size: '3g'
   tags:
     - tests::lvm
 
@@ -57,11 +53,7 @@
             state: present
             volumes:
               - name: test1
-                size: "{{ volume1_size }}"
-                mount_point: "{{ mount_location1 }}"
-              - name: test2
-                size: "{{ volume2_size }}"
-                mount_point: "{{ mount_location2 }}"
+                size: 100%
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
@@ -77,11 +69,7 @@
             state: present
             volumes:
               - name: test1
-                size: "{{ volume1_size }}"
-                mount_point: "{{ mount_location1 }}"
-              - name: test2
-                size: "{{ volume2_size }}"
-                mount_point: "{{ mount_location2 }}"
+                size: 100%
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
@@ -96,7 +84,6 @@
             state: "absent"
             volumes:
               - name: test1
-              - name: test2
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
