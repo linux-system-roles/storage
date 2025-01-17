@@ -78,6 +78,7 @@
     executable: "{{ ansible_python.executable }}"
   register: grow_supported
   changed_when: false
+  failed_when: grow_supported.rc not in [0, 1]
 
 - name: Verify that PVs fill the whole devices when they should
   include_tasks: verify-pool-member-pvsize.yml
@@ -85,7 +86,7 @@
   loop_control:
     loop_var: st_pool_pv
   when:
-    - grow_supported.stdout | trim == 'True'
+    - grow_supported.rc == 0
     - storage_test_pool.type == "lvm"
     - storage_test_pool.grow_to_fill | bool
 
