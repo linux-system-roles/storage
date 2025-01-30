@@ -245,9 +245,17 @@ def run_module():
                 sector_sizes[ss].append(path)
             else:
                 sector_sizes[ss] = [path]
-        disks = [os.path.basename(p) for p in max(sector_sizes.values(), key=len)]
+        try:
+            disks = [os.path.basename(p) for p in max(sector_sizes.values(), key=len)]
+        except ValueError as ve:
+            result["info"] = info
+            module.fail_json(msg=str(ve), **result)
     else:
-        disks = [os.path.basename(p) for p in disks.keys()]
+        try:
+            disks = [os.path.basename(p) for p in disks.keys()]
+        except ValueError as ve:
+            result["info"] = info
+            module.fail_json(msg=str(ve), **result)
 
     if not disks:
         result['disks'] = "Unable to find unused disk"
