@@ -1,8 +1,10 @@
 cryptsetup
 e2fsprogs
 kpartx
+libblockdev
 libblockdev-crypto
 libblockdev-dm
+libblockdev-loop
 libblockdev-lvm
 libblockdev-mdraid
 libblockdev-swap
