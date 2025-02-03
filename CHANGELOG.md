@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.18.12] - 2025-02-02
+--------------------
+
+### Bug Fixes
+
+- fix: ensure ostree has libblockdev and libblockdev-loop (#509)
+
+### Other Changes
+
+- ci: ansible-plugin-scan is disabled for now (#505)
+- ci: bump ansible-lint to v25; provide collection requirements for ansible-lint (#508)
+
 [1.18.11] - 2025-01-27
 --------------------
 
