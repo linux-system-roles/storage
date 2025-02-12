@@ -63,7 +63,7 @@ imports are located at `module_utils/storage_lsr`.
 ### Defaults
 
 This is where we define the structure of the vars available to users to specify
-how they want the storage to be layed out. There are two top-level lists:
+how they want the storage to be laid out. There are two top-level lists:
 `storage_pools` is a list of pools, which contain volumes, and
 `storage_volumes`, which are volumes that are not associated with any pool.
 Examples of pools include LVM volume groups and disks with partition tables.
