@@ -56,7 +56,7 @@ class ArgValidator(object):
             return False
         if value is None:
             return None
-        raise TypeError("'%s' has to be convertable to a bool" % value)
+        raise TypeError("'%s' has to be convertible to a bool" % value)
 
     @classmethod
     def _validate_int(cls, value):
