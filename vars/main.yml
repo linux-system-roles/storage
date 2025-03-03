@@ -13,6 +13,10 @@ __storage_required_facts:
 __storage_required_facts_subsets: "{{ ['!all', '!min'] +
   __storage_required_facts }}"
 
+# Set flag for blivet to know if there is a kmod-kvdo package
+__storage_uses_kmod_kvdo: "{{ __storage_is_rh_distro and
+  ansible_facts['distribution_major_version'] | int < 10 }}"
+
 # BEGIN - DO NOT EDIT THIS BLOCK - rh distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __storage_rh_distros:

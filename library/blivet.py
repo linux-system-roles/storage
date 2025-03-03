@@ -309,6 +309,11 @@ options:
               when creating a disk volume (that is, a whole disk filesystem)
         type: dict
         default: {}
+    uses_kmod_kvdo:
+        description:
+            - bool - set if platform uses_kmod_kvdo
+        type: bool
+        default: false
 author:
     - David Lehman (@dwlehman)
 '''
@@ -604,7 +609,9 @@ class BlivetVolume(BlivetBase):
         if self._volume.get('encryption'):
             packages.extend(get_format('luks').packages)
         if self._volume.get('compression') or self._volume.get('deduplication'):
-            packages.extend(['vdo', 'kmod-kvdo'])
+            packages.append('vdo')
+            if uses_kmod_kvdo:
+                packages.append('kmod-kvdo')
         return packages
 
     @property
@@ -2376,7 +2383,9 @@ def run_module():
         pool_defaults=dict(type='dict', required=False),
         volume_defaults=dict(type='dict', required=False),
         use_partitions=dict(type='bool', required=False),
-        diskvolume_mkfs_option_map=dict(type='dict', required=False, default={}))
+        diskvolume_mkfs_option_map=dict(type='dict', required=False, default={}),
+        uses_kmod_kvdo=dict(type='bool', required=False, default=False),
+    )
 
     # comment this out if not generating module docs
     # mod_arg_str = generate_module_doc(module_args)
@@ -2433,6 +2442,9 @@ def run_module():
     global volume_defaults
     if 'volume_defaults' in module.params:
         volume_defaults = module.params['volume_defaults']
+
+    global uses_kmod_kvdo
+    uses_kmod_kvdo = module.params['uses_kmod_kvdo']
 
     b = Blivet()
     b.reset()
