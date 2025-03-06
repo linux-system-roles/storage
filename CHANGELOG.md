@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.18.13] - 2025-03-06
+--------------------
+
+### Bug Fixes
+
+- fix: there is no kmod-kvdo on EL10 and later (#514)
+
+### Other Changes
+
+- ci: Check spelling with codespell (#511)
+- ci: Bump Ubuntu version for Python unit tests (#512)
+- ci: Add test plan that runs CI tests and customize it for each role (#513)
+
 [1.18.12] - 2025-02-02
 --------------------
 
