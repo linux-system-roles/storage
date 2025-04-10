@@ -109,14 +109,24 @@ jobs:
               echo "$f"
           done < batch.report
 
-      - name: Show test logs on failure
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "logs-${{ matrix.scenario.image }}-${{ matrix.scenario.env }}"
+          path: tests/*.log
+          retention-days: 30
+
+      - name: Show test log failures
         if: steps.check_platform.outputs.supported && failure()
         run: |
           set -euo pipefail
           for f in tests/*.log; do
-              echo "::group::$(basename $f)"
-              cat "$f"
-              echo "::endgroup::"
+              if FAIL=$(grep -B100 -A30 "fatal:" "$f"); then
+                  echo "::group::$(basename $f)"
+                  echo "$FAIL"
+                  echo "::endgroup::"
+              fi
           done
 
       - name: Set commit status as success with a description that platform is skipped
