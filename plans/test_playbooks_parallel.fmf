@@ -5,55 +5,36 @@ provision:
   # Hence there is no need to define `how` explicitly.
   - name: control-node1
     role: control_node
-    # `connection: system` is required for `how: virtual` to assign VMs a real
-    # IP making SSH configuration easier.
-    # This setting is ignored in `artemis`, so we can leave it as is.
-    connection: system
   - name: managed-node1
     role: managed_node
-    connection: system
   - name: managed-node2
     role: managed_node
-    connection: system
   - name: managed-node3
     role: managed_node
-    connection: system
   - name: managed-node4
     role: managed_node
-    connection: system
   - name: managed-node5
     role: managed_node
-    connection: system
   - name: managed-node6
     role: managed_node
-    connection: system
   - name: managed-node7
     role: managed_node
-    connection: system
   - name: managed-node8
     role: managed_node
-    connection: system
   - name: managed-node9
     role: managed_node
-    connection: system
   - name: managed-node10
     role: managed_node
-    connection: system
   - name: managed-node11
     role: managed_node
-    connection: system
   - name: managed-node12
     role: managed_node
-    connection: system
   - name: managed-node13
     role: managed_node
-    connection: system
   - name: managed-node14
     role: managed_node
-    connection: system
   - name: managed-node15
     role: managed_node
-    connection: system
 environment:
   SR_ANSIBLE_VER: 2.17
   SR_REPO_NAME: storage
