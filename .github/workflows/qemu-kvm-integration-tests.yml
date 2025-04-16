@@ -114,7 +114,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "logs-${{ matrix.scenario.image }}-${{ matrix.scenario.env }}"
-          path: tests/*.log
+          path: |
+            tests/*.log
+            batch.txt
+            batch.report
           retention-days: 30
 
       - name: Show test log failures
