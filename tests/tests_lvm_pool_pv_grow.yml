@@ -9,81 +9,84 @@
     - tests::lvm
 
   tasks:
-    - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+    - name: Test
+      block:
+        - name: Run the role
+          include_role:
+            name: linux-system-roles.storage
 
-    - name: Mark tasks to be skipped
-      set_fact:
-        storage_skip_checks:
-          - blivet_available
-          - service_facts
-          - "{{ (lookup('env',
-                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
-                ternary('packages_installed', '') }}"
+        - name: Mark tasks to be skipped
+          set_fact:
+            storage_skip_checks:
+              - blivet_available
+              - service_facts
+              - "{{ (lookup('env',
+                            'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
+                    ternary('packages_installed', '') }}"
 
-    - name: Get unused disks
-      include_tasks: get_unused_disk.yml
-      vars:
-        max_return: 1
-        min_size: "10g"
+        - name: Get unused disks
+          include_tasks: get_unused_disk.yml
+          vars:
+            max_return: 1
+            min_size: "10g"
 
-    - name: Create PV with a space to grow
-      command: >-
-        timeout 30s pvcreate -vvv -y --setphysicalvolumesize
-        {{ pv_size | quote }} /dev/{{ unused_disks[0] | quote }}
-      register: pvcreate_output
-      changed_when: pvcreate_output.rc != 0
+        - name: Create PV with a space to grow
+          command: >-
+            timeout 30s pvcreate -vvv -y --setphysicalvolumesize
+            {{ pv_size | quote }} /dev/{{ unused_disks[0] | quote }}
+          register: pvcreate_output
+          changed_when: pvcreate_output.rc != 0
 
-      # VG has to be present, the role otherwise automatically reformats empty PV,
-      # taking all available space
-    - name: Create VG
-      command: "vgcreate foo /dev/{{ unused_disks[0] }}"
-      register: vgcreate_output
-      changed_when: vgcreate_output.rc != 0
+          # VG has to be present, the role otherwise automatically reformats empty PV,
+          # taking all available space
+        - name: Create VG
+          command: "vgcreate foo /dev/{{ unused_disks[0] }}"
+          register: vgcreate_output
+          changed_when: vgcreate_output.rc != 0
 
-    - name: Create LVM
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ unused_disks }}"
-            grow_to_fill: true
-            state: present
-            volumes:
-              - name: test1
-                size: 100%
+        - name: Create LVM
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                grow_to_fill: true
+                state: present
+                volumes:
+                  - name: test1
+                    size: 100%
 
-    - name: Verify role results
-      include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
-    - name: Rerun the task to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ unused_disks }}"
-            grow_to_fill: true
-            state: present
-            volumes:
-              - name: test1
-                size: 100%
+        - name: Rerun the task to verify idempotence
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                grow_to_fill: true
+                state: present
+                volumes:
+                  - name: test1
+                    size: 100%
 
-    - name: Verify role results
-      include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
-    - name: Remove 'foo' pool created above
-      include_role:
-        name: linux-system-roles.storage
-      vars:
-        storage_pools:
-          - name: foo
-            disks: "{{ unused_disks }}"
-            state: "absent"
-            volumes:
-              - name: test1
+      always:
+        - name: Remove 'foo' pool created above
+          include_role:
+            name: linux-system-roles.storage
+          vars:
+            storage_pools:
+              - name: foo
+                disks: "{{ unused_disks }}"
+                state: "absent"
+                volumes:
+                  - name: test1
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
