@@ -1,6 +1,17 @@
 Changelog
 =========
 
+[1.18.14] - 2025-04-23
+--------------------
+
+### Other Changes
+
+- ci: In test plans, prefix all relate variables with SR_ (#516)
+- ci: Fix bug with ARTIFACTS_URL after prefixing with SR_ (#517)
+- ci: several changes related to new qemu test, ansible-lint, python versions, ubuntu versions (#518)
+- tests: Fix more cleanups; ci: Attach batch.txt and batch.report on failures (#519)
+- ci: use tox-lsr 3.6.0; improve qemu test logging (#520)
+
 [1.18.13] - 2025-03-06
 --------------------
 
