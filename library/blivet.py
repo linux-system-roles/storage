@@ -1854,17 +1854,16 @@ class BlivetLVMPool(BlivetPool):
             grow_pv_candidates = [pv for pv in self._device.pvs if pv not in remove_pvs and pv not in add_disks]
 
             for pv in grow_pv_candidates:
-                if abs(self._device.size - self._device.current_size) < 2 * self._device.pe_size:
-                    continue
-
                 pv.format.update_size_info()  # set pv to be resizable
 
-                if pv.format.resizable:
+                if not pv.format.resizable:
+                    log.warning("cannot grow/resize PV '%s', format is not resizable", pv.name)
+                    continue
+
+                if abs(pv.size - pv.format.size) > 2 * self._device.pe_size:
                     pv.format.grow_to_fill = True
                     ac = ActionResizeFormat(pv, pv.size)
                     self._blivet.devicetree.actions.add(ac)
-                else:
-                    log.warning("cannot grow/resize PV '%s', format is not resizable", pv.name)
 
         if not (add_disks or remove_pvs):
             return
