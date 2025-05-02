@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.18.15] - 2025-05-02
+--------------------
+
+### Bug Fixes
+
+- fix: Correctly check PVs for grow_to_fill feature (#523)
+
+### Other Changes
+
+- tests: Add a custom script for getting info about Stratis pools (#522)
+- ci: bump sclorg/testing-farm-as-github-action from 3 to 4 (#524)
+
 [1.18.14] - 2025-04-23
 --------------------
 
