@@ -12,7 +12,8 @@ on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
 permissions:
   contents: read
-review-with-sourcery:
+jobs:
+  review-with-sourcery:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
