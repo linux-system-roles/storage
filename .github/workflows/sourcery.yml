@@ -27,4 +27,3 @@ jobs:
       - uses: sourcery-ai/action@v1
         with:
           token: ${{ secrets.SOURCERY_TOKEN }}
-          config: .github/config/sourcery.yaml
