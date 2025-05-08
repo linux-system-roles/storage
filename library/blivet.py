@@ -785,16 +785,28 @@ class BlivetVolume(BlivetBase):
             if not self._device.resizable:
                 return
 
-            trim_percent = (1.0 - float(self._device.max_size / size)) * 100
-            log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
-            if size > self._device.max_size and trim_percent <= MAX_TRIM_PERCENT:
-                log.info("adjusting %s resize target from %s to %s to fit in free space",
-                         self._volume['name'],
-                         size,
-                         self._device.max_size)
-                size = self._device.max_size
-                if size == self._device.size:
-                    return
+            if size > self._device.size:
+                trim_percent = abs((1.0 - float(self._device.max_size / size)) * 100)
+                log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
+                if size > self._device.max_size and trim_percent <= MAX_TRIM_PERCENT:
+                    log.info("adjusting %s resize target from %s to %s to fit in free space",
+                             self._volume['name'],
+                             size,
+                             self._device.max_size)
+                    size = self._device.max_size
+                    if size == self._device.size:
+                        return
+            elif size < self._device.size:
+                trim_percent = abs((1.0 - float(self._device.min_size / size)) * 100)
+                log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
+                if size < self._device.min_size and trim_percent <= MAX_TRIM_PERCENT:
+                    log.info("adjusting %s resize target from %s to %s match device min size",
+                             self._volume['name'],
+                             size,
+                             self._device.min_size)
+                    size = self._device.min_size
+                    if size == self._device.size:
+                        return
 
             if not self._device.min_size <= size <= self._device.max_size:
                 raise BlivetAnsibleError("volume '%s' cannot be resized to '%s'" % (self._volume['name'], size))
