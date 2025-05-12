@@ -194,3 +194,31 @@
             type: lvm
             disks: "{{ unused_disks }}"
             state: absent
+
+    - name: Test for correct handling of pool and volume type mismatch
+      include_tasks: verify-role-failed.yml
+      vars:
+        storage_safe_mode: false
+        __storage_failed_regex: LVM volume can be placed only on LVM pool
+        __storage_failed_msg: Role did not report that wrong pool type was selected
+        __storage_failed_params:
+          storage_pools:
+            - name: foo
+              disks: "{{ unused_disks }}"
+              type: partition
+              volumes:
+                - name: test1
+                  type: lvm
+                  size: "{{ volume1_size }}"
+                  mount_point: "{{ mount_location1 }}"
+
+    - name: Clean up
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_safe_mode: false
+        storage_pools:
+          - name: testpool1
+            type: lvm
+            disks: "{{ unused_disks }}"
+            state: absent
