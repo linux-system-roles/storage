@@ -1175,6 +1175,9 @@ class BlivetLVMVolume(BlivetVolume):
         if self._device:
             return
 
+        if self._blivet_pool._device and self._blivet_pool._device.type != "lvmvg":
+            raise BlivetAnsibleError("LVM volume can be placed only on LVM pool")
+
         thin_pool = self._volume.get('thin')
         use_vdo = self._volume['deduplication'] or self._volume['compression']
         use_lvmraid = self._volume['raid_level']
