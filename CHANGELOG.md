@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.18.16] - 2025-05-16
+--------------------
+
+### Bug Fixes
+
+- fix: Allow small size differences to match the device min size (#526)
+- fix: Show error when trying to put LVM volume on partition pool (#531)
+
+### Other Changes
+
+- ci: bump tox-lsr to 3.8.0; rename qemu/kvm tests (#527)
+
 [1.18.15] - 2025-05-02
 --------------------
 
