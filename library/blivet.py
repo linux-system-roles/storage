@@ -1091,9 +1091,16 @@ class BlivetLVMVolume(BlivetVolume):
 
             for path in self._volume['raid_disks']:
                 disk = self._blivet.devicetree.resolve_device(path)
-                for pv in parent_device.pvs:
-                    if disk in pv.parents:
-                        pvs.append(pv)
+                if disk:
+                    for pv in parent_device.pvs:
+                        if pv == disk or disk in pv.ancestors:
+                            pvs.append(pv)
+                            break
+                    else:
+                        raise BlivetAnsibleError("Disk %s specified in raid_disks doesn't seem "
+                                                 "to be a PV of %s" % (path, parent_device.name))
+                else:
+                    raise BlivetAnsibleError("disk %s specified in raid_disks not found" % path)
 
         else:
             pvs = parent_device.pvs
