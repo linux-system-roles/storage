@@ -62,7 +62,8 @@
 
 - name: Process thin pool sizes when applicable
   when:
-    - storage_test_volume.thin
+    - not storage_test_volume.thin is none
+    - storage_test_volume.thin | bool
     - _storage_test_volume_present | bool
   block:
     - name: Default thin pool reserved space values

@@ -32,11 +32,13 @@
   stat:
     path: "{{ storage_test_volume.mount_point }}"
   register: storage_test_found_mount_stat
-  when: _storage_test_volume_present and
-        storage_test_volume.mount_point and
-        (storage_test_volume.mount_user or
-         storage_test_volume.mount_group or
-         storage_test_volume.mount_mode)
+  when:
+    - _storage_test_volume_present | bool
+    - not storage_test_volume.mount_point is none
+    - storage_test_volume.mount_point | length > 0
+    - (not storage_test_volume.mount_user is none and storage_test_volume.mount_user | length > 0) or
+      (not storage_test_volume.mount_group is none and storage_test_volume.mount_group | length > 0) or
+      (not storage_test_volume.mount_mode is none and storage_test_volume.mount_mode | length > 0)
 
 #
 # Verify mount presence.
@@ -58,9 +60,12 @@
           {{ storage_test_volume.name }}) has unexpected owner
           (expected: {{ storage_test_volume.mount_user }}, found:
           {{ storage_test_found_mount_stat.stat.pw_name }})"
-  when: _storage_test_volume_present and
-        storage_test_volume.mount_point and
-        storage_test_volume.mount_user
+  when:
+    - _storage_test_volume_present
+    - not storage_test_volume.mount_point is none
+    - storage_test_volume.mount_point | length > 0
+    - not storage_test_volume.mount_user is none
+    - storage_test_volume.mount_user | length > 0
 
 - name: Verify mount directory group
   assert:
@@ -70,9 +75,12 @@
           {{ storage_test_volume.name }}) has unexpected group
           (expected: {{ storage_test_volume.mount_group }}, found:
           {{ storage_test_found_mount_stat.stat.gr_name }})"
-  when: _storage_test_volume_present and
-        storage_test_volume.mount_point and
-        storage_test_volume.mount_group
+  when:
+    - _storage_test_volume_present
+    - not storage_test_volume.mount_point is none
+    - storage_test_volume.mount_point | length > 0
+    - not storage_test_volume.mount_group is none
+    - storage_test_volume.mount_group | length > 0
 
 - name: Verify mount directory permissions
   assert:
@@ -82,9 +90,12 @@
           {{ storage_test_volume.name }}) has unexpected permissions (expected:
           {{ storage_test_volume.mount_mode }}, found:
           {{ storage_test_found_mount_stat.stat.mode }})"
-  when: _storage_test_volume_present and
-        storage_test_volume.mount_point and
-        storage_test_volume.mount_mode
+  when:
+    - _storage_test_volume_present
+    - not storage_test_volume.mount_point is none
+    - storage_test_volume.mount_point | length > 0
+    - not storage_test_volume.mount_mode is none
+    - storage_test_volume.mount_mode | length > 0
 
 #
 # Verify swap status.

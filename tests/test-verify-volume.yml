@@ -15,10 +15,10 @@
     #     compression
     #     deduplication
     _storage_test_volume_present: "{{ storage_test_volume.state == 'present' and
-      (not storage_test_pool | default() or
+      (storage_test_pool | default({}) | length == 0 or
        storage_test_pool.state == 'present') }}"
 
-- name: Run test verify for {{ storage_test_volume_subset }}
+- name: Run test verify for storage_test_volume_subset
   include_tasks: test-verify-volume-{{ storage_test_volume_subset }}.yml
   loop: "{{ _storage_volume_tests }}"
   loop_control:
