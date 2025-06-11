@@ -54,7 +54,10 @@
 - name: Set expected pv type
   set_fact:
     _storage_test_expected_pv_type: "{{ storage_test_pool.raid_level }}"
-  when: storage_test_pool.type == 'lvm' and storage_test_pool.raid_level
+  when:
+    - storage_test_pool.type == 'lvm'
+    - not storage_test_pool.raid_level is none
+    - storage_test_pool.raid_level | length > 0
 
 - name: Check the type of each PV
   assert:

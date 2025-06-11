@@ -10,12 +10,12 @@
 
 - name: Show storage_pools
   debug:
-    var: storage_pools
+    var: storage_pools | d([])
     verbosity: 1
 
 - name: Show storage_volumes
   debug:
-    var: storage_volumes
+    var: storage_volumes | d([])
     verbosity: 1
 
 - name: Get required packages
@@ -177,7 +177,7 @@
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: true
-  when: blivet_output['mounts']
+  when: blivet_output['mounts'] | length > 0
 
 - name: Set up new/current mounts
   mount:  # noqa fqcn
@@ -209,7 +209,7 @@
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: true
-  when: blivet_output['mounts']
+  when: blivet_output['mounts'] | length > 0
 
 #
 # Manage /etc/crypttab

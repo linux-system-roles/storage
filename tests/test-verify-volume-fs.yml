@@ -10,7 +10,7 @@
           (storage_test_blkinfo.info[storage_test_volume._device].fstype | length
           == 0 and storage_test_volume.fs_type == "unformatted")
       when:
-        - storage_test_volume.fs_type
+        - storage_test_volume.fs_type | length > 0
         - _storage_test_volume_present
 
     # label

@@ -35,7 +35,8 @@
   when:
     - storage_test_pool.state == 'present'
     - storage_test_pool.encryption
-    - storage_test_pool.encryption_luks_version
+    - not storage_test_pool.encryption_luks_version is none
+    - storage_test_pool.encryption_luks_version | length > 0
 
 - name: Check LUKS key size
   assert:
@@ -50,7 +51,8 @@
   when:
     - storage_test_pool.state == 'present'
     - storage_test_pool.encryption
-    - storage_test_pool.encryption_key_size
+    - not storage_test_pool.encryption_key_size is none
+    - storage_test_pool.encryption_key_size > 0
 
 - name: Check LUKS cipher
   assert:
@@ -67,4 +69,5 @@
   when:
     - storage_test_pool.state == 'present'
     - storage_test_pool.encryption
-    - storage_test_pool.encryption_cipher
+    - not storage_test_pool.encryption_cipher is none
+    - storage_test_pool.encryption_cipher | length > 0

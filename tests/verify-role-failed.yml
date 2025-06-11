@@ -44,13 +44,15 @@
 
     - name: Verify correct exception or error message
       assert:
-        that: exception is search(__storage_failed_exception) or
+        that: msg_msg is search(__storage_failed_exception) or
+          exception is search(__storage_failed_exception) or
           msg_stdout is search(__storage_failed_exception) or
           msg_stderr is search(__storage_failed_exception) or
           stdout is search(__storage_failed_exception) or
           stderr is search(__storage_failed_exception)
       when: __storage_failed_exception is defined
       vars:
+        msg_msg: "{{ ansible_failed_result.msg.msg | d('') }}"
         exception: "{{ ansible_failed_result.msg.exception | d('') }}"
         msg_stdout: "{{ ansible_failed_result.msg.module_stdout | d('') }}"
         msg_stderr: "{{ ansible_failed_result.msg.module_stderr | d('') }}"
