@@ -177,7 +177,7 @@
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: true
-  when: blivet_output['mounts']
+  when: blivet_output['mounts'] | length > 0
 
 - name: Set up new/current mounts
   mount:  # noqa fqcn
@@ -209,7 +209,7 @@
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: true
-  when: blivet_output['mounts']
+  when: blivet_output['mounts'] | length > 0
 
 #
 # Manage /etc/crypttab
