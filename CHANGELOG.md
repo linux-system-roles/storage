@@ -1,6 +1,20 @@
 Changelog
 =========
 
+[1.18.17] - 2025-06-16
+--------------------
+
+### Bug Fixes
+
+- fix: Fix getting PVs from raid_disks for RAID LVs (#536)
+
+### Other Changes
+
+- ci: Add Fedora 42; use tox-lsr 3.9.0; use lsr-report-errors for qemu tests (#534)
+- ci: Add support for bootc end-to-end validation tests (#537)
+- ci: Use ansible 2.19 for fedora 42 testing; support python 3.13 (#538)
+- refactor: Ansible 2.19 support (#540)
+
 [1.18.16] - 2025-05-16
 --------------------
 
