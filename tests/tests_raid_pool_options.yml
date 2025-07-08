@@ -74,10 +74,10 @@
               - name: lv1
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
-              - name: Lv2 - 2
+              - name: Lv2
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
-              - name: Lv3 - 2
+              - name: Lv3
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
@@ -110,10 +110,10 @@
               - name: lv1
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
-              - name: Lv2 - 3
+              - name: Lv2
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
-              - name: Lv3 - 3
+              - name: Lv3
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
