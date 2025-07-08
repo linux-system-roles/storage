@@ -169,7 +169,7 @@
               disks: "{{ unused_disks }}"
               type: lvm
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 2
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -212,7 +212,7 @@
                   size: "{{ volume1_size }}"
                   mount_point: "{{ mount_location1 }}"
 
-    - name: Clean up
+    - name: Clean up - 2
       include_role:
         name: linux-system-roles.storage
       vars:

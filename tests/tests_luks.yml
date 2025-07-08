@@ -37,11 +37,11 @@
         - ansible_facts["distribution_major_version"] | int > 7
         - ansible_facts["distribution_major_version"] | int < 10
       block:
-        - name: Enable FIPS mode
+        - name: Enable FIPS mode - 2
           command: fips-mode-setup --enable
           changed_when: false
 
-        - name: Reboot
+        - name: Reboot - 2
           reboot:
             test_command: fips-mode-setup --check
 
@@ -67,7 +67,7 @@
             kernel=$(grubby --default-kernel)
             grubby --update-kernel=$kernel --args=fips=1
 
-        - name: Reboot
+        - name: Reboot - 3
           reboot:
             test_command: grep 1 /proc/sys/crypto/fips_enabled
 
@@ -150,13 +150,13 @@
             encryption: false
             encryption_password: yabbadabbadoo
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
-    - name: Create test file
+    - name: Create test file - 2
       import_tasks: create-test-file.yml
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 2
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -173,7 +173,7 @@
               encryption: true
               encryption_password: yabbadabbadoo
 
-    - name: Verify data preservation
+    - name: Verify data preservation - 2
       import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the volume
@@ -189,14 +189,14 @@
             encryption: true
             encryption_password: yabbadabbadoo
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     ##
     ## Partition
     ##
 
-    - name: Test for correct handling of new encrypted volume w/ no key
+    - name: Test for correct handling of new encrypted volume w/ no key - 2
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: encrypted volume.*missing key
@@ -232,13 +232,13 @@
                 encryption: true
                 encryption_password: yabbadabbadoo
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
-    - name: Create test file
+    - name: Create test file - 3
       import_tasks: create-test-file.yml
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 3
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -259,10 +259,10 @@
                   encryption: false
                   encryption_password: yabbadabbadoo
 
-    - name: Verify data preservation
+    - name: Verify data preservation - 3
       import_tasks: verify-data-preservation.yml
 
-    - name: Remove the encryption layer
+    - name: Remove the encryption layer - 2
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -279,13 +279,13 @@
                 encryption: false
                 encryption_password: yabbadabbadoo
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml
 
-    - name: Create test file
+    - name: Create test file - 4
       import_tasks: create-test-file.yml
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 4
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -306,7 +306,7 @@
                   encryption: true
                   encryption_password: yabbadabbadoo
 
-    - name: Verify data preservation
+    - name: Verify data preservation - 4
       import_tasks: verify-data-preservation.yml
 
     - name: Test key file handling
@@ -325,7 +325,7 @@
             mode: "0600"
           changed_when: false
 
-        - name: Add encryption to the volume
+        - name: Add encryption to the volume - 2
           include_role:
             name: linux-system-roles.storage
           vars:
@@ -342,7 +342,7 @@
                     encryption: true
                     encryption_key: "{{ storage_test_key_file.path }}"
 
-        - name: Verify role results
+        - name: Verify role results - 6
           include_tasks: verify-role-results.yml
       always:
         - name: Remove the key file
@@ -355,7 +355,7 @@
     ## LVM
     ##
 
-    - name: Test for correct handling of new encrypted volume w/ no key
+    - name: Test for correct handling of new encrypted volume w/ no key - 3
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: encrypted volume.*missing key
@@ -392,7 +392,7 @@
                 encryption_key_size: 512
                 encryption_cipher: "{{ __luks_cipher }}"
 
-    - name: Verify role results
+    - name: Verify role results - 7
       include_tasks: verify-role-results.yml
 
     - name: Verify preservation of encryption settings on existing LVM volume
@@ -416,13 +416,13 @@
           - blivet_output.pools[0].volumes[0].encryption
           - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks1'
 
-    - name: Verify role results
+    - name: Verify role results - 8
       include_tasks: verify-role-results.yml
 
-    - name: Create test file
+    - name: Create test file - 5
       import_tasks: create-test-file.yml
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 5
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -442,10 +442,10 @@
                   encryption: false
                   encryption_password: yabbadabbadoo
 
-    - name: Verify data preservation
+    - name: Verify data preservation - 5
       import_tasks: verify-data-preservation.yml
 
-    - name: Remove the encryption layer
+    - name: Remove the encryption layer - 3
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -461,13 +461,13 @@
                 encryption: false
                 encryption_password: yabbadabbadoo
 
-    - name: Verify role results
+    - name: Verify role results - 9
       include_tasks: verify-role-results.yml
 
-    - name: Create test file
+    - name: Create test file - 6
       import_tasks: create-test-file.yml
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 6
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -487,10 +487,10 @@
                   encryption: true
                   encryption_password: yabbadabbadoo
 
-    - name: Verify data preservation
+    - name: Verify data preservation - 6
       import_tasks: verify-data-preservation.yml
 
-    - name: Add encryption to the volume
+    - name: Add encryption to the volume - 3
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -506,7 +506,7 @@
                 encryption: true
                 encryption_password: yabbadabbadoo
 
-    - name: Verify role results
+    - name: Verify role results - 10
       include_tasks: verify-role-results.yml
 
     - name: Clean up
@@ -519,5 +519,5 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 11
       include_tasks: verify-role-results.yml

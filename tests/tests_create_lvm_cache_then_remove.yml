@@ -86,7 +86,7 @@
                 size: "{{ volume_size }}"
                 cached: false
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Run test on supported platforms
@@ -109,7 +109,7 @@
                     cache_size: "{{ cache_size }}"
                     cache_devices: "{{ [unused_disks[1]] }}"
 
-        - name: Verify role results
+        - name: Verify role results - 3
           include_tasks: verify-role-results.yml
 
     - name: Clean up
@@ -124,5 +124,5 @@
               - name: test
                 size: "{{ volume_size }}"
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml

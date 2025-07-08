@@ -7,7 +7,7 @@
         storage_pools_global: "{{ storage_pools | d([]) }}"
         storage_volumes_global: "{{ storage_volumes | d([]) }}"
 
-    - name: Verify role raises correct error
+    - name: Verify role raises correct error - 2
       include_role:
         name: linux-system-roles.storage
       vars:

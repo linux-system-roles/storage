@@ -129,7 +129,7 @@
         that: stat_r.stat.isreg is defined and stat_r.stat.isreg
         msg: data lost!
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 2
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -156,12 +156,12 @@
               disks: "{{ unused_disks }}"
               type: lvm
 
-    - name: Stat the file
+    - name: Stat the file - 2
       stat:
         path: "{{ testfile }}"
       register: stat_r
 
-    - name: Assert file presence
+    - name: Assert file presence - 2
       assert:
         that: stat_r.stat.isreg is defined and stat_r.stat.isreg
         msg: data lost!

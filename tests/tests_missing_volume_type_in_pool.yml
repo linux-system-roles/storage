@@ -60,12 +60,12 @@
                 mount_point: "{{ mount_location }}"
                 state: absent
 
-    - name: Ensure the inherited type is reflected in blivet module output
+    - name: Ensure the inherited type is reflected in blivet module output - 2
       assert:
         that: blivet_output.pools[0].volumes[0].type == "partition"
         msg: "Incorrect type assigned to un-typed volume in partition pool"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
@@ -82,10 +82,10 @@
                 mount_point: "{{ mount_location }}"
                 state: absent
 
-    - name: Ensure the inherited type is reflected in blivet module output
+    - name: Ensure the inherited type is reflected in blivet module output - 3
       assert:
         that: blivet_output.pools[0].volumes[0].type == "partition"
         msg: "Incorrect type assigned to un-typed volume in partition pool"
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml

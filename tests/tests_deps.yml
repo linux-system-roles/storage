@@ -46,7 +46,7 @@
             fs_type: ext4
             encryption: false
 
-    - name: Assert unexpected required package list is empty
+    - name: Assert unexpected required package list is empty - 2
       assert:
         that:
           - blivet_output.packages == ['e2fsprogs']
@@ -65,7 +65,7 @@
             fs_type: swap
             encryption: false
 
-    - name: Assert unexpected required package list is empty
+    - name: Assert unexpected required package list is empty - 3
       assert:
         that:
           - blivet_output.packages == []

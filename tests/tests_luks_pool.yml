@@ -21,7 +21,7 @@
         - ansible_facts["os_family"] == "RedHat"
         - ansible_facts["distribution_major_version"] | int > 7
       block:
-        - name: Enable FIPS mode
+        - name: Enable FIPS mode - 2
           command: fips-mode-setup --enable
           changed_when: false
 
@@ -29,7 +29,7 @@
           reboot:
             test_command: fips-mode-setup --check
 
-    - name: Enable FIPS mode
+    - name: Enable FIPS mode - 3
       when:
         - lookup("env", "SYSTEM_ROLES_TEST_FIPS") == "true"
         - ansible_facts["os_family"] == "RedHat"
@@ -51,7 +51,7 @@
             kernel=$(grubby --default-kernel)
             grubby --update-kernel=$kernel --args=fips=1
 
-        - name: Reboot
+        - name: Reboot - 2
           reboot:
             test_command: grep 1 /proc/sys/crypto/fips_enabled
 
@@ -92,7 +92,7 @@
                   mount_point: "{{ mount_location }}"
                   size: 4g
 
-    - name: Mark tasks to be skipped
+    - name: Mark tasks to be skipped - 2
       set_fact:
         storage_skip_checks:
           - blivet_available
@@ -182,13 +182,13 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
-    - name: Create test file
+    - name: Create test file - 2
       import_tasks: create-test-file.yml
 
-    - name: Test for correct handling of safe_mode
+    - name: Test for correct handling of safe_mode - 2
       include_tasks: verify-role-failed.yml
       vars:
         __storage_failed_regex: >-
@@ -210,7 +210,7 @@
                   mount_point: "{{ mount_location }}"
                   size: 4g
 
-    - name: Verify data preservation
+    - name: Verify data preservation - 2
       import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the pool
@@ -232,10 +232,10 @@
                 mount_point: "{{ mount_location }}"
                 size: 4g
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
-    - name: Create test file
+    - name: Create test file - 3
       import_tasks: create-test-file.yml
 
     - name: Change the mountpoint, leaving encryption in place
@@ -255,12 +255,12 @@
         that: blivet_output.pools[0].encryption
         msg: Failed to implicitly preserve encryption on existing pool.
 
-    - name: Verify data preservation
+    - name: Verify data preservation - 3
       import_tasks: verify-data-preservation.yml
       vars:
         testfile: "{{ testfile_location_2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
     - name: Clean up
@@ -273,5 +273,5 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml

@@ -52,7 +52,7 @@
           command: parted -s /dev/{{ unused_disks[0] }} mklabel gpt
           changed_when: false
 
-        - name: Create nilfs2 partition (1/2)
+        - name: Create nilfs2 partition (1/2) - 2
           command: parted -s /dev/{{ unused_disks[0] }} mkpart primary 0% 100%
           changed_when: false
 

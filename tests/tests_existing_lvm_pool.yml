@@ -56,7 +56,7 @@
                 fs_type: ext4
                 fs_label: newvol
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Clean up.
@@ -67,5 +67,5 @@
           - name: "{{ pool_name }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml

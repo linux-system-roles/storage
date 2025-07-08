@@ -32,13 +32,13 @@
       register: storage_test_vdo_status
       changed_when: false
 
-    - name: Check if VDO deduplication is off
+    - name: Check if VDO deduplication is off - 2
       assert:
         that: storage_test_vdo_status.stdout | trim != "enabled"
         msg: VDO compression is on but it should not
       when: not storage_test_vdo_volume.compression
 
-    - name: Check if VDO deduplication is on
+    - name: Check if VDO deduplication is on - 2
       assert:
         that: storage_test_vdo_status.stdout | trim == "enabled"
         msg: VDO compression is off but it should not

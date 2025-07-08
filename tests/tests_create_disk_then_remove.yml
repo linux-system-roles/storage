@@ -64,7 +64,7 @@
           - blivet_output.volumes[0].fs_type == 'ext4'
         msg: File system not preserved on existing partition volume.
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Remove the disk device created above
@@ -78,5 +78,5 @@
             mount_point: "{{ mount_location }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml

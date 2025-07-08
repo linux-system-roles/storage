@@ -73,7 +73,7 @@
                   - name: test1
                     size: 100%
 
-        - name: Verify role results
+        - name: Verify role results - 2
           include_tasks: verify-role-results.yml
 
       always:
@@ -88,5 +88,5 @@
                 volumes:
                   - name: test1
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml

@@ -103,7 +103,7 @@
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Remove the device created above
@@ -127,7 +127,7 @@
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID1 lvm raid device
@@ -146,10 +146,10 @@
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
                 raid_level: raid1
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous invocation to verify idempotence
+    - name: Repeat the previous invocation to verify idempotence - 2
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -165,10 +165,10 @@
                 raid_level: raid1
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml
 
-    - name: Remove the device created above
+    - name: Remove the device created above - 2
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -184,7 +184,7 @@
                 raid_level: raid1
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
 
-    - name: Verify role results
+    - name: Verify role results - 6
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID0 lvm raid device
@@ -203,10 +203,10 @@
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
                 raid_level: raid0
 
-    - name: Verify role results
+    - name: Verify role results - 7
       include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous invocation to verify idempotence
+    - name: Repeat the previous invocation to verify idempotence - 3
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -222,10 +222,10 @@
                 raid_level: raid0
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
 
-    - name: Verify role results
+    - name: Verify role results - 8
       include_tasks: verify-role-results.yml
 
-    - name: Remove the device created above
+    - name: Remove the device created above - 3
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -241,7 +241,7 @@
                 raid_level: raid0
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
 
-    - name: Verify role results
+    - name: Verify role results - 9
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID1 lvm raid device on encrypted VG
@@ -262,10 +262,10 @@
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
                 raid_level: raid0
 
-    - name: Verify role results
+    - name: Verify role results - 10
       include_tasks: verify-role-results.yml
 
-    - name: Remove the device created above
+    - name: Remove the device created above - 4
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -281,7 +281,7 @@
                 raid_level: raid0
                 raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
 
-    - name: Verify role results
+    - name: Verify role results - 11
       include_tasks: verify-role-results.yml
 
     - name: Run test on supported platforms
@@ -307,10 +307,10 @@
                     raid_level: raid0
                     raid_stripe_size: "256 KiB"
 
-        - name: Verify role results
+        - name: Verify role results - 12
           include_tasks: verify-role-results.yml
 
-        - name: Remove the device created above
+        - name: Remove the device created above - 5
           include_role:
             name: linux-system-roles.storage
           vars:
@@ -326,5 +326,5 @@
                     raid_level: raid0
                     raid_disks: "{{ [unused_disks[0], unused_disks[1]] }}"
 
-        - name: Verify role results
+        - name: Verify role results - 13
           include_tasks: verify-role-results.yml

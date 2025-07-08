@@ -74,10 +74,10 @@
               - name: lv1
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
-              - name: Lv2
+              - name: Lv2 - 2
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
-              - name: Lv3
+              - name: Lv3 - 2
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
@@ -90,7 +90,7 @@
               blivet_output.pools[0].raid_metadata_version == '1.0'
         msg: "Failure to preserve RAID settings for preexisting pool."
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Remove the pool created above
@@ -110,14 +110,14 @@
               - name: lv1
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location1 }}"
-              - name: Lv2
+              - name: Lv2 - 3
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
-              - name: Lv3
+              - name: Lv3 - 3
                 size: "{{ volume3_size }}"
                 mount_point: "{{ mount_location3 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID0 device
@@ -134,10 +134,10 @@
             raid_chunk_size: "1024 KiB"
             state: present
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
-    - name: Remove the pool created above
+    - name: Remove the pool created above - 2
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -151,5 +151,5 @@
             raid_chunk_size: "1024 KiB"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml

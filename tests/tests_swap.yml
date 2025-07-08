@@ -70,7 +70,7 @@
             fs_type: ext3
             disks: "{{ [__non_swap_disk] }}"
 
-    - name: Verify results
+    - name: Verify results - 2
       include_tasks: verify-role-results.yml
 
     - name: Change the disk device file system type from swap to ext3
@@ -84,7 +84,7 @@
             fs_type: ext3
             disks: "{{ [__swap_disk] }}"
 
-    - name: Verify results
+    - name: Verify results - 3
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
@@ -98,7 +98,7 @@
             fs_type: ext3
             disks: "{{ [__swap_disk] }}"
 
-    - name: Verify results
+    - name: Verify results - 4
       include_tasks: verify-role-results.yml
 
     - name: Change it back to swap
@@ -111,10 +111,10 @@
             disks: "{{ [__swap_disk] }}"
             fs_type: swap
 
-    - name: Verify results
+    - name: Verify results - 5
       include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous invocation to verify idempotence
+    - name: Repeat the previous invocation to verify idempotence - 2
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -124,7 +124,7 @@
             disks: "{{ [__swap_disk] }}"
             fs_type: swap
 
-    - name: Verify results
+    - name: Verify results - 6
       include_tasks: verify-role-results.yml
 
     - name: Clean up
@@ -143,5 +143,5 @@
             mount_point: none
             state: absent
 
-    - name: Verify results
+    - name: Verify results - 7
       include_tasks: verify-role-results.yml

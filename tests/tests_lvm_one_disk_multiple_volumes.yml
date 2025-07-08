@@ -67,7 +67,7 @@
                 size: "{{ volume_size }}"
                 mount_point: '/opt/test3'
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Remove two of the LVs
@@ -90,7 +90,7 @@
                 mount_point: '/opt/test3'
                 state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Re-run the previous role invocation to ensure idempotence
@@ -113,7 +113,7 @@
                 mount_point: '/opt/test3'
                 state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
     - name: Clean up

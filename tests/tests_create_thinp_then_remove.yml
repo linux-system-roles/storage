@@ -61,7 +61,7 @@
                 thin: true
                 mount_point: "{{ mount_location1 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Change thinlv fs type
@@ -78,7 +78,7 @@
                 thin: true
                 fs_type: "{{ fs_after }}"
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Create new LV under existing thinpool
@@ -96,7 +96,7 @@
                 thin: true
                 mount_point: "{{ mount_location2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
     - name: Remove existing LV under existing thinpool
@@ -114,7 +114,7 @@
                 mount_point: "{{ mount_location2 }}"
                 state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml
 
     - name: Cleanup
@@ -134,7 +134,7 @@
                 thin: true
                 mount_point: "{{ mount_location1 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 6
       include_tasks: verify-role-results.yml
 
     - name: Create a thinpool device using percentages
@@ -154,10 +154,10 @@
                 thin: true
                 mount_point: "{{ mount_location1 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 7
       include_tasks: verify-role-results.yml
 
-    - name: Cleanup
+    - name: Cleanup - 2
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -174,5 +174,5 @@
                 thin: true
                 mount_point: "{{ mount_location1 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 8
       include_tasks: verify-role-results.yml
