@@ -67,7 +67,7 @@
                 mount_point: "{{ mount_location2 }}"
                 state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
@@ -86,7 +86,7 @@
                 mount_point: "{{ mount_location2 }}"
                 state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Remove both of the LVM logical volumes in 'foo' created above
@@ -105,5 +105,5 @@
                 size: "{{ volume2_size }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml

@@ -97,7 +97,7 @@
                         size: "{{ volume_size }}"
                         mount_point: "{{ mount_location }}"
 
-            - name: Verify role results
+            - name: Verify role results - 2
               include_tasks: verify-role-results.yml
 
             - name: Add second filesystem to the pool
@@ -116,7 +116,7 @@
                         size: "{{ volume_size }}"
                         mount_point: "{{ mount_location_2 }}"
 
-            - name: Verify role results
+            - name: Verify role results - 3
               include_tasks: verify-role-results.yml
 
           always:
@@ -139,7 +139,7 @@
                         mount_point: "{{ mount_location_2 }}"
                         state: absent
 
-        - name: Verify role results
+        - name: Verify role results - 4
           include_tasks: verify-role-results.yml
 
         - name: Run test only if blivet supports this functionality
@@ -164,10 +164,10 @@
                             size: "{{ volume_size }}"
                             mount_point: "{{ mount_location }}"
 
-                - name: Verify role results
+                - name: Verify role results - 5
                   include_tasks: verify-role-results.yml
 
-                - name: Repeat the previous invocation to verify idempotence
+                - name: Repeat the previous invocation to verify idempotence - 2
                   include_role:
                     name: linux-system-roles.storage
                   vars:
@@ -182,11 +182,11 @@
                             size: "{{ volume_size }}"
                             mount_point: "{{ mount_location }}"
 
-                - name: Verify role results
+                - name: Verify role results - 6
                   include_tasks: verify-role-results.yml
 
               always:
-                - name: Clean up
+                - name: Clean up - 2
                   include_role:
                     name: linux-system-roles.storage
                   vars:
@@ -201,7 +201,7 @@
                             mount_point: "{{ mount_location }}"
                             state: absent
 
-            - name: Verify role results
+            - name: Verify role results - 7
               include_tasks: verify-role-results.yml
 
             - name: Test one disk pool
@@ -215,7 +215,7 @@
                         disks: "{{ unused_disks[0] }}"
                         type: stratis
 
-                - name: Verify role results
+                - name: Verify role results - 8
                   include_tasks: verify-role-results.yml
 
                 - name: Add the second disk to the pool
@@ -227,11 +227,11 @@
                         disks: "{{ [unused_disks[0], unused_disks[1]] }}"
                         type: stratis
 
-                - name: Verify role results
+                - name: Verify role results - 9
                   include_tasks: verify-role-results.yml
 
               always:
-                - name: Clean up
+                - name: Clean up - 3
                   include_role:
                     name: linux-system-roles.storage
                   vars:
@@ -246,7 +246,7 @@
                             mount_point: "{{ mount_location }}"
                             state: absent
 
-            - name: Verify role results
+            - name: Verify role results - 10
               include_tasks: verify-role-results.yml
 
             - name: Setup Tang server on localhost for testing
@@ -272,11 +272,11 @@
                         encryption_clevis_pin: tang
                         encryption_tang_url: localhost:7500
 
-                - name: Verify role results
+                - name: Verify role results - 11
                   include_tasks: verify-role-results.yml
 
               always:
-                - name: Clean up
+                - name: Clean up - 4
                   include_role:
                     name: linux-system-roles.storage
                   vars:
@@ -286,5 +286,5 @@
                         type: stratis
                         state: absent
 
-            - name: Verify role results
+            - name: Verify role results - 12
               include_tasks: verify-role-results.yml

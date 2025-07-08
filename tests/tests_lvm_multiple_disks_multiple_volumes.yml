@@ -66,7 +66,7 @@
                 size: "{{ volume_size }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Clean up
@@ -79,5 +79,5 @@
             volumes: []
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml

@@ -152,7 +152,7 @@
                     fs_type: gfs2
                     fs_create_options: -j 2 -t rhel9-1node:myfs
 
-        - name: Verify role results
+        - name: Verify role results - 2
           include_tasks: verify-role-results.yml
 
         - name: >-
@@ -172,7 +172,7 @@
                     size: "{{ volume1_size }}"
                     mount_point: "{{ mount_location1 }}"
 
-        - name: Verify role results
+        - name: Verify role results - 3
           include_tasks: verify-role-results.yml
 
       always:

@@ -52,7 +52,7 @@
             disks: "{{ unused_disks }}"
             mount_point: "{{ mount_location }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Remove the disk device created above
@@ -67,5 +67,5 @@
             mount_point: "{{ mount_location }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml

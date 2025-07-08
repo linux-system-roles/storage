@@ -59,7 +59,7 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - name: Verify results
+    - name: Verify results - 2
       include_tasks: verify-role-results.yml
 
     - name: >-
@@ -86,7 +86,7 @@
                   fs_create_options: -Fb 512
                   mount_point: "{{ mount_location }}"
 
-    - name: Remove the volume group created above
+    - name: Remove the volume group created above - 2
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -112,7 +112,7 @@
                 size: "{{ volume1_size }}"
                 mount_point: "{{ mount_location }}"
 
-    - name: Verify results
+    - name: Verify results - 3
       include_tasks: verify-role-results.yml
 
     - name: Test for correct handling resize large size
@@ -133,7 +133,7 @@
                   size: "{{ too_large_size }}"
                   mount_point: "{{ mount_location }}"
 
-    - name: Remove the volume group created above
+    - name: Remove the volume group created above - 3
       include_role:
         name: linux-system-roles.storage
       vars:
@@ -157,7 +157,7 @@
                 fs_type: ext4
                 mount_point: "{{ mount_location }}"
 
-    - name: Verify results
+    - name: Verify results - 4
       include_tasks: verify-role-results.yml
 
     - name: Test setting up disk volume will remove the partition create above
@@ -173,7 +173,7 @@
             mount_point: "{{ mount_location }}"
             mount_options: rw,noatime,defaults
 
-    - name: Verify results
+    - name: Verify results - 5
       include_tasks: verify-role-results.yml
       vars:
         __storage_verify_mount_options: true
@@ -219,7 +219,7 @@
               fs_type: swap
               mount_point: "{{ mount_location }}"
 
-    - name: Remove the disk volume created above
+    - name: Remove the disk volume created above - 2
       include_role:
         name: linux-system-roles.storage
       vars:

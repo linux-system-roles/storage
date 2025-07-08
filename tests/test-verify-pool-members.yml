@@ -45,13 +45,13 @@
       if storage_test_pool.encryption else 'disk' }}"
   when: storage_test_pool.type == 'lvm'
 
-- name: Set expected pv type
+- name: Set expected pv type - 2
   set_fact:
     _storage_test_expected_pv_type: "{{ 'partition'
       if storage_use_partitions | d(false) else 'disk' }}"
   when: storage_test_pool.type == 'lvm' and not storage_test_pool.encryption
 
-- name: Set expected pv type
+- name: Set expected pv type - 3
   set_fact:
     _storage_test_expected_pv_type: "{{ storage_test_pool.raid_level }}"
   when:

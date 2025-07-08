@@ -62,7 +62,7 @@
           - blivet_output.pools[0].volumes[0].fs_type == 'ext4'
         msg: File system not preserved on existing partition volume.
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Remove the partition created above
@@ -80,7 +80,7 @@
                 mount_point: "{{ mount_location }}"
                 state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
@@ -98,5 +98,5 @@
                 mount_point: "{{ mount_location }}"
                 state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml

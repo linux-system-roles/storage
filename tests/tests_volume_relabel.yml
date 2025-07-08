@@ -54,7 +54,7 @@
             disks: "{{ unused_disks }}"
             fs_label: relabel
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Run relabel again to verify idempotence
@@ -74,7 +74,7 @@
         that: not blivet_output.changed
         msg: "Volume relabeling is not idempotent."
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Relabel without explicitly setting the label
@@ -93,7 +93,7 @@
         that: not blivet_output.changed
         msg: "Volume relabeling doesn't preserve existing label."
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
     - name: Remove label
@@ -108,7 +108,7 @@
             disks: "{{ unused_disks }}"
             fs_label: ""
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml
 
     - name: Format the device to LVMPV which doesn't support labels
@@ -142,5 +142,5 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 6
       include_tasks: verify-role-results.yml

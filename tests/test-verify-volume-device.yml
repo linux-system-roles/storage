@@ -13,7 +13,7 @@
       Incorrect device node presence for volume {{ storage_test_volume.name }}
   when: _storage_test_volume_present or storage_test_volume.type == 'disk'
 
-- name: Verify the presence/absence of the device node
+- name: Verify the presence/absence of the device node - 2
   assert:
     that: not storage_test_dev.stat.exists
     msg: >-

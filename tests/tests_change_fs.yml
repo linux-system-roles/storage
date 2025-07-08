@@ -60,7 +60,7 @@
                 fs_type: "{{ fs_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Re-run the role on the same volume without specifying fs_type
@@ -82,7 +82,7 @@
           - blivet_output.pools[0].volumes[0].fs_type == fs_after
         msg: Failed to preserve omitted fs_type on existing lvm volume
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
@@ -98,7 +98,7 @@
                 fs_type: "{{ fs_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
     - name: Remove the FS
@@ -113,7 +113,7 @@
                 size: "{{ volume_size }}"
                 fs_type: unformatted
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml
 
 
@@ -131,5 +131,5 @@
                 fs_type: "{{ fs_after }}"
                 mount_point: "{{ mount_location }}"
 
-    - name: Verify role results
+    - name: Verify role results - 6
       include_tasks: verify-role-results.yml

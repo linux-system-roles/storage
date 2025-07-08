@@ -77,7 +77,7 @@
                 size: "{{ size2 }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Shrink test2 volume via percentage-based size spec
@@ -95,7 +95,7 @@
                 size: "{{ size3 }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
 
     - name: Get the size of test2 volume
@@ -120,7 +120,7 @@
                 size: "{{ size3 }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 4
       include_tasks: verify-role-results.yml
 
     - name: Get the size of test2 volume again
@@ -146,7 +146,7 @@
                 size: "{{ size4 }}"
                 mount_point: "{{ mount_location2 }}"
 
-    - name: Verify role results
+    - name: Verify role results - 5
       include_tasks: verify-role-results.yml
 
     - name: Remove both of the LVM logical volumes in 'foo' created above
@@ -158,5 +158,5 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 6
       include_tasks: verify-role-results.yml

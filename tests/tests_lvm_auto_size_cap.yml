@@ -91,7 +91,7 @@
               - name: test1
                 size: "{{ test_disk_size }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Clean up

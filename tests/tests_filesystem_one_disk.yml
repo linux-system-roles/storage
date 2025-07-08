@@ -47,7 +47,7 @@
             mount_point: "{{ mount_location }}"
             disks: "{{ unused_disks }}"
 
-    - name: Verify role results
+    - name: Verify role results - 2
       include_tasks: verify-role-results.yml
 
     - name: Clean up
@@ -61,5 +61,5 @@
             disks: "{{ unused_disks }}"
             state: absent
 
-    - name: Verify role results
+    - name: Verify role results - 3
       include_tasks: verify-role-results.yml
