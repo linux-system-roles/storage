@@ -1,6 +1,14 @@
 Changelog
 =========
 
+[1.18.18] - 2025-07-09
+--------------------
+
+### Other Changes
+
+- refactor: make task names unique; fix indentation (#542)
+- refactor: correct volume names changed by previous fix (#543)
+
 [1.18.17] - 2025-06-16
 --------------------
 
