@@ -40,7 +40,7 @@ options:
                 description: encryption_cipher
                 type: str
             encryption_key:
-                description: encryption_key
+                description: encryption_key file, not the actual key
                 type: str
             encryption_key_size:
                 description: encryption_key_size
@@ -105,7 +105,7 @@ options:
                         description: encryption_cipher
                         type: str
                     encryption_key:
-                        description: encryption_key
+                        description: encryption_key file, not the actual key
                         type: str
                     encryption_key_size:
                         description: encryption_key_size
@@ -210,7 +210,7 @@ options:
                 description: encryption_cipher
                 type: str
             encryption_key:
-                description: encryption_key
+                description: encryption_key file, not the actual key
                 type: str
             encryption_key_size:
                 description: encryption_key_size
@@ -2331,9 +2331,16 @@ def generate_module_doc(module_args, input="", indent=4):
 
 def run_module():
     # available arguments/parameters that a user can pass
+    # NOTE: The encryption_key parameter is the name of the key file, not the
+    # actual key.  This is confusing because it is also referred to as "password"
+    # in the crypts dict.  Since this is just a filename, it does not need to
+    # be marked as no_log - however, since the name is "encryption_key", Ansible
+    # thinks that it should be marked as no_log, so we have to explicitly mark
+    # it as no_log=False for ansible-test.
+    # see https://github.com/linux-system-roles/storage/pull/546
     common_volume_opts = dict(encryption=dict(type='bool'),
                               encryption_cipher=dict(type='str'),
-                              encryption_key=dict(type='str', no_log=True),
+                              encryption_key=dict(type='str', no_log=False),
                               encryption_key_size=dict(type='int'),
                               encryption_luks_version=dict(type='str'),
                               encryption_password=dict(type='str', no_log=True),
@@ -2377,7 +2384,7 @@ def run_module():
                    options=dict(disks=dict(type='list', elements='str', default=list()),
                                 encryption=dict(type='bool'),
                                 encryption_cipher=dict(type='str'),
-                                encryption_key=dict(type='str', no_log=True),
+                                encryption_key=dict(type='str', no_log=False),
                                 encryption_key_size=dict(type='int'),
                                 encryption_luks_version=dict(type='str'),
                                 encryption_password=dict(type='str', no_log=True),
