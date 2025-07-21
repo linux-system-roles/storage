@@ -1261,29 +1261,6 @@ class BlivetLVMVolume(BlivetVolume):
 
 class BlivetMDRaidVolume(BlivetVolume):
 
-    def _process_device_numbers(self, members_count, requested_actives, requested_spares):
-
-        active_count = members_count
-        spare_count = 0
-
-        if requested_actives is not None and requested_spares is not None:
-            if (requested_actives + requested_spares != members_count
-                or requested_actives < 0 or requested_spares < 0):  # noqa: E129
-                raise BlivetAnsibleError("failed to set up volume '%s': cannot create RAID "
-                                         "with %s members (%s active and %s spare)"
-                                         % (self._volume['name'], members_count,
-                                            requested_actives, requested_spares))
-
-        if requested_actives is not None:
-            active_count = requested_actives
-            spare_count = members_count - active_count
-
-        if requested_spares is not None:
-            spare_count = requested_spares
-            active_count = members_count - spare_count
-
-        return members_count, active_count
-
     def _create_raid_members(self, member_names):
         members = list()
 
