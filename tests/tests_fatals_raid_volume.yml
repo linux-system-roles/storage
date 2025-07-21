@@ -30,7 +30,7 @@
     - name: Try to create a raid pool with invalid raid_level (expect failure)
       include_tasks: verify-role-failed.yml
       vars:
-        __storage_failed_exception: RAID level null is an invalid value.
+        __storage_failed_exception: null is not a valid RAID level
         __storage_failed_params:
           storage_safe_mode: false
           storage_volumes:
