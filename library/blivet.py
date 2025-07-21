@@ -389,6 +389,7 @@ try:
     from blivet3 import devices
     from blivet3.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
     from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
+    from blivet3.errors import RaidError
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import fslib, get_format
     from blivet3.partitioning import do_partitioning
@@ -405,6 +406,7 @@ except ImportError:
         from blivet import devices
         from blivet.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
         from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
+        from blivet.errors import RaidError
         from blivet.flags import flags as blivet_flags
         from blivet.formats import fslib, get_format
         from blivet.partitioning import do_partitioning
@@ -538,6 +540,16 @@ class BlivetBase(object):
         if raid_name == "":
             raid_name = self._spec_dict["name"]
 
+        raid_level = self._spec_dict["raid_level"]
+        try:
+            blivet_level = devicelibs.raid.get_raid_level(raid_level)
+        except RaidError:
+            raise BlivetAnsibleError("%s is not a valid RAID level" % raid_level)
+        else:
+            if len(members) < blivet_level.min_members:
+                raise BlivetAnsibleError("not enough disks selected to create %s array, at least %d "
+                                         "disks needed" % (raid_level, blivet_level.min_members))
+
         # calculate and verify active and spare devices counts
         active_count = len(members)
         spare_count = 0
@@ -571,7 +583,7 @@ class BlivetBase(object):
 
         try:
             raid_array = self._blivet.new_mdarray(name=raid_name,
-                                                  level=self._spec_dict["raid_level"],
+                                                  level=raid_level,
                                                   member_devices=active_count,
                                                   total_devices=len(members),
                                                   parents=members,

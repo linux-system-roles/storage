@@ -37,12 +37,41 @@
     - name: Try to create a raid pool with invalid raid_level (expect failure)
       include_tasks: verify-role-failed.yml
       vars:
+        __storage_failed_regex: >-
+          fail is not a valid RAID level
+        __storage_failed_msg: >-
+          Unexpected behavior w/ invalid RAID level
         __storage_failed_params:
           storage_pools:
             - name: vg1
               disks: "{{ unused_disks }}"
               type: lvm
               raid_level: fail
+              state: present
+              volumes:
+                - name: lv1
+                  size: "{{ volume1_size }}"
+                  mount_point: "{{ mount_location1 }}"
+                - name: lv2
+                  size: "{{ volume2_size }}"
+                  mount_point: "{{ mount_location2 }}"
+                - name: lv3
+                  size: "{{ volume3_size }}"
+                  mount_point: "{{ mount_location3 }}"
+
+    - name: Try to create a raid pool without enough disks (expect failure)
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_regex: >-
+          not enough disks selected to create raid5 array, at least 3 disks needed
+        __storage_failed_msg: >-
+          Unexpected behavior w/ invalid number of disks
+        __storage_failed_params:
+          storage_pools:
+            - name: vg1
+              disks: "{{ unused_disks }}"
+              type: lvm
+              raid_level: raid5
               state: present
               volumes:
                 - name: lv1
