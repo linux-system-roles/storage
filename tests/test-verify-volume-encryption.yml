@@ -110,8 +110,8 @@
       map('regex_search', '^' + storage_test_volume._device |
           basename + ' .*$') |
       select('string') | list }}"
-    _storage_test_expected_crypttab_key_file: "{{
-      storage_test_volume.encryption_key or '-' }}"
+    _storage_test_expected_crypttab_key_file: "{{ __test_encryption_key |
+      d(storage_test_volume.encryption_key or '-') }}"
 
 - name: Check for /etc/crypttab entry
   assert:
