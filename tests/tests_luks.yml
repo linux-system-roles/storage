@@ -344,6 +344,9 @@
 
         - name: Verify role results - 6
           include_tasks: verify-role-results.yml
+          vars:
+            __test_encryption_key: "{{ storage_test_key_file.path }}"
+
       always:
         - name: Remove the key file
           file:
