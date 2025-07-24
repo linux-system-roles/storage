@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.18.19] - 2025-07-24
+--------------------
+
+### Bug Fixes
+
+- fix: Show better error when trying to create RAID without enough disks  (#545)
+- fix: the encryption_key parameter should not be marked as no_log (#546)
+
+### Other Changes
+
+- test: test luks encryption key (#547)
+
 [1.18.18] - 2025-07-09
 --------------------
 
