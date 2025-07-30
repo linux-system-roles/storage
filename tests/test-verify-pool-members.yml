@@ -58,6 +58,7 @@
     - storage_test_pool.type == 'lvm'
     - not storage_test_pool.raid_level is none
     - storage_test_pool.raid_level | length > 0
+    - not storage_test_pool.encryption
 
 - name: Check the type of each PV
   assert:
