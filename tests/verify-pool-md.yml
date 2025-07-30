@@ -6,7 +6,7 @@
     - storage_test_pool.state != "absent"
   block:
     - name: Get information about RAID
-      command: mdadm --detail {{ _storage_test_pool_pvs[0] }}
+      command: mdadm --detail /dev/md/{{ storage_test_pool.name }}-1
       register: storage_test_mdadm
       changed_when: false
 
