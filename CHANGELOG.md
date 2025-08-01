@@ -1,6 +1,14 @@
 Changelog
 =========
 
+[1.18.20] - 2025-08-01
+--------------------
+
+### Other Changes
+
+- tests: Fix verification for LVM pool on top encrypted MD RAID (#549)
+- test: fix error string checking for raid failures (#550)
+
 [1.18.19] - 2025-07-24
 --------------------
 
