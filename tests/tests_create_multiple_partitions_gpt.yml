@@ -1,0 +1,231 @@
+---
+- name: Test creating multiple partitions on GPT
+  hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    volume1_size: '1g'
+    volume2_size: '2g'
+    volume3_size: '2g'
+    storage_disklabel_type: 'gpt'
+
+  tasks:
+    - name: Run the role
+      include_role:
+        name: linux-system-roles.storage
+
+    - name: Mark tasks to be skipped
+      set_fact:
+        storage_skip_checks:
+          - blivet_available
+          - "{{ (lookup('env',
+                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
+                ternary('packages_installed', '') }}"
+          - service_facts
+
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
+      vars:
+        max_return: 1
+
+    - name: Create two partitions
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: 1
+                type: partition
+                fs_type: ext4
+                size: "{{ volume1_size }}"
+              - name: 2
+                type: partition
+                fs_type: ext4
+                size: "{{ volume2_size }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: 1
+                type: partition
+                fs_type: ext4
+                size: "{{ volume1_size }}"
+              - name: 2
+                type: partition
+                fs_type: ext4
+                size: "{{ volume2_size }}"
+
+    - name: Verify role results - 2
+      include_tasks: verify-role-results.yml
+
+    - name: Add third partition
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: 1
+                type: partition
+                fs_type: ext4
+                size: "{{ volume1_size }}"
+              - name: 2
+                type: partition
+                fs_type: ext4
+                size: "{{ volume2_size }}"
+              - name: 3
+                type: partition
+                fs_type: xfs
+                size: "{{ volume3_size }}"
+
+    - name: Verify role results - 3
+      include_tasks: verify-role-results.yml
+
+    - name: Resize third partition
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: 1
+                type: partition
+                fs_type: ext4
+                size: "{{ volume1_size }}"
+              - name: 2
+                type: partition
+                fs_type: ext4
+                size: "{{ volume2_size }}"
+              - name: 3
+                type: partition
+                fs_type: xfs
+                size: "3g"
+
+    - name: Verify role results - 4
+      include_tasks: verify-role-results.yml
+
+    - name: Repeat the previous invocation to verify idempotence - 2
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: 1
+                type: partition
+                fs_type: ext4
+                size: "{{ volume1_size }}"
+              - name: 2
+                type: partition
+                fs_type: ext4
+                size: "{{ volume2_size }}"
+              - name: 3
+                type: partition
+                fs_type: xfs
+                size: "3g"
+
+    - name: Verify role results - 5
+      include_tasks: verify-role-results.yml
+
+    - name: Remove the first partition created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            state: absent
+            volumes:
+              - name: 1
+                type: partition
+                state: absent
+              - name: 2
+                type: partition
+                fs_type: ext4
+                size: "{{ volume2_size }}"
+
+    - name: Verify role results - 6
+      include_tasks: verify-role-results.yml
+
+    - name: Remove all partitions
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - name: Verify role results - 7
+      include_tasks: verify-role-results.yml
+
+    - name: Create two encrypted partitions
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: 1
+                type: partition
+                fs_type: ext4
+                size: "{{ volume1_size }}"
+                encryption: true
+                encryption_password: yabbadabbadoo
+              - name: 2
+                type: partition
+                fs_type: ext4
+                size: "{{ volume2_size }}"
+                encryption: true
+                encryption_password: yabbadabbadoo
+
+    - name: Verify role results - 8
+      include_tasks: verify-role-results.yml
+
+    - name: Remove all partitions
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: "{{ unused_disks[0] }}"
+            type: partition
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - name: Try to create extended partition (expect failure)
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_exception: extended and logical partitions can be created only on MSDOS disk
+        __storage_failed_params:
+          storage_safe_mode: false
+          storage_pools:
+            - name: "{{ unused_disks[0] }}"
+              type: partition
+              disks: "{{ unused_disks }}"
+              volumes:
+                - name: 1
+                  type: partition
+                  part_type: extended
+                  size: "{{ volume1_size }}"

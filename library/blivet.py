@@ -198,6 +198,9 @@ options:
                     vdo_pool_size:
                         description: vdo_pool_size
                         type: str
+                    part_type:
+                        description: part_type
+                        type: str
     volumes:
         description: volumes
         type: list
@@ -377,6 +380,7 @@ import logging
 import os
 import traceback
 import inspect
+import re
 
 BLIVET_PACKAGE = None
 LIB_IMP_ERR3 = ""
@@ -392,7 +396,7 @@ try:
     from blivet3.errors import RaidError
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import fslib, get_format
-    from blivet3.partitioning import do_partitioning
+    from blivet3.partitioning import do_partitioning, parted
     from blivet3.size import Size
     from blivet3.udev import trigger
     from blivet3.util import set_up_logging
@@ -409,7 +413,7 @@ except ImportError:
         from blivet.errors import RaidError
         from blivet.flags import flags as blivet_flags
         from blivet.formats import fslib, get_format
-        from blivet.partitioning import do_partitioning
+        from blivet.partitioning import do_partitioning, parted
         from blivet.size import Size
         from blivet.udev import trigger
         from blivet.util import set_up_logging
@@ -974,19 +978,64 @@ class BlivetPartitionVolume(BlivetVolume):
     def _type_check(self):
         return self._device.raw_device.type == 'partition'
 
+    def _update_from_device(self, param_name):
+        """ Return True if param_name's value was retrieved from a looked-up device. """
+        if param_name == 'part_type':
+            if self._device.raw_device.is_primary:
+                self._volume['part_type'] = 'primary'
+            elif self._device.raw_device.is_extended:
+                self._volume['part_type'] = 'extended'
+            elif self._device.raw_device.is_logical:
+                self._volume['part_type'] = 'logical'
+        elif param_name == 'fs_type':
+            if self._device.raw_device.is_extended:
+                self._volume['fs_type'] = 'unformatted'
+            else:
+                return super(BlivetPartitionVolume, self)._update_from_device(param_name)
+        else:
+            return super(BlivetPartitionVolume, self)._update_from_device(param_name)
+
+        return True
+
+    def _get_part_by_partnum(self, partnum):
+        return next((p for p in self._blivet_pool._disks[0].children if (p.parted_partition and p.parted_partition.number == partnum)),
+                    None)
+
     def _get_device_id(self):
-        device_id = None
-        if self._blivet_pool._disks[0].partitioned and len(self._blivet_pool._disks[0].children) == 1:
-            device_id = self._blivet_pool._disks[0].children[0].name
-
-        return device_id
-
-    def _resize(self):
-        pass
+        name = self._volume['name']
+        if self._blivet_pool._disks and self._blivet_pool._disks[0].partitioned:
+            if name in (p.name for p in self._blivet_pool._disks[0].children):
+                # partition is specified by its name, e.g. "sda1"
+                return name
+            elif name and name.isdigit():
+                # partition is specified by its partition number, e.g. "1"
+                part = self._get_part_by_partnum(int(name))
+                if part:
+                    return os.path.basename(part.path)
+            elif name and name[-1].isdigit():
+                # this might be something like "test1", not really supported but we used it previously
+                # with the "single partition spanning whole disk" approach so lets just keep this
+                # supported for backwards compatibility
+                match = re.search(r'\d+$', name)
+                if match:
+                    part = self._get_part_by_partnum(int(match.group()))
+                    if part:
+                        return os.path.basename(part.path)
+        return None
 
     def _manage_cache(self):
         if self._volume['cached']:
             raise BlivetAnsibleError("caching is not supported for partition volumes")
+
+    def _get_part_weight(self):
+        # XXX make sure the newly created partitions are in right order. We use the partition
+        # number as weight, otherwise blivet would create the partitions in random order breaking
+        # the idempotency
+        name = self._volume['name']
+        match = re.search(r'\d+$', name)
+        if match:
+            return -int(match.group()) * 100
+        return 0
 
     def _create(self):
         if self._device:
@@ -1000,13 +1049,41 @@ class BlivetPartitionVolume(BlivetVolume):
         if parent is None:
             raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool['name'], self._volume['name']))
 
-        size = Size("256 MiB")
-        maxsize = None
-        if isinstance(self._volume['size'], str) and '%' in self._volume['size']:
-            maxsize = self._get_size()
+        size = self._get_size()
+        if size == Size(0):
+            # backward compatibility with the old "single partition spanning whole disk"
+            # approach -- Size 0 means to use the entire disk
+            size = Size("256 MiB")
+            grow = True
+        else:
+            grow = False
+
+        part_type = self._volume['part_type']
+        if part_type == "primary":
+            parted_type = parted.PARTITION_NORMAL
+        elif part_type == "extended":
+            parted_type = parted.PARTITION_EXTENDED
+        elif part_type == "logical":
+            parted_type = parted.PARTITION_LOGICAL
+        else:
+            parted_type = None
+        if part_type in ("extended", "logical") and parent.format.label_type != "msdos":
+            raise BlivetAnsibleError("extended and logical partitions can be created only on MSDOS disk")
+        if part_type == "extended":
+            if self._volume['encryption']:
+                raise BlivetAnsibleError("extended partitions cannot be encrypted")
+            if self._volume['mount_point']:
+                raise BlivetAnsibleError("extended partitions cannot be mounted")
+        if part_type == "extended":
+            fmt = None
+            self._volume['fs_type'] = 'unformatted'
+        else:
+            fmt = self._get_format()
 
         try:
-            device = self._blivet.new_partition(parents=[parent], size=size, maxsize=maxsize, grow=True, fmt=self._get_format())
+            device = self._blivet.new_partition(parents=[parent], size=size, grow=grow, fmt=fmt,
+                                                weight=self._get_part_weight(),
+                                                part_type=parted_type)
         except Exception:
             raise BlivetAnsibleError("failed set up volume '%s'" % self._volume['name'])
 
@@ -1708,8 +1785,12 @@ class BlivetPartitionPool(BlivetPool):
         return self._device.partitionable
 
     def _look_up_device(self):
-        self._look_up_disks()
-        self._device = self._disks[0]
+        device = self._blivet.devicetree.resolve_device(self._pool['name'])
+        if device is not None:
+            self._device = device
+        else:
+            self._look_up_disks()
+            self._device = self._disks[0]
 
     def _create(self):
         if self._device.format.type != "disklabel" or \
@@ -2361,6 +2442,7 @@ def run_module():
              cache_size=dict(type='str'),
              compression=dict(type='bool'),
              deduplication=dict(type='bool'),
+             part_type=dict(type='str'),
              raid_disks=dict(type='list', elements='str', default=list()),
              raid_stripe_size=dict(type='str'),
              thin_pool_name=dict(type='str'),

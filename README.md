@@ -166,10 +166,6 @@ variables:
   Valid values for `type`: `lvm`, `disk`, `partition` or `raid`.
   The default is determined according to the OS and release (currently `lvm`).
 
-  __NOTE__: Support for managing partition volumes is currently very limited,
-            the role allows creating only a single partition spanning the
-            entire disk.
-
 - `state`
 
   Valid values are `present` (default behavior) or `absent`. Volumes marked as
@@ -377,6 +373,14 @@ variables:
 
   Size for the thin pool. `thin_pool_size` format is intended to be human-readable,
   e.g.: "30g", "50GiB".
+
+- `part_type`
+
+  This specifies partition type for newly created partitions on MSDOS/MBR partition table.
+  Supported values include `primary`, `extended` and `logical`.
+  If not specified, first three partitions on the disk will be created as primary and fourth
+  one will be created as logical inside a newly created extended partition.
+  `part_type` is ignored on GPT partition table.
 
 ### `storage_safe_mode`
 
