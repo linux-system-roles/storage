@@ -288,10 +288,7 @@ manage. Each volume has the following variables:</p>
 reside. Valid values for <code>type</code>: <code>lvm</code>,
 <code>disk</code>, <code>partition</code> or <code>raid</code>. The
 default is determined according to the OS and release (currently
-<code>lvm</code>).</p>
-<p><strong>NOTE</strong>: Support for managing partition volumes is
-currently very limited, the role allows creating only a single partition
-spanning the entire disk.</p></li>
+<code>lvm</code>).</p></li>
 <li><p><code>state</code></p>
 <p>Valid values are <code>present</code> (default behavior) or
 <code>absent</code>. Volumes marked as <code>absent</code> will be
@@ -464,6 +461,14 @@ raised.</li>
 <li><p><code>thin_pool_size</code></p>
 <p>Size for the thin pool. <code>thin_pool_size</code> format is
 intended to be human-readable, e.g.: "30g", "50GiB".</p></li>
+<li><p><code>part_type</code></p>
+<p>This specifies partition type for newly created partitions on
+MSDOS/MBR partition table. Supported values include
+<code>primary</code>, <code>extended</code> and <code>logical</code>. If
+not specified, first three partitions on the disk will be created as
+primary and fourth one will be created as logical inside a newly created
+extended partition. <code>part_type</code> is ignored on GPT partition
+table.</p></li>
 </ul>
 <h2 id="storage_safe_mode"><code>storage_safe_mode</code></h2>
 <p>When true (the default), an error will occur instead of automatically
