@@ -35,6 +35,8 @@ provision:
     role: managed_node
   - name: managed-node15
     role: managed_node
+  - name: managed-node16
+    role: managed_node
 environment:
   SR_ANSIBLE_VER: 2.17
   SR_REPO_NAME: storage
