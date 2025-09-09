@@ -129,6 +129,7 @@ often useful to redirect/duplicate to a log by setting `ANSIBLE_LOG_PATH`.
 
 There is also `/tmp/blivet.log` in case there are problems doing the actual
 storage management.
+
 ## Running CI Tests Locally
 
 ### Use tox-lsr with qemu
