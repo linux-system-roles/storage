@@ -2186,6 +2186,9 @@ class FSTab(object):
         if self._entries:
             self.reset()
 
+        if not os.path.exists('/etc/fstab'):
+            return
+
         with open('/etc/fstab') as f:
             for line in f.readlines():
                 if line.lstrip().startswith("#"):
