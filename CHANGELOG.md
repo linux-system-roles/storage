@@ -1,6 +1,28 @@
 Changelog
 =========
 
+[1.19.0] - 2025-10-21
+--------------------
+
+### New Features
+
+- feat: Add support for creating multiple partitions (#552)
+
+### Bug Fixes
+
+- fix: Allow running on systems without /etc/fstab present (#562)
+
+### Other Changes
+
+- ci: bump actions/checkout from 4 to 5 (#553)
+- ci: rollout several recent changes to CI testing (#555)
+- ci: support openSUSE Leap in qemu/kvm test matrix (#556)
+- ci: use the new epel feature to enable EPEL for testing farm (#558)
+- ci: use tox-lsr 3.12.0 for osbuild_config.yml feature (#560)
+- ci: use JSON format for __bootc_validation (#561)
+- ci: bump actions/setup-python from 5 to 6 (#563)
+- ci: bump actions/github-script from 7 to 8 (#564)
+
 [1.18.20] - 2025-08-01
 --------------------
 
