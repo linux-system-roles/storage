@@ -27,6 +27,17 @@
         min_size: "10g"
         max_return: 1
 
+    - name: Verify that the role fails when no disks are specified
+      include_tasks: verify-role-failed.yml
+      vars:
+        __storage_failed_params:
+          storage_volumes:
+            - name: test1
+              type: disk
+              mount_point: "{{ mount_location }}"
+        __storage_failed_regex: no disks specified for volume 'test1'
+        __storage_failed_msg: Role did not report that no disks were specified
+
     - name: Verify that the role fails with the expected error message
       include_tasks: verify-role-failed.yml
       vars:
