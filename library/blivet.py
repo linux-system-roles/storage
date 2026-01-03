@@ -940,6 +940,9 @@ class BlivetDiskVolume(BlivetVolume):
     blivet_device_class = devices.DiskDevice
 
     def _get_device_id(self):
+        disks = self._volume.get('disks', [])
+        if not disks:
+            return None
         return self._volume['disks'][0]
 
     def _type_check(self):
