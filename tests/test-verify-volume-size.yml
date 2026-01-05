@@ -31,7 +31,7 @@
 
 - name: Get the size of parent/pool device
   bsize:
-    size: "{{ ansible_lvm.vgs[storage_test_pool.name].size_g + 'G' }}"
+    size: "{{ ansible_facts['lvm'].vgs[storage_test_pool.name].size_g + 'G' }}"
   register: storage_test_pool_size
   when:
     - _storage_test_volume_present | bool

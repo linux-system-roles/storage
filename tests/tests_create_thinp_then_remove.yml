@@ -10,8 +10,8 @@
     mount_location3: '/opt/test3'
     volume1_size: '3g'
     volume2_size: '4g'
-    fs_after: "{{ (ansible_distribution == 'RedHat' and
-                   ansible_distribution_major_version == '6') |
+    fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
+                   ansible_facts['distribution_major_version'] == '6') |
       ternary('ext4', 'xfs') }}"
 
   tasks:
