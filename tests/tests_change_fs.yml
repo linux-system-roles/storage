@@ -6,8 +6,8 @@
     storage_safe_mode: false
     mount_location: '/opt/test1'
     volume_size: '5g'
-    fs_after: "{{ (ansible_distribution == 'RedHat' and
-                   ansible_distribution_major_version == '6') |
+    fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
+                   ansible_facts['distribution_major_version'] == '6') |
                   ternary('ext4', 'xfs') }}"
   tags:
     - tests::lvm

@@ -7,7 +7,7 @@
     mount_location: '/opt/test1'
     volume_group_size: '10g'
     lv_size: '10g'
-    unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
+    unused_disk_subfact: '{{ ansible_facts["devices"][unused_disks[0]] }}'
     disk_size: '{{ unused_disk_subfact.sectors | int * 512 }}'
   tags:
     - tests::lvm

@@ -11,7 +11,7 @@ blivet_package_list:
   - stratis-cli
   # XXX libblockdev-s390 is available only on s390 so just add 'libblockdev' everywhere
   # else, it is already brought in as dependency of blivet so it's just no-op here
-  - "{{ 'libblockdev-s390' if ansible_architecture == 's390x' else 'libblockdev' }}"
+  - "{{ 'libblockdev-s390' if ansible_facts['architecture'] == 's390x' else 'libblockdev' }}"
   - vdo
 _storage_copr_support_packages:
   - dnf-plugins-core

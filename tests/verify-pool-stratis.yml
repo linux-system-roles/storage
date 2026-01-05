@@ -8,7 +8,7 @@
         scripts/stratis_pool_info.py
         "{{ storage_test_pool.name }}"
       args:
-        executable: "{{ ansible_python.executable }}"
+        executable: "{{ ansible_facts['python'].executable }}"
       register: storage_test_stratis_report
       changed_when: false
 

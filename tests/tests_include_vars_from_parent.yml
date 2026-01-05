@@ -30,10 +30,10 @@
         # create all variants like CentOS, CentOS_8.1, CentOS-8.1,
         # CentOS-8, CentOS-8.1
         # more formally:
-        # {{ ansible_distribution }}-{{ ansible_distribution_version }}
-        # {{ ansible_distribution }}-{{ ansible_distribution_major_version }}
-        # {{ ansible_distribution }}
-        # {{ ansible_os_family }}
+        # {{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}
+        # {{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_major_version'] }}
+        # {{ ansible_facts['distribution'] }}
+        # {{ ansible_facts['os_family'] }}
         # and the same for _ as separator.
         varfiles: "{{ [facts['distribution']] | product(separators) |
           map('join') | product(versions) | map('join') | list +

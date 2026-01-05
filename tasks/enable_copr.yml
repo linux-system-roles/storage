@@ -2,13 +2,13 @@
 - name: Get list of COPRs
   shell: |
     set -euo pipefail
-    {{ ansible_pkg_mgr }} repolist | \
+    {{ ansible_facts['pkg_mgr'] }} repolist | \
     grep -c `echo {{ repo.repository }} | tr / :` || true
   register: copr_present
   changed_when: false
 
 - name: Enable COPRs
   command:
-    cmd: "{{ ansible_pkg_mgr }} -y copr enable {{ repo.repository }}"
+    cmd: "{{ ansible_facts['pkg_mgr'] }} -y copr enable {{ repo.repository }}"
   when: copr_present.stdout == "0"
   changed_when: true

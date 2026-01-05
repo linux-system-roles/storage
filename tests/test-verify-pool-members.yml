@@ -1,7 +1,7 @@
 ---
 - name: Set test variables
   set_fact:
-    _storage_test_pool_pvs_lvm: "{{ ansible_lvm.pvs | dict2items |
+    _storage_test_pool_pvs_lvm: "{{ ansible_facts['lvm'].pvs | dict2items |
       selectattr('value.vg', 'match', '^' ~ storage_test_pool.name ~ '$') |
       map(attribute='key') | list }}"
     _storage_test_expected_pv_count: "{{ 0
@@ -79,7 +79,7 @@
     scripts/does_library_support.py
     blivet.formats.lvmpv.LVMPhysicalVolume.grow_to_fill
   args:
-    executable: "{{ ansible_python.executable }}"
+    executable: "{{ ansible_facts['python'].executable }}"
   register: grow_supported
   changed_when: false
   failed_when: grow_supported.rc not in [0, 1]

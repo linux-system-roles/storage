@@ -10,7 +10,7 @@
     volume_size_after: '9g'
     invalid_size1: xyz GiB
     invalid_size2: none
-    unused_disk_subfact: '{{ ansible_devices[unused_disks[0]] }}'
+    unused_disk_subfact: '{{ ansible_facts["devices"][unused_disks[0]] }}'
     too_large_size: '{{ unused_disk_subfact.sectors | int * 1.2 * 512 }}'
     acc_large_size: '{{ unused_disk_subfact.sectors | int * 1.015 * 512 }}'
     acc_small_size: '{{ unused_disk_subfact.sectors | int * 0.985 * 512 }}'
