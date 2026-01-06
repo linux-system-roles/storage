@@ -1,6 +1,20 @@
 Changelog
 =========
 
+[1.19.2] - 2026-01-06
+--------------------
+
+### Bug Fixes
+
+- fix: check for no disks specified and report correct error (#575)
+
+### Other Changes
+
+- ci: bump actions/checkout from 5 to 6 (#573)
+- ci: add qemu tests for Fedora 43, drop Fedora 41 (#574)
+- ci: bump actions/upload-artifact from 5 to 6 (#576)
+- refactor: handle INJECT_FACTS_AS_VARS=false by using ansible_facts instead (#577)
+
 [1.19.1] - 2025-11-17
 --------------------
 
