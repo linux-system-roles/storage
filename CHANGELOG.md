@@ -1,6 +1,17 @@
 Changelog
 =========
 
+[1.19.3] - 2026-01-13
+--------------------
+
+### Bug Fixes
+
+- fix: add vdo package for Fedora OSTree (#579)
+
+### Other Changes
+
+- ci: use ANSIBLE_INJECT_FACT_VARS=false by default for testing (#580)
+
 [1.19.2] - 2026-01-06
 --------------------
 
