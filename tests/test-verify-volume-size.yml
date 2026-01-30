@@ -60,6 +60,14 @@
         storage_test_expected_size: "{{ (storage_test_pool_size.bytes *
           ((storage_test_volume.size[:-1] | int) / 100.0)) }}"
 
+- name: Unspecified size => 100 %
+  when:
+    - _storage_test_volume_present | bool
+    - storage_test_volume.type == "lvm"
+    - storage_test_volume.size | string == "0"
+  set_fact:
+      storage_test_expected_size: "{{ storage_test_pool_size.bytes }}"
+
 - name: Process thin pool sizes when applicable
   when:
     - not storage_test_volume.thin is none

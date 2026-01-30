@@ -748,11 +748,14 @@ class BlivetVolume(BlivetBase):
 
     def _get_size(self):
         spec = self._volume['size']
+        if not spec:
+            log.debug("size for %s not specified, defaulting to 100 percent", self._volume['name'])
+            spec = "100 %"
         if isinstance(spec, str) and '%' in spec and self._blivet_pool:
             try:
                 percentage = int(spec[:-1].strip())
             except ValueError:
-                raise BlivetAnsibleError("invalid percentage '%s' size specified for volume '%s'" % (self._volume['size'], self._volume['name']))
+                raise BlivetAnsibleError("invalid percentage '%s' size specified for volume '%s'" % (spec, self._volume['name']))
 
             parent = self._blivet_pool._device
             size = parent.size * (percentage / 100.0)
@@ -760,7 +763,7 @@ class BlivetVolume(BlivetBase):
             try:
                 size = Size(spec)
             except Exception:
-                raise BlivetAnsibleError("invalid size specification for volume '%s': '%s'" % (self._volume['name'], self._volume['size']))
+                raise BlivetAnsibleError("invalid size specification for volume '%s': '%s'" % (self._volume['name'], spec))
 
         return size
 

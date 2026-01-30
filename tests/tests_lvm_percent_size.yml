@@ -160,3 +160,30 @@
 
     - name: Verify role results - 6
       include_tasks: verify-role-results.yml
+
+    - name: Create LV without size specified, should default to 100%
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: present
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location1 }}"
+
+    - name: Verify role results - 7
+      include_tasks: verify-role-results.yml
+
+    - name: Cleanup
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - name: Verify role results - 8
+      include_tasks: verify-role-results.yml
