@@ -189,6 +189,9 @@ variables:
   When using `compression` or `deduplication`, `size` can be set higher than actual available space,
   e.g.: 3 times the size of the volume, based on duplicity and/or compressibility of stored data.
 
+  If `size` is not specified, it will be the same as if you specified `size: 100%` - it will use
+  all available space in the pool.
+
   __NOTE__: The requested volume size may be reduced as necessary so the volume can
             fit in the available pool space, but only if the required reduction is
             not more than 2% of the requested volume size.

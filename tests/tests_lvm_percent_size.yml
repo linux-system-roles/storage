@@ -160,3 +160,36 @@
 
     - name: Verify role results - 6
       include_tasks: verify-role-results.yml
+
+    - name: Create an LVM logical volume with no size specified
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: test_no_size_pool
+            disks: "{{ unused_disks }}"
+            type: lvm
+            volumes:
+              - name: test_no_size_volume
+                fs_type: ext4
+
+    - name: Fixup the volume size to be 100% of the pool for verification purposes
+      set_fact:
+        _storage_pools_list: "{{ _storage_pools_list | map('combine', {'volumes': fixed_volumes}) | list }}"
+      vars:
+        fixed_volumes: "{{ _storage_pools_list[0].volumes | map('combine', {'size': '100%'}) | list }}"
+
+    - name: Verify role results - 7
+      include_tasks: verify-role-results.yml
+
+    - name: Remove the LVM logical volume in 'test_no_size_pool' created above
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: test_no_size_pool
+            disks: "{{ unused_disks }}"
+            state: absent
+
+    - name: Verify role results - 8
+      include_tasks: verify-role-results.yml
