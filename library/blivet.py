@@ -1126,7 +1126,10 @@ class BlivetLVMVolume(BlivetVolume):
         return size
 
     def _trim_size(self, size, parent_device):
-
+        if size == Size(0):
+            log.info("auto-fill volume '%s': using all available free space (%s)",
+                     self._volume['name'], parent_device.free_space)
+            return parent_device.free_space
         trim_percent = (1.0 - float(parent_device.free_space / size)) * 100
         log.debug("size: %s ; %s", size, trim_percent)
 
