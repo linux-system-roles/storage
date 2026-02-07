@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.19.4] - 2026-02-06
+--------------------
+
+### Bug Fixes
+
+- fix: Volume with no size is same as size 100% - fixes divide by zero error (#583)
+
+### Other Changes
+
+- ci: bump ansible/ansible-lint from 25 to 26 (#584)
+- ci: skip most CI checks if title contains citest skip [citest_skip] (#585)
+- ci: ansible-lint - remove .collection directory from converted collection [citest_skip] (#586)
+
 [1.19.3] - 2026-01-13
 --------------------
 
