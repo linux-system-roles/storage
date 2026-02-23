@@ -4,6 +4,7 @@ blivet_package_list:
   - python-blivet3
   - libblockdev-crypto
   - libblockdev-dm
+  - libblockdev-loop
   - libblockdev-lvm
   - libblockdev-mdraid
   - libblockdev-swap
