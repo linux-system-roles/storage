@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.19.5] - 2026-02-23
+--------------------
+
+### Bug Fixes
+
+- fix: ensure libblockdev-loop package on EL7 for loop mounts (#591)
+
+### Other Changes
+
+- ci: tox-lsr version 3.15.0 [citest_skip] (#588)
+- ci: Add Fedora 43, remove Fedora 41 from Testing Farm CI (#589)
+- ci: Ansible version must be string, not float [citest_skip] (#590)
+
 [1.19.4] - 2026-02-06
 --------------------
 
