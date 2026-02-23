@@ -8,6 +8,17 @@
     volume_size: '5g'
 
   tasks:
+    - name: Create blockdev and loop mount
+      shell: |
+        set -euxo pipefail
+        exec 1>&2
+        dd if=/dev/zero of=/tmp/loop.img bs=1024 count=64
+        mkfs.ext4 -v -F /tmp/loop.img
+        mkdir /mnt/loop_test
+        mount /tmp/loop.img /mnt/loop_test
+        cat /proc/mounts | grep loop
+      changed_when: false
+
     - name: Run the role
       include_role:
         name: linux-system-roles.storage
@@ -79,3 +90,11 @@
 
     - name: Verify role results - 4
       include_tasks: verify-role-results.yml
+
+    - name: Clean up loop mount
+      shell: |
+        set -euxo pipefail
+        exec 1>&2
+        umount /mnt/loop_test
+        rm -rf /tmp/loop.img /mnt/loop_test
+      changed_when: false
