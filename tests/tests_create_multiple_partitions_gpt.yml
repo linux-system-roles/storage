@@ -11,8 +11,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -21,7 +20,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -29,8 +27,7 @@
         max_return: 1
 
     - name: Create two partitions
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -50,8 +47,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -71,8 +67,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Add third partition
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -96,8 +91,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Resize third partition
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -121,8 +115,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -146,8 +139,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the first partition created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -167,8 +159,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove all partitions
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -180,8 +171,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create two encrypted partitions
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"
@@ -205,8 +195,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove all partitions
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: "{{ unused_disks[0] }}"

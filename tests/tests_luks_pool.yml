@@ -56,14 +56,12 @@
             test_command: grep 1 /proc/sys/crypto/fips_enabled
 
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
         storage_skip_checks:
           - blivet_available
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -99,7 +97,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Test key file handling
       block:
@@ -118,8 +115,7 @@
           changed_when: false
 
         - name: Create an encrypted lvm pool using a key file
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -167,8 +163,7 @@
       import_tasks: verify-data-preservation.yml
 
     - name: Remove the encryption layer
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -214,8 +209,7 @@
       import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the pool
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -239,8 +233,7 @@
       import_tasks: create-test-file.yml
 
     - name: Change the mountpoint, leaving encryption in place
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -264,8 +257,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: foo

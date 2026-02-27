@@ -9,8 +9,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -19,7 +18,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -28,8 +26,7 @@
         max_return: 1
 
     - name: Set label
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -43,8 +40,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Relabel
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -58,8 +54,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Run relabel again to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -78,8 +73,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Relabel without explicitly setting the label
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -97,8 +91,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove label
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -112,8 +105,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Format the device to LVMPV which doesn't support labels
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -122,8 +114,7 @@
             disks: "{{ unused_disks }}"
 
     - name: Rerun to check we don't try to relabel preexisitng LVMPV (regression test for RHEL-29874)
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -132,8 +123,7 @@
             disks: "{{ unused_disks }}"
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
