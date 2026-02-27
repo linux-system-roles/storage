@@ -13,8 +13,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -23,7 +22,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Gather package facts
       package_facts:
@@ -58,8 +56,7 @@
         match_sector_size: true
 
     - name: Create a cached LVM logical volume under volume group 'foo'
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -75,8 +72,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove (detach) cache from the 'test' LV created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -96,8 +92,7 @@
              is_rhel10)
       block:
         - name: Attach the cache to the 'test' LV created above
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -113,8 +108,7 @@
           include_tasks: verify-role-results.yml
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo

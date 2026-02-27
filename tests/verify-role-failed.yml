@@ -8,8 +8,7 @@
         storage_volumes_global: "{{ storage_volumes | d([]) }}"
 
     - name: Verify role raises correct error - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools: "{{
           __storage_failed_params.get('storage_pools',
