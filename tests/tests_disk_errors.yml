@@ -9,8 +9,7 @@
     - tests::lvm
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -19,7 +18,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -64,8 +62,7 @@
               disks: "{{ unused_disks }}"
 
     - name: Create a file system on disk
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -95,8 +92,7 @@
               disks: "{{ unused_disks }}"
 
     - name: Unmount file system
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -120,8 +116,7 @@
               disks: "{{ unused_disks }}"
 
     - name: Remount file system
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -180,8 +175,7 @@
     - name: >-
         Create a partition pool on the disk already containing a file system
         w/o safe_mode
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -197,8 +191,7 @@
           safe_mode
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:

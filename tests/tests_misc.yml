@@ -7,14 +7,12 @@
     mount_location: /opt/test1
     volume_group_size: "5g"
     volume1_size: "4g"
-    unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
     too_large_size: "{{ (unused_disk_subfact.sectors | int * 1.2) * 512 }}"
   tags:
     - tests::lvm
   tasks:
     - name: Include the role to ensure packages are installed
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -23,7 +21,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks for test
       include_tasks: get_unused_disk.yml
@@ -31,9 +28,12 @@
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
+    - name: Set unused disk subfact and too_large_size
+      set_fact:
+        unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
+
     - name: Test creating ext4 filesystem with valid parameter "-Fb 4096"
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -50,8 +50,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the volume group created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -87,8 +86,7 @@
                   mount_point: "{{ mount_location }}"
 
     - name: Remove the volume group created above - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -99,8 +97,7 @@
     - name: >-
         Create one LVM logical volume under one volume group, size
         {{ volume1_size }}
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -134,8 +131,7 @@
                   mount_point: "{{ mount_location }}"
 
     - name: Remove the volume group created above - 3
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -144,8 +140,7 @@
             state: absent
 
     - name: Create one partition on one disk
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -161,8 +156,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Test setting up disk volume will remove the partition create above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: foo
@@ -179,8 +173,7 @@
         __storage_verify_mount_options: true
 
     - name: Remove the disk volume created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: foo
@@ -189,6 +182,7 @@
             state: absent
 
     # rhel7 has a limitation of 128g swap size
+
     - name: Get unused disks for swap
       include_tasks: get_unused_disk.yml
       vars:
@@ -220,8 +214,7 @@
               mount_point: "{{ mount_location }}"
 
     - name: Remove the disk volume created above - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1

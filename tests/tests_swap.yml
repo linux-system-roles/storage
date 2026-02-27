@@ -8,8 +8,7 @@
 
   tasks:
     - name: Include role to ensure packages are installed
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -18,7 +17,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     # rhel7 has a limitation of 128g swap size
     - name: Get unused disks for swap
@@ -36,8 +34,7 @@
         __swap_disk: "{{ unused_disks[0] }}"
 
     - name: Create a disk device with swap
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -60,8 +57,7 @@
         __non_swap_disk: "{{ unused_disks[0] }}"
 
     - name: Format second disk as ext3
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test2
@@ -74,8 +70,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Change the disk device file system type from swap to ext3
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -88,8 +83,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -102,8 +96,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Change it back to swap
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -115,8 +108,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -128,8 +120,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1

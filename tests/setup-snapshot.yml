@@ -3,8 +3,8 @@
   hosts: all
   tasks:
     - name: Set platform/version specific variables
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
         tasks_from: set_vars.yml
         public: true
 

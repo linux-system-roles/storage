@@ -1,0 +1,21 @@
+---
+# Task file: save facts, clear_facts, run linux-system-roles.storage, then restore facts.
+# Include this with include_tasks or import_tasks; ensure tests/library is in module search path.
+
+- name: Save current ansible facts
+  set_fact:
+    saved_facts: "{{ ansible_facts }}"
+
+- name: Clear facts
+  meta: clear_facts
+
+- name: Run the role
+  include_role:
+    name: linux-system-roles.storage
+    tasks_from: "{{ tasks_from | default('main') }}"
+    public: "{{ public | default(false) }}"
+
+- name: Reset ansible_facts (saved base with current overrides)
+  merge_ansible_facts:
+    current_ansible_facts: "{{ ansible_facts }}"
+    saved_ansible_facts: "{{ saved_facts }}"

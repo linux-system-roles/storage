@@ -8,14 +8,12 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
         storage_skip_checks:
           - blivet_available
-          - service_facts
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
@@ -28,8 +26,7 @@
     - name: >-
         Create a disk device; specify disks as non-list mounted on
         {{ mount_location }}
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -45,8 +42,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation minus fs_type to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1
@@ -68,8 +64,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the disk device created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: test1

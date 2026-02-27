@@ -7,15 +7,13 @@
     mount_location: '/opt/test1'
     volume_group_size: '10g'
     lv_size: '10g'
-    unused_disk_subfact: '{{ ansible_facts["devices"][unused_disks[0]] }}'
-    disk_size: '{{ unused_disk_subfact.sectors | int * 512 }}'
+    disk_size: "{{ unused_disk_subfact.sectors | int * 512 }}"
   tags:
     - tests::lvm
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -24,7 +22,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -32,9 +29,12 @@
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
+    - name: Set unused_disk_subfact and disk_size
+      set_fact:
+        unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
+
     - name: Create one lv which size is equal to vg size
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -48,8 +48,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo

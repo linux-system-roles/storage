@@ -11,15 +11,14 @@
   tasks:
     - name: Test
       block:
+
         - name: Run the role
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
 
         - name: Mark tasks to be skipped
           set_fact:
             storage_skip_checks:
               - blivet_available
-              - service_facts
               - "{{ (lookup('env',
                             'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                     ternary('packages_installed', '') }}"
@@ -45,8 +44,7 @@
           changed_when: vgcreate_output.rc != 0
 
         - name: Create LVM
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -61,8 +59,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Rerun the task to verify idempotence
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -77,9 +74,9 @@
           include_tasks: verify-role-results.yml
 
       always:
+
         - name: Remove 'foo' pool created above
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -88,5 +85,5 @@
                 volumes:
                   - name: test1
 
-    - name: Verify role results - 3
-      include_tasks: verify-role-results.yml
+        - name: Verify role results - 3
+          include_tasks: verify-role-results.yml

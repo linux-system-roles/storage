@@ -16,8 +16,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -26,7 +25,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Gather package facts
       package_facts:
@@ -59,8 +57,7 @@
         disks_needed: 2
 
     - name: Create a RAID0 device
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -83,8 +80,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -107,8 +103,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the device created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -131,8 +126,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID1 lvm raid device
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -150,8 +144,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -169,8 +162,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the device created above - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -188,8 +180,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID0 lvm raid device
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -207,8 +198,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence - 3
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -226,8 +216,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the device created above - 3
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -245,8 +234,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID1 lvm raid device on encrypted VG
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -266,8 +254,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the device created above - 4
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -285,8 +272,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create encrypted RAID1 LVM device
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -303,8 +289,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the device created above - 5
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -328,8 +313,7 @@
              is_rhel10)
       block:
         - name: Create a RAID0 lvm raid device with custom stripe size
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: vg1
@@ -348,8 +332,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Remove the device created above - 6
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: vg1
