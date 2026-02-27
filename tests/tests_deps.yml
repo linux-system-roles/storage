@@ -5,9 +5,9 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
-        public: true
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
+        __sr_public: true
 
     - name: Test lvm and xfs package deps
       include_tasks: run_blivet.yml

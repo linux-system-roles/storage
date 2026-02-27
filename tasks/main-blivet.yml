@@ -55,15 +55,10 @@
     extra_pkgs:
       - kpartx
 
-- name: Get service facts
-  service_facts:
-  when: storage_skip_checks is not defined or
-        not "service_facts" in storage_skip_checks
-
-# rejectattr required because the fix to service_facts is on Ansible > 2.12 only
-# https://github.com/ansible/ansible/pull/75326
-- name: Set storage_cryptsetup_services
-  set_fact:
+- name: Manage storage devices and check for errors
+  vars:
+    # rejectattr required because the fix to service_facts is on Ansible > 2.12 only
+    # https://github.com/ansible/ansible/pull/75326
     storage_cryptsetup_services: "{{
       ansible_facts.services.values() |
       selectattr('name', 'defined') |
@@ -72,10 +67,15 @@
       rejectattr('status', 'match', '^failed$') |
       map(attribute='name') |
       select('match', '^systemd-cryptsetup@') |
-      list }}"
-
-- name: Manage storage devices and check for errors
+      list
+      if 'services' in ansible_facts else [] }}"
   block:
+    - name: Get service facts
+      service_facts:
+      when:
+        - not "services" in ansible_facts
+        - not "cryptsetup_services" in storage_skip_checks | d([])
+
     - name: Mask the systemd cryptsetup services
       systemd:
         name: "{{ item }}"

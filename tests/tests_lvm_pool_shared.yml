@@ -42,8 +42,7 @@
           when: inventory_hostname == "localhost"
 
         - name: Run the role to install blivet
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
 
         - name: Gather package facts
           package_facts:
@@ -116,8 +115,7 @@
         - name: >-
             Create a disk device; specify disks as non-list mounted on
             {{ mount_location }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: vg1
@@ -136,8 +134,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Repeat the previous step to verify idempotence
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: vg1
@@ -158,8 +155,7 @@
         - name: >-
             Remove the device created above
             {{ mount_location }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: vg1

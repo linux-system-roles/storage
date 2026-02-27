@@ -72,8 +72,7 @@
             test_command: grep 1 /proc/sys/crypto/fips_enabled
 
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -101,8 +100,7 @@
 
     # encrypted disk volume
     - name: Create an encrypted disk volume w/ default fs
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: foo
@@ -141,8 +139,7 @@
       import_tasks: verify-data-preservation.yml
 
     - name: Remove the encryption layer
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_volumes:
@@ -182,8 +179,7 @@
       import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the volume
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_volumes:
@@ -223,8 +219,7 @@
                   encryption_luks_version: luks2
 
     - name: Create an encrypted partition volume w/ default fs
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -272,8 +267,7 @@
       import_tasks: verify-data-preservation.yml
 
     - name: Remove the encryption layer - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -337,8 +331,7 @@
           changed_when: false
 
         - name: Add encryption to the volume - 2
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_safe_mode: false
             storage_pools:
@@ -387,8 +380,7 @@
                   encryption_luks_version: luks2
 
     - name: Create an encrypted lvm volume w/ default fs
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -409,8 +401,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Verify preservation of encryption settings on existing LVM volume
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -460,8 +451,7 @@
       import_tasks: verify-data-preservation.yml
 
     - name: Remove the encryption layer - 3
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -507,8 +497,7 @@
       import_tasks: verify-data-preservation.yml
 
     - name: Add encryption to the volume - 3
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -527,8 +516,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_volumes:
           - name: foo

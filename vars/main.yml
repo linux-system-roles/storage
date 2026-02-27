@@ -11,7 +11,7 @@ __storage_required_facts:
 # the subsets of ansible_facts that need to be gathered in case any of the
 # facts in required_facts is missing; see the documentation of
 # the 'gather_subset' parameter of the 'setup' module
-__storage_required_facts_subsets: "{{ ['!all', '!min'] +
+__storage_required_facts_subsets: "{{ ['!all', '!min', 'devices'] +
   __storage_required_facts }}"
 
 # Set flag for blivet to know if there is a kmod-kvdo package
