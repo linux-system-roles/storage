@@ -6,16 +6,18 @@
     storage_safe_mode: false
     mount_location: '/opt/test1'
     volume_size: '5g'
-    fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
-                   ansible_facts['distribution_major_version'] == '6') |
-                  ternary('ext4', 'xfs') }}"
   tags:
     - tests::lvm
 
   tasks:
+    - name: Set fs_after based on distribution
+      set_fact:
+        fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
+                       ansible_facts['distribution_major_version'] == '6') |
+                      ternary('ext4', 'xfs') }}"
+
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -24,7 +26,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -33,8 +34,7 @@
         max_return: 1
 
     - name: Create a LVM logical volume with default fs_type
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -48,8 +48,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Change the file system signature on the logical volume created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -64,8 +63,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Re-run the role on the same volume without specifying fs_type
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -86,8 +84,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -102,8 +99,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the FS
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -116,10 +112,8 @@
     - name: Verify role results - 5
       include_tasks: verify-role-results.yml
 
-
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo

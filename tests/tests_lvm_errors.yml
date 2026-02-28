@@ -11,13 +11,11 @@
     invalid_disks:
       - '/non/existent/disk'
     invalid_size: 'xyz GiB'
-    unused_disk_subfact: '{{ ansible_facts["devices"][unused_disks[0]] }}'
   tags:
     - tests::lvm
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -26,13 +24,16 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 1
+
+    - name: Set unused_disk_subfact
+      set_fact:
+        unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
 
     - name: Test for correct handling of invalid disk specifications.
       include_tasks: verify-role-failed.yml
@@ -126,8 +127,7 @@
                   mount_point: "{{ mount_location2 }}"
 
     - name: Create a pool
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: testpool1
@@ -185,8 +185,7 @@
                 - "{{ unused_disks[0] }}"
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:
@@ -213,8 +212,7 @@
                   mount_point: "{{ mount_location1 }}"
 
     - name: Clean up - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_safe_mode: false
         storage_pools:

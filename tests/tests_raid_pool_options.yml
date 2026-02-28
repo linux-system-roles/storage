@@ -16,8 +16,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -26,7 +25,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -35,8 +33,7 @@
         disks_needed: 3
 
     - name: Create a RAID1 device
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -62,8 +59,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation minus the pool raid options
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -94,8 +90,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the pool created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -121,8 +116,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create a RAID0 device
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -138,8 +132,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the pool created above - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1

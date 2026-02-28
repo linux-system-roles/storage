@@ -12,8 +12,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -22,7 +21,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Gather package facts
       package_facts:
@@ -49,7 +47,6 @@
                     ansible_facts.distribution_major_version == '10' }}"
         is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
 
-
     - name: Completely skip this on RHEL/CentOS 7 and 8 where Stratis isn't supported by blivet
       when: not is_rhel78
       block:
@@ -68,9 +65,9 @@
 
         - name: One pool/volume test
           block:
+
             - name: Create one Stratis pool with one volume
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -85,8 +82,7 @@
               include_tasks: verify-role-results.yml
 
             - name: Repeat the previous invocation to verify idempotence
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -101,8 +97,7 @@
               include_tasks: verify-role-results.yml
 
             - name: Add second filesystem to the pool
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -120,9 +115,9 @@
               include_tasks: verify-role-results.yml
 
           always:
+
             - name: Clean up
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -149,9 +144,9 @@
           block:
             - name: Test encrypted pool
               block:
+
                 - name: Create encrypted Stratis pool
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -168,8 +163,7 @@
                   include_tasks: verify-role-results.yml
 
                 - name: Repeat the previous invocation to verify idempotence - 2
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -186,9 +180,9 @@
                   include_tasks: verify-role-results.yml
 
               always:
+
                 - name: Clean up - 2
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -206,9 +200,9 @@
 
             - name: Test one disk pool
               block:
+
                 - name: Create one Stratis pool on one disk
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -219,8 +213,7 @@
                   include_tasks: verify-role-results.yml
 
                 - name: Add the second disk to the pool
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -231,9 +224,9 @@
                   include_tasks: verify-role-results.yml
 
               always:
+
                 - name: Clean up - 3
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -260,8 +253,7 @@
             - name: Clevis/Tang test
               block:
                 - name: Create encrypted Stratis pool with Clevis/Tang
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -277,8 +269,7 @@
 
               always:
                 - name: Clean up - 4
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo

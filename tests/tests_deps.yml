@@ -5,8 +5,8 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
         public: true
 
     - name: Test lvm and xfs package deps

@@ -10,14 +10,14 @@
     mount_location3: '/opt/test3'
     volume1_size: '3g'
     volume2_size: '4g'
-    fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
-                   ansible_facts['distribution_major_version'] == '6') |
-      ternary('ext4', 'xfs') }}"
 
   tasks:
+    - name: Set fs_after based on distribution
+      set_fact:
+        fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and ansible_facts['distribution_major_version'] == '6') | ternary('ext4', 'xfs') }}"
+
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -26,8 +26,7 @@
         match_sector_size: true
 
     - name: Create a thinpool device
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -46,8 +45,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat previous invocation to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -65,8 +63,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Change thinlv fs type
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -82,8 +79,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create new LV under existing thinpool
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -100,8 +96,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove existing LV under existing thinpool
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -118,8 +113,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Cleanup
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -138,8 +132,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create a thinpool device using percentages
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1
@@ -158,8 +151,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Cleanup - 2
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: vg1

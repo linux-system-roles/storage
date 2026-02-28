@@ -12,8 +12,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -22,7 +21,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Gather package facts
       package_facts:
@@ -38,6 +36,14 @@
           ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
           '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
 
+    - name: Set distribution version flags
+      set_fact:
+        is_rhel10: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '10' }}"
+        is_rhel9: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '9' }}"
+        is_rhel8: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '8' }}"
+        is_rhel7: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '7' }}"
+        is_fedora: "{{ ansible_facts['distribution'] == 'Fedora' }}"
+
     # end early when running with old blivet where removing PVs from a VG fails
     - name: Run test only if blivet supports this functionality
       when: (blivet_pkg_version is defined and
@@ -46,16 +52,6 @@
               (is_rhel8 and blivet_pkg_version is version("3.4.0-10", ">=")) or
               (is_rhel9 and blivet_pkg_version is version("3.4.0-14", ">=")) or
               is_rhel10))
-      vars:
-        is_rhel10: "{{ ansible_facts['os_family'] == 'RedHat' and
-          ansible_facts['distribution_major_version'] == '10' }}"
-        is_rhel9: "{{ ansible_facts['os_family'] == 'RedHat' and
-          ansible_facts['distribution_major_version'] == '9' }}"
-        is_rhel8: "{{ ansible_facts['os_family'] == 'RedHat' and
-          ansible_facts['distribution_major_version'] == '8' }}"
-        is_rhel7: "{{ ansible_facts['os_family'] == 'RedHat' and
-          ansible_facts['distribution_major_version'] == '7' }}"
-        is_fedora: "{{ ansible_facts['distribution'] == 'Fedora' }}"
       block:
         - name: Get unused disks
           include_tasks: get_unused_disk.yml
@@ -65,8 +61,7 @@
             match_sector_size: true
 
         - name: Create volume group 'foo' with 3 PVs
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -81,8 +76,7 @@
           register: storage_test_members_vg_uuid
 
         - name: Verify that nothing changes when disks don't change
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -102,8 +96,7 @@
               storage_test_members_vg_uuid_after.stdout
 
         - name: Remove 2 PVs from the 'foo' volume group
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -133,8 +126,7 @@
               storage_test_members_vg_uuid_after.stdout
 
         - name: Add the second disk back to the 'foo' volume group
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -155,8 +147,7 @@
 
         - name: >-
             Remove the first PV and add the third disk to the 'foo' volume group
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -176,8 +167,7 @@
               storage_test_members_vg_uuid_after.stdout
 
         - name: Create volume group 'foo' with 3 encrypted PVs
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_safe_mode: false
             storage_pools:
@@ -192,8 +182,7 @@
           register: storage_test_members_vg_uuid
 
         - name: Remove 2 PVs from the 'foo' volume group - 2
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -215,8 +204,7 @@
               storage_test_members_vg_uuid_after.stdout
 
         - name: Add the disks back to the 'foo' volume group
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -238,8 +226,7 @@
               storage_test_members_vg_uuid_after.stdout
 
         - name: Create a new volume group with a logical volume
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -258,8 +245,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Add a second PV to the VG
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -279,8 +265,7 @@
               storage_test_members_vg_uuid_after.stdout
 
         - name: Remove the first PV from the VG
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -310,8 +295,7 @@
               storage_test_members_vg_uuid_after.stdout
 
         - name: Clean up
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo

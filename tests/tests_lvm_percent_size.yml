@@ -15,8 +15,7 @@
     - tests::lvm
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -44,8 +43,7 @@
     - name: >-
         Create two LVM logical volumes under volume group 'foo' using percentage
         sizes
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -63,8 +61,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -81,8 +78,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Shrink test2 volume via percentage-based size spec
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -104,8 +100,7 @@
       changed_when: false
 
     - name: Remove the test1 volume without changing its size
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -134,8 +129,7 @@
           storage_test_test1_size_2.stdout
 
     - name: Grow test2 using a percentage-based size spec
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -150,8 +144,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove both of the LVM logical volumes in 'foo' created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -162,8 +155,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Create an LVM logical volume with no size specified
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: test_no_size_pool
@@ -183,8 +175,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Remove the LVM logical volume in 'test_no_size_pool' created above
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: test_no_size_pool

@@ -10,7 +10,6 @@
     volume_size_after: '9g'
     invalid_size1: xyz GiB
     invalid_size2: none
-    unused_disk_subfact: '{{ ansible_facts["devices"][unused_disks[0]] }}'
     too_large_size: '{{ unused_disk_subfact.sectors | int * 1.2 * 512 }}'
     acc_large_size: '{{ unused_disk_subfact.sectors | int * 1.015 * 512 }}'
     acc_small_size: '{{ unused_disk_subfact.sectors | int * 0.985 * 512 }}'
@@ -19,8 +18,7 @@
     - tests::lvm
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -29,7 +27,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -37,15 +34,19 @@
         min_size: "{{ volume_group_size }}"
         max_return: 1
 
+    - name: Set unused disk subfact
+      set_fact:
+        unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
+
     # For ext4 FS
 
     - name: Test ext4
       block:
+
         - name: >-
             Create one LVM logical volume under one volume group with size
             {{ volume_size_before }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -62,8 +63,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Change volume_size to {{ volume_size_after }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -79,8 +79,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Change volume size to {{ volume_size_before }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -113,11 +112,11 @@
 
         - name: Test for correct handling of volume size equal disk's size
           block:
+
             - name: >-
                 Try to create LVM with volume size equal disk's size, resize to
                 {{ disk_size }}
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -133,11 +132,11 @@
 
         - name: Test for correct handling of acceptable size difference (slightly bigger than max)
           block:
+
             - name: >-
                 Try to resize LVM volume size to disk size + 1.5 % (less than 2 % than
                 maximum size should be tolerated)
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -184,9 +183,9 @@
                       mount_point: "{{ mount_location }}"
 
       always:
+
         - name: Clean up
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -204,11 +203,11 @@
 
     - name: Test ext3
       block:
+
         - name: >-
             Create a LVM logical volume with for ext3 FS size
             {{ volume_size_before }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -224,8 +223,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Change volume size to {{ volume_size_after }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -241,8 +239,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Change volume size to before size {{ volume_size_before }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -258,9 +255,9 @@
           include_tasks: verify-role-results.yml
 
       always:
+
         - name: Clean up - 2
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -278,11 +275,11 @@
 
     - name: Test ext2
       block:
+
         - name: >-
             Create a LVM logical volume with for ext2 FS size
             {{ volume_size_before }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -298,8 +295,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Change volume size to after size {{ volume_size_after }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -315,8 +311,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Change again volume size to before size {{ volume_size_before }}
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -333,8 +328,7 @@
 
       always:
         - name: Clean up - 3
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: foo
@@ -381,11 +375,11 @@
                 (is_rhel9 and blivet_pkg_version is version("3.6.0-8", ">=")) or
                 is_rhel10)
           block:
+
             - name: >-
                 Create one LVM logical volume under one volume group with size
                 {{ volume_size_before }}
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -401,8 +395,7 @@
               include_tasks: verify-role-results.yml
 
             - name: Change volume_size to after size {{ volume_size_after }}
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -435,9 +428,9 @@
                           mount_point: "{{ mount_location }}"
 
           always:
+
             - name: Clean up - 4
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -460,11 +453,11 @@
                 (is_rhel8 and blivet_pkg_version is version("3.4.0-1", ">=")) or
                 is_rhel9 or is_rhel10)
           block:
+
             - name: >-
                 Create a LVM logical volume with for XFS size
                 {{ volume_size_before }}
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -480,8 +473,7 @@
               include_tasks: verify-role-results.yml
 
             - name: Change again volume size to after size {{ volume_size_after }}
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -497,8 +489,7 @@
               include_tasks: verify-role-results.yml
 
             - name: Repeat for idempotency test
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo
@@ -531,11 +522,11 @@
 
             - name: Test for correct handling of acceptable size difference (slightly smaller than min)
               block:
+
                 - name: >-
                     Try to resize LVM volume size to disk size - 1.5 % (less than 2 % than
                     minimum size should be tolerated)
-                  include_role:
-                    name: linux-system-roles.storage
+                  include_tasks: tasks/run_role_with_clear_facts.yml
                   vars:
                     storage_pools:
                       - name: foo
@@ -551,8 +542,7 @@
 
           always:
             - name: Clean up - 5
-              include_role:
-                name: linux-system-roles.storage
+              include_tasks: tasks/run_role_with_clear_facts.yml
               vars:
                 storage_pools:
                   - name: foo

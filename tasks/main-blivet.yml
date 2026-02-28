@@ -57,8 +57,7 @@
 
 - name: Get service facts
   service_facts:
-  when: storage_skip_checks is not defined or
-        not "service_facts" in storage_skip_checks
+  when: not "services" in ansible_facts
 
 # rejectattr required because the fix to service_facts is on Ansible > 2.12 only
 # https://github.com/ansible/ansible/pull/75326
