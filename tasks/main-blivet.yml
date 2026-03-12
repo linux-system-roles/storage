@@ -1,14 +1,20 @@
 ---
+
 - name: Add blivet package repository
-  when: ansible_facts['os_family'] == "Debian"
+  when:
+    - _blivet_custom_repo.key is defined
+    - _blivet_custom_repo.key_name is defined
+    - _blivet_custom_repo.repository is defined
   block:
     - name: Add repo key
-      ansible.builtin.command:
-        cmd: "wget https://download.opensuse.org/repositories/home:vtrefny/Debian_Unstable/Release.key -O /etc/apt/trusted.gpg.d/home_vtrefny.asc"
+      ansible.builtin.get_url:
+        url: "{{ _blivet_custom_repo.key }}"
+        dest: "/etc/apt/trusted.gpg.d/{{ _blivet_custom_repo.key_name }}"
+        mode: "0644"
 
     - name: Add blivet repo
       ansible.builtin.apt_repository:
-        repo: "deb http://download.opensuse.org/repositories/home:/vtrefny/Debian_Unstable/ /"
+        repo: "{{ _blivet_custom_repo.repository }}"
         state: present
 
 - name: Make sure blivet is available
