@@ -3,10 +3,10 @@
   hosts: all
   tasks:
     - name: Set platform/version specific variables
-      include_role:
-        name: linux-system-roles.storage
-        tasks_from: set_vars.yml
-        public: true
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
+        __sr_tasks_from: set_vars.yml
+        __sr_public: true
 
     - name: Install test packages
       package:

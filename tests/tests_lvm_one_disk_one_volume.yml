@@ -11,8 +11,7 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
@@ -21,7 +20,6 @@
           - "{{ (lookup('env',
                         'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
                 ternary('packages_installed', '') }}"
-          - service_facts
 
     - name: Get unused disks
       include_tasks: get_unused_disk.yml
@@ -30,8 +28,7 @@
         max_return: 1
 
     - name: Create one LVM logical volume under one volume group
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -45,8 +42,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Repeat the previous invocation to verify idempotence
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo
@@ -60,8 +56,7 @@
       include_tasks: verify-role-results.yml
 
     - name: Clean up
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
           - name: foo

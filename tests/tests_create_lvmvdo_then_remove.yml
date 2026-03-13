@@ -14,14 +14,12 @@
 
   tasks:
     - name: Run the role
-      include_role:
-        name: linux-system-roles.storage
+      include_tasks: tasks/run_role_with_clear_facts.yml
 
     - name: Mark tasks to be skipped
       set_fact:
         storage_skip_checks:
           - blivet_available
-          - service_facts
 
     - name: Gather package facts
       package_facts:
@@ -55,11 +53,14 @@
       changed_when: false
       register: __storage_dmvdo_loadable
 
+    - name: Set flag for Fedora
+      set_fact:
+        is_fedora: "{{ ansible_facts['distribution'] == 'Fedora' }}"
+
     - name: Run tests if VDO is available
       when:
         - blivet_pkg_version is version("3.2.2-10", ">=")
-        - ansible_facts["distribution"] != "Fedora" or
-          libblockdev_pkg_version is version("3.1.1-2", ">=")
+        - not is_fedora or libblockdev_pkg_version is version("3.1.1-2", ">=")
         - __storage_kvdo_loadable is success or __storage_dmvdo_loadable is success
       block:
         - name: Get unused disks
@@ -69,8 +70,7 @@
             max_return: 1
 
         - name: Create LVM VDO volume under volume group 'pool1'
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: pool1
@@ -87,8 +87,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Repeat the previous invocation to verify idempotence
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: pool1
@@ -105,8 +104,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Remove LVM VDO volume in 'pool1' created above
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: pool1
@@ -126,8 +124,7 @@
         - name: >-
             Create LVM VDO volume under volume group 'pool1' (this time
             default size)
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: pool1
@@ -143,8 +140,7 @@
           include_tasks: verify-role-results.yml
 
         - name: Remove LVM VDO volume in 'pool1' created above - 2
-          include_role:
-            name: linux-system-roles.storage
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
               - name: pool1
