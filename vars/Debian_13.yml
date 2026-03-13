@@ -1,0 +1,17 @@
+---
+_blivet_custom_repo:
+  # Debian has no blivet lib in repos
+  # See: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=965321
+  repository: "deb https://download.opensuse.org/repositories/home:/vtrefny/Debian_13/ /"
+  key: "https://download.opensuse.org/repositories/home:vtrefny/Debian_13/Release.key"
+  key_name: home_vtrefny.asc
+
+blivet_package_list:
+  - python3-blivet
+  - libblockdev-crypto3
+  - libblockdev-dm3
+  - libblockdev-fs3
+  - libblockdev-lvm3
+  - libblockdev-mdraid3
+  - libblockdev-swap3
+  - mdadm

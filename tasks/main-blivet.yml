@@ -1,4 +1,22 @@
 ---
+
+- name: Add blivet package repository
+  when:
+    - _blivet_custom_repo.key is defined
+    - _blivet_custom_repo.key_name is defined
+    - _blivet_custom_repo.repository is defined
+  block:
+    - name: Add repo key
+      ansible.builtin.get_url:
+        url: "{{ _blivet_custom_repo.key }}"
+        dest: "/etc/apt/trusted.gpg.d/{{ _blivet_custom_repo.key_name }}"
+        mode: "0644"
+
+    - name: Add blivet repo
+      ansible.builtin.apt_repository:
+        repo: "{{ _blivet_custom_repo.repository }}"
+        state: present
+
 - name: Make sure blivet is available
   package:
     name: "{{ blivet_package_list }}"
@@ -67,6 +85,7 @@
     storage_cryptsetup_services: "{{
       ansible_facts.services.values() |
       selectattr('name', 'defined') |
+      selectattr('status', 'defined') |
       rejectattr('status', 'match', '^not-found$') |
       rejectattr('status', 'match', '^masked$') |
       rejectattr('status', 'match', '^failed$') |
