@@ -1,6 +1,20 @@
 Changelog
 =========
 
+[1.20.0] - 2026-03-16
+--------------------
+
+### New Features
+
+- feat: Added support for debian 13 [WIP] (#598)
+
+### Other Changes
+
+- ci: bump actions/upload-artifact from 6 to 7 (#594)
+- ci: tox-lsr 3.16.0 - fix qemu tox test failures - rename to qemu-ansible-core-X-Y [citest_skip] (#595)
+- ci: tox-lsr 3.17.0 - container test improvements, use ansible 2.20 for fedora 43 [citest_skip] (#596)
+- ci: tox-lsr 3.17.1 - previous update broke container tests, this fixes them [citest_skip] (#599)
+
 [1.19.5] - 2026-02-23
 --------------------
 
