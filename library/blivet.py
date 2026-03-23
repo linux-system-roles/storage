@@ -1301,7 +1301,7 @@ class BlivetLVMVolume(BlivetVolume):
         else:
             parent_device = self._blivet_pool._device
             if parent_device is None:
-                raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool._device.name, self._volume['name']))
+                raise BlivetAnsibleError("failed to find pool for volume '%s'" % self._volume['name'])
 
         if use_vdo:
             # VDO size is technically unlimited, so no size checks needed when it is used
@@ -1493,8 +1493,7 @@ class BlivetStratisVolume(BlivetVolume):
 
         parent_device = self._blivet_pool._device
         if parent_device is None:
-            raise BlivetAnsibleError("failed to find pool '%s' for volume '%s'" % (self._blivet_pool._device.name,
-                                                                                   self._volume['name']))
+            raise BlivetAnsibleError("failed to find pool for volume '%s'" % self._volume['name'])
 
         size = self._trim_size(self._get_size(), parent_device)
 
