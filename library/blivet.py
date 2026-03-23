@@ -704,8 +704,8 @@ class BlivetVolume(BlivetBase):
             self._volume['encryption'] = encrypted
         elif param_name == 'encryption_key_size' and encrypted:
             self._volume['encryption_key_size'] = luks_fmt.key_size
-        elif param_name == 'encryption_key_file' and encrypted:
-            self._volume['encryption_key_file'] = luks_fmt.key_file
+        elif param_name == 'encryption_key' and encrypted:
+            self._volume['encryption_key'] = luks_fmt.key_file
         elif param_name == 'encryption_cipher' and encrypted:
             self._volume['encryption_cipher'] = luks_fmt.cipher
         elif param_name == 'encryption_luks_version' and encrypted:
@@ -1630,8 +1630,8 @@ class BlivetPool(BlivetBase):
 
         # Apply encryption keys as appropriate
         if any(d.encrypted for d in self._device.parents):
-            passphrase = self._pool.get("encryption_passphrase")
-            key_file = self._pool.get("encryption_key_file")
+            passphrase = self._pool.get("encryption_password")
+            key_file = self._pool.get("encryption_key")
             for member in self._device.parents:
                 if member.parents[0].format.type == "luks":
                     if passphrase:
@@ -1655,8 +1655,8 @@ class BlivetPool(BlivetBase):
             self._pool['encryption'] = encrypted
         elif param_name == 'encryption_key_size' and encrypted:
             self._pool['encryption_key_size'] = self._device.parents[0].parents[0].format.key_size
-        elif param_name == 'encryption_key_file' and encrypted:
-            self._pool['encryption_key_file'] = self._device.parents[0].parents[0].format.key_file
+        elif param_name == 'encryption_key' and encrypted:
+            self._pool['encryption_key'] = self._device.parents[0].parents[0].format.key_file
         elif param_name == 'encryption_cipher' and encrypted:
             self._pool['encryption_cipher'] = self._device.parents[0].parents[0].format.cipher
         elif param_name == 'encryption_luks_version' and encrypted:
