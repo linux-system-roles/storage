@@ -1160,8 +1160,9 @@ class BlivetLVMVolume(BlivetVolume):
                 pool_size = self._trim_size(Size(self._volume['vdo_pool_size']), parent_device)
             except BlivetAnsibleError:
                 # Literally the same error just more specific description
-                raise BlivetAnsibleError("specified 'vdo_pool_size' for volume '%s' "
-                                         "exceeds available space in pool '%s' (%s)" % (pool_size,
+                raise BlivetAnsibleError("specified 'vdo_pool_size' '%s' for volume '%s' "
+                                         "exceeds available space in pool '%s' (%s)" % (self._volume['vdo_pool_size'],
+                                                                                        self._volume['name'],
                                                                                         parent_device.name,
                                                                                         parent_device.free_space))
 
