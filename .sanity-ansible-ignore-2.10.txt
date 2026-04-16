@@ -5,3 +5,4 @@ plugins/modules/find_unused_disk.py validate-modules:missing-gplv3-license
 plugins/modules/lvm_gensym.py validate-modules:missing-gplv3-license
 plugins/modules/resolve_blockdev.py validate-modules:missing-gplv3-license
 tests/storage/scripts/generate_tests.py shebang!skip
+plugins/modules/sr_fingerprint.py validate-modules:missing-gplv3-license
