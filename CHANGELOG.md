@@ -1,6 +1,30 @@
 Changelog
 =========
 
+[1.21.0] - 2026-04-28
+--------------------
+
+### New Features
+
+- feat: add role fingerprint to system journal (#614)
+
+### Bug Fixes
+
+- fix: use correct encryption_key parameter, improve error messages (#601)
+
+### Other Changes
+
+- test: ensure role gathers the facts it uses by having test clear_facts before include_role (#593)
+- ci: Bump codecov/codecov-action from 5 to 6 (#602)
+- ci: fix yum repos to use devel site instead of old site name [citest_skip] (#603)
+- ci: use codecov @v6 [citest_skip] (#604)
+- refactor: comply with Ansible partner certification checks [citest_skip] (#605)
+- ci: update header for run_role_with_clear_facts [citest_skip] (#606)
+- test: support ansible-test milestone version 2.22 (#610)
+- ci: Comply with Ansible partner certification checking [citest_skip] (#612)
+- ci: ansible-lint requires dependencies to be installed [citest_skip] (#613)
+- test: add role fingerprints to syslog (#615)
+
 [1.20.0] - 2026-03-16
 --------------------
 
