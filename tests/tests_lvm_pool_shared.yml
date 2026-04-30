@@ -16,6 +16,12 @@
 
     - name: Run the test
       block:
+        - name: Storage test setup
+          ansible.builtin.include_tasks: tasks/setup.yml
+          vars:
+            __storage_get_package_facts: true
+            __storage_get_unused_disks: false
+
         - name: See if lvm.conf exists
           stat:
             path: "{{ lvm_conf }}"
@@ -40,33 +46,6 @@
           set_fact:
             inventory_hostname: "127.0.0.1"  # noqa: var-naming
           when: inventory_hostname == "localhost"
-
-        - name: Run the role to install blivet
-          include_tasks: tasks/run_role_with_clear_facts.yml
-
-        - name: Gather package facts
-          package_facts:
-
-        - name: Set blivet package name
-          set_fact:
-            blivet_pkg_name: "{{ ansible_facts.packages |
-              select('search', 'blivet') | select('search', 'python') | list }}"
-
-        - name: Set blivet package version
-          set_fact:
-            blivet_pkg_version: "{{
-              ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
-              '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
-
-        - name: Set distribution version
-          set_fact:
-            is_rhel10: "{{ (ansible_facts['os_family'] == 'RedHat') and
-                        ansible_facts.distribution_major_version == '10' }}"
-            is_rhel9: "{{ (ansible_facts['os_family'] == 'RedHat') and
-                        ansible_facts.distribution_major_version == '9' }}"
-            is_rhel8: "{{ (ansible_facts['os_family'] == 'RedHat') and
-                        ansible_facts.distribution_major_version == '8' }}"
-            is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
 
         - name: Skip test if the blivet version does not support shared VGs
           meta: end_host
@@ -107,8 +86,8 @@
                   - dlm
                   - lvmlockd
 
-        - name: Get unused disks
-          include_tasks: get_unused_disk.yml
+        - name: Discover unused disks for testing
+          ansible.builtin.include_tasks: tasks/get_unused_disk.yml
           vars:
             max_return: 1
 
