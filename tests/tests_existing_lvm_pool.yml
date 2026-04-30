@@ -7,26 +7,14 @@
     volume_group_size: '5g'
     volume_size: '4g'
     pool_name: foo
+    __storage_min_size: "{{ volume_group_size }}"
+    __storage_max_return: 1
   tags:
     - tests::lvm
 
   tasks:
-    - name: Run the role
-      include_tasks: tasks/run_role_with_clear_facts.yml
-
-    - name: Mark tasks to be skipped
-      set_fact:
-        storage_skip_checks:
-          - blivet_available
-          - "{{ (lookup('env',
-                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
-                ternary('packages_installed', '') }}"
-
-    - name: Get unused disks
-      include_tasks: get_unused_disk.yml
-      vars:
-        min_size: "{{ volume_group_size }}"
-        max_return: 1
+    - name: Prep storage role and discover unused disks
+      ansible.builtin.include_tasks: tasks/setup.yml
 
     - name: Create one LVM logical volume under one volume group
       include_tasks: tasks/run_role_with_clear_facts.yml

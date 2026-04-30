@@ -15,11 +15,11 @@
 
 - name: Find unused disks in the system
   find_unused_disk:
-    min_size: "{{ min_size | d(omit) }}"
-    max_size: "{{ max_size | d(omit) }}"
-    max_return: "{{ max_return | d(omit) }}"
+    min_size: "{{ min_size | d(__storage_min_size | d(omit)) }}"
+    max_size: "{{ max_size | d(__storage_max_size | d(omit)) }}"
+    max_return: "{{ max_return | d(__storage_max_return | d(omit)) }}"
     with_interface: "{{ storage_test_use_interface | d(omit) }}"
-    match_sector_size: "{{ match_sector_size | d(omit) }}"
+    match_sector_size: "{{ match_sector_size | d(__storage_match_sector_size | d(omit)) }}"
   register: unused_disks_return
 
 - name: Debug why there are no unused disks
