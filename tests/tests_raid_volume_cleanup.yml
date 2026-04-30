@@ -9,22 +9,16 @@
     mount_location2: '/opt/test2'
     volume1_size: '5g'
     volume2_size: '4g'
+    __storage_max_return: 3
+    __storage_disks_needed: 3
 
   tasks:
-    - name: Run the role
-      include_tasks: tasks/run_role_with_clear_facts.yml
-
-    - name: Mark tasks to be skipped
-      set_fact:
-        storage_skip_checks:
+    - name: Storage test setup
+      ansible.builtin.include_tasks: tasks/setup.yml
+      vars:
+        __storage_storage_skip_checks:
           - blivet_available
           - packages_installed
-
-    - name: Get unused disks
-      include_tasks: get_unused_disk.yml
-      vars:
-        max_return: 3
-        disks_needed: 3
 
     - name: Create two LVM logical volumes under volume group 'foo'
       include_tasks: tasks/run_role_with_clear_facts.yml

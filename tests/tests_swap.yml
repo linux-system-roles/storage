@@ -7,28 +7,16 @@
     volume_size: '5g'
     __swap_disk: "{{ unused_disks[0] }}"
     __non_swap_disk: "{{ unused_disks[1] }}"
+    __storage_min_size: "{{ volume_size }}"
+    __storage_max_return: 2
+    __storage_disks_needed: 2
+    __storage_max_size: >-
+      {{ '127g' if (ansible_facts['os_family'] == 'RedHat'
+      and ansible_facts['distribution_major_version'] is version('8', '<'))
+      else '0' }}
   tasks:
-    - name: Include role to ensure packages are installed
-      include_tasks: tasks/run_role_with_clear_facts.yml
-
-    - name: Mark tasks to be skipped
-      set_fact:
-        storage_skip_checks:
-          - blivet_available
-          - "{{ (lookup('env',
-                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
-                ternary('packages_installed', '') }}"
-
-    # rhel7 has a limitation of 128g swap size
-    - name: Get unused disks for swap
-      include_tasks: get_unused_disk.yml
-      vars:
-        min_size: "{{ volume_size }}"
-        max_return: 2
-        disks_needed: 2
-        max_size: "{{ '127g' if (ansible_facts['os_family'] == 'RedHat'
-          and ansible_facts['distribution_major_version'] is version('8', '<'))
-          else '0' }}"
+    - name: Prep storage role and discover unused disks
+      ansible.builtin.include_tasks: tasks/setup.yml
 
     - name: Create a disk device with swap
       include_tasks: tasks/run_role_with_clear_facts.yml
