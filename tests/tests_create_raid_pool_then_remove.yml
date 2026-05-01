@@ -254,6 +254,19 @@
     - name: Verify role results - 12
       include_tasks: verify-role-results.yml
 
+    - name: Debug0
+      shell:
+        executable: /bin/bash
+        cmd: |
+          set -euxo pipefail
+          exec 1>&2
+          lsblk -p --pairs --bytes -o NAME,TYPE,SIZE,FSTYPE,LOG-SEC
+          mdadm --misc --examine --scan
+          dmsetup ls --tree --separator /
+          lvm vgdisplay
+          cat /proc/mdstat
+      changed_when: false
+
     - name: Remove the device created above - 5
       include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
