@@ -1,0 +1,83 @@
+---
+# Single storage test setup entrypoint (typically the play's first task).
+#
+# Optional variables:
+#   __storage_include_prep — default true: run role with no storage_* config and set
+#     storage_skip_checks. Set false for a follow-up include that only needs
+#     package_facts / blivet facts (e.g. tests_resize.yml after initial setup).
+#   __storage_storage_skip_checks — if set, used as storage_skip_checks instead of
+#     the default [blivet_available, packages_installed conditional].
+#   __storage_get_package_facts — default false: ansible.builtin.package_facts, then
+#     blivet_pkg_version, and is_fedora / is_rhel* / is_rhel78.
+#   __storage_get_unused_disks — default true: whether to include get_unused_disk.yml.
+#     The playbook supplies this when needed; setup does not derive it.
+#   __storage_min_size, __storage_max_return, __storage_max_size,
+#   __storage_disks_needed, __storage_match_sector_size — passed to get_unused_disk.
+#
+- name: Run the role
+  when: __storage_include_prep | default(true)
+  block:
+    - name: Run the role
+      ansible.builtin.include_tasks: run_role_with_clear_facts.yml
+
+    - name: Mark tasks to be skipped
+      ansible.builtin.set_fact:
+        storage_skip_checks: >-
+          {{
+            __storage_storage_skip_checks
+            if __storage_storage_skip_checks is defined
+            else (
+              ['blivet_available',
+              (lookup('env', 'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false'])
+              | ternary('packages_installed', '')]
+            )
+          }}
+
+- name: Gather package facts and set vars based on package facts
+  when: __storage_get_package_facts | default(false)
+  block:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+      no_log: "{{ ansible_verbosity < 3 }}"
+
+    - name: Set blivet package version
+      ansible.builtin.set_fact:
+        blivet_pkg_version: "{{
+          ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
+          '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
+      vars:
+        blivet_pkg_name: "{{ ansible_facts.packages |
+          select('search', 'blivet') | select('search', 'python') | list }}"
+
+- name: Set distribution version flags
+  ansible.builtin.set_fact:
+    is_fedora: "{{ ansible_facts['distribution'] == 'Fedora' }}"
+    is_rhel7: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '7' }}"
+    is_rhel8: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '8' }}"
+    is_rhel9: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '9' }}"
+    is_rhel10: "{{ ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] == '10' }}"
+    is_rhel78: "{{ ansible_facts['os_family'] == 'RedHat' and
+                   ansible_facts['distribution_major_version'] in ['7', '8'] }}"
+
+- name: Get unused disks for test
+  when: __storage_get_unused_disks | default(true)
+  ansible.builtin.include_tasks: get_unused_disk.yml
+
+- name: Get info about storage devices
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      set -euxo pipefail
+      exec 1>&2
+      lsblk -p --pairs --bytes -o NAME,TYPE,SIZE,FSTYPE,LOG-SEC
+      if type -p mdadm >/dev/null; then
+        mdadm --misc --examine --scan
+      fi
+      if type -p dmsetup >/dev/null; then
+        dmsetup ls --tree --separator /
+      fi
+      if type -p lvm >/dev/null; then
+        lvm vgdisplay
+      fi
+      udevadm settle -t 0
+  changed_when: false

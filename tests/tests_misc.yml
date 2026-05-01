@@ -9,25 +9,13 @@
     volume1_size: "4g"
     unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
     too_large_size: "{{ (unused_disk_subfact.sectors | int * 1.2) * 512 }}"
+    __storage_min_size: "{{ volume_group_size }}"
+    __storage_max_return: 1
   tags:
     - tests::lvm
   tasks:
-    - name: Include the role to ensure packages are installed
-      include_tasks: tasks/run_role_with_clear_facts.yml
-
-    - name: Mark tasks to be skipped
-      set_fact:
-        storage_skip_checks:
-          - blivet_available
-          - "{{ (lookup('env',
-                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
-                ternary('packages_installed', '') }}"
-
-    - name: Get unused disks for test
-      include_tasks: get_unused_disk.yml
-      vars:
-        min_size: "{{ volume_group_size }}"
-        max_return: 1
+    - name: Prep storage role and discover unused disks
+      ansible.builtin.include_tasks: tasks/setup.yml
 
     - name: Test creating ext4 filesystem with valid parameter "-Fb 4096"
       include_tasks: tasks/run_role_with_clear_facts.yml
@@ -180,14 +168,15 @@
 
     # rhel7 has a limitation of 128g swap size
     - name: Get unused disks for swap
-      include_tasks: get_unused_disk.yml
+      ansible.builtin.include_tasks: tasks/get_unused_disk.yml
       vars:
         min_size: "{{ volume_group_size }}"
         max_return: 1
         disks_needed: 1
-        max_size: "{{ '127g' if (ansible_facts['os_family'] == 'RedHat'
+        max_size: >-
+          {{ '127g' if (ansible_facts['os_family'] == 'RedHat'
           and ansible_facts['distribution_major_version'] is version('8', '<'))
-          else '0' }}"
+          else '0' }}
 
     - name: Save disk used for swap
       set_fact:

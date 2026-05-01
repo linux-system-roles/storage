@@ -9,6 +9,8 @@
     __luks_cipher: "{{ (__luks_cipher_env == '') |
       ternary('aes-xts-plain64', __luks_cipher_env) }}"
     __luks_cipher_env: "{{ lookup('env', 'SYSTEM_ROLES_LUKS_CIPHER') }}"
+    __storage_min_size: "{{ volume_size }}"
+    __storage_max_return: 1
   tags:
     - tests::lvm
   tasks:
@@ -71,14 +73,8 @@
           reboot:
             test_command: grep 1 /proc/sys/crypto/fips_enabled
 
-    - name: Run the role
-      include_tasks: tasks/run_role_with_clear_facts.yml
-
-    - name: Get unused disks
-      include_tasks: get_unused_disk.yml
-      vars:
-        min_size: "{{ volume_size }}"
-        max_return: 1
+    - name: Prep storage role and discover unused disks
+      ansible.builtin.include_tasks: tasks/setup.yml
 
     ##
     ## Disk

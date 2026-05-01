@@ -7,55 +7,22 @@
     mount_location_2: '/opt/test2'
     volume_group_size: '5g'
     volume_size: '4g'
+    __storage_min_size: "{{ volume_group_size }}"
+    __storage_disks_needed: 2
   tags:
     - tests::stratis
 
   tasks:
-    - name: Run the role
-      include_tasks: tasks/run_role_with_clear_facts.yml
-
-    - name: Mark tasks to be skipped
-      set_fact:
-        storage_skip_checks:
-          - blivet_available
-          - "{{ (lookup('env',
-                        'SYSTEM_ROLES_REMOVE_CLOUD_INIT') in ['', 'false']) |
-                ternary('packages_installed', '') }}"
-
-    - name: Gather package facts
-      package_facts:
-
-    - name: Set blivet package name
-      set_fact:
-        blivet_pkg_name: "{{ ansible_facts.packages |
-          select('search', 'blivet') | select('search', 'python') | list }}"
-
-    - name: Set blivet package version
-      set_fact:
-        blivet_pkg_version: "{{
-          ansible_facts.packages[blivet_pkg_name[0]][0]['version'] +
-          '-' + ansible_facts.packages[blivet_pkg_name[0]][0]['release'] }}"
-
-    - name: Set distribution version
-      set_fact:
-        is_rhel78: "{{ (ansible_facts['os_family'] == 'RedHat') and
-                    (ansible_facts.distribution_major_version == '7' or
-                     ansible_facts.distribution_major_version == '8') }}"
-        is_rhel9: "{{ (ansible_facts['os_family'] == 'RedHat') and
-                    ansible_facts.distribution_major_version == '9' }}"
-        is_rhel10: "{{ (ansible_facts['os_family'] == 'RedHat') and
-                    ansible_facts.distribution_major_version == '10' }}"
-        is_fedora: "{{ ansible_facts.distribution == 'Fedora' }}"
+    - name: Storage test setup
+      ansible.builtin.include_tasks: tasks/setup.yml
+      vars:
+        __storage_get_package_facts: true
+        # From gather_facts only (safe before setup runs); mirrors is_rhel78 in setup.yml
+        __storage_get_unused_disks: "{{ not (ansible_facts['os_family'] == 'RedHat' and (ansible_facts['distribution_major_version'] == '7' or ansible_facts['distribution_major_version'] == '8')) }}"
 
     - name: Completely skip this on RHEL/CentOS 7 and 8 where Stratis isn't supported by blivet
       when: not is_rhel78
       block:
-        - name: Get unused disks
-          include_tasks: get_unused_disk.yml
-          vars:
-            min_size: "{{ volume_group_size }}"
-            disks_needed: 2
-
         # stratisd is not started automatically and doesn't support DBus activation
         # this will be covered by Blivet in the next build
         - name: Start stratisd service
