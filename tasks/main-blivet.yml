@@ -91,6 +91,7 @@
   block:
     - name: Get service facts
       service_facts:
+      no_log: "{{ ansible_verbosity < 2 }}"
       when:
         - not "services" in ansible_facts
         - not "cryptsetup_services" in storage_skip_checks | d([])
