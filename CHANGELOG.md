@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.21.1] - 2026-05-07
+--------------------
+
+### Bug Fixes
+
+- fix: add verbosity-based no_log to facts modules (#619)
+
+### Other Changes
+
+- test: refactor test setup to add device info (#617)
+- ci: Bump actions/github-script from 8 to 9 (#618)
+
 [1.21.0] - 2026-04-28
 --------------------
 
