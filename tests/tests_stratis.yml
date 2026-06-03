@@ -18,17 +18,15 @@
       vars:
         __storage_get_package_facts: true
         # From gather_facts only (safe before setup runs); mirrors is_rhel78 in setup.yml
-        __storage_get_unused_disks: "{{ not (ansible_facts['os_family'] == 'RedHat' and (ansible_facts['distribution_major_version'] == '7' or ansible_facts['distribution_major_version'] == '8')) }}"
+        __storage_get_unused_disks: "{{ not is_rhel78 }}"
+        __sr_public: true
 
     - name: Completely skip this on RHEL/CentOS 7 and 8 where Stratis isn't supported by blivet
       when: not is_rhel78
       block:
-        # stratisd is not started automatically and doesn't support DBus activation
-        # this will be covered by Blivet in the next build
-        - name: Start stratisd service
-          service:
-            name: stratisd
-            state: started
+        - name: Ensure role will install stratis packages if needed
+          set_fact:
+            storage_skip_checks: "{{ storage_skip_checks | reject('match', '^packages_installed$') }}"
 
         - name: One pool/volume test
           block:
@@ -246,3 +244,14 @@
 
             - name: Verify role results - 12
               include_tasks: verify-role-results.yml
+      always:
+        - name: Ensure stratisd is stopped and disabled
+          service:
+            name: stratisd
+            state: stopped
+            enabled: false
+
+        - name: Remove stratis packages
+          package:
+            name: "{{ __storage_stratis_packages }}"
+            state: absent

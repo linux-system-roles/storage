@@ -59,7 +59,7 @@
 
 - name: Make sure required packages are installed
   package:
-    name: "{{ package_info.packages + extra_pkgs }}"
+    name: "{{ package_info.packages + extra_pkgs + stratis_packages }}"
     state: present
     use: "{{ (__storage_is_ostree | d(false)) |
              ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
@@ -72,6 +72,14 @@
     # into blivet, or made conditional
     extra_pkgs:
       - kpartx
+    stratis_packages: "{{ __storage_manage_stratis | ternary(__storage_stratis_packages, []) }}"
+
+- name: Ensure stratisd is running and enabled
+  service:
+    name: stratisd
+    state: started
+    enabled: true
+  when: __storage_manage_stratis
 
 - name: Manage storage devices and check for errors
   vars:

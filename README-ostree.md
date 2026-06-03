@@ -6,6 +6,10 @@ role cannot install packages. Instead, it will just verify that the necessary
 packages and any other `/usr` files are pre-installed. The role will change the
 package manager to one that is compatible with `rpm-ostree` systems.
 
+If you are not managing stratis pools or volumes, remove `stratisd` and
+`stratis-cli` from the ostree image package list generated from
+`.ostree/get_ostree_data.sh`.
+
 ## Building
 
 To build an ostree image for a particular operating system distribution and

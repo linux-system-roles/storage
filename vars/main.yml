@@ -18,6 +18,15 @@ __storage_required_facts_subsets: "{{ ['!all', '!min', 'devices'] +
 __storage_uses_kmod_kvdo: "{{ __storage_is_rh_distro and
   ansible_facts['distribution_major_version'] | int < 10 }}"
 
+__storage_stratis_packages:
+  - stratisd
+  - stratis-cli
+
+# True when role variables request Stratis pool or volume management
+__storage_manage_stratis: "{{ (storage_pool_defaults.type | default('lvm')) == 'stratis' or (storage_volume_defaults.type | default('lvm')) == 'stratis' or
+  (storage_pools | default([]) | selectattr('type', 'defined') | selectattr('type', 'match', '^stratis$') | list | length > 0) or
+  (storage_volumes | default([]) | selectattr('type', 'defined') | selectattr('type', 'match', '^stratis$') | list | length > 0) }}"
+
 # BEGIN - DO NOT EDIT THIS BLOCK - rh distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __storage_rh_distros:
