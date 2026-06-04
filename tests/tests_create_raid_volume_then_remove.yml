@@ -10,45 +10,54 @@
     __storage_disks_needed: 2
 
   tasks:
-    - name: Prep storage role and discover unused disks
-      ansible.builtin.include_tasks: tasks/setup.yml
+    - name: Run tests
+      block:
+        - name: Prep storage role and discover unused disks
+          ansible.builtin.include_tasks: tasks/setup.yml
 
-    - name: Create a RAID0 device mounted on {{ mount_location }}
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_volumes:
-          - name: test1
-            type: raid
-            raid_level: raid0
-            disks: "{{ unused_disks }}"
-            mount_point: "{{ mount_location }}"
+        - name: Create a RAID0 device mounted on {{ mount_location }}
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_volumes:
+              - name: test1
+                type: raid
+                raid_level: raid0
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
 
-    - name: Verify role results
-      include_tasks: verify-role-results.yml
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
 
-    - name: Repeat the previous invocation to verify idempotence
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_volumes:
-          - name: test1
-            type: raid
-            raid_level: raid0
-            disks: "{{ unused_disks }}"
-            mount_point: "{{ mount_location }}"
+        - name: Repeat the previous invocation to verify idempotence
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_volumes:
+              - name: test1
+                type: raid
+                raid_level: raid0
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
 
-    - name: Verify role results - 2
-      include_tasks: verify-role-results.yml
+        - name: Verify role results - 2
+          include_tasks: verify-role-results.yml
 
-    - name: Remove the disk device created above
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_volumes:
-          - name: test1
-            type: raid
-            raid_level: raid0
-            disks: "{{ unused_disks }}"
-            mount_point: "{{ mount_location }}"
-            state: absent
+        - name: Remove the disk device created above
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_volumes:
+              - name: test1
+                type: raid
+                raid_level: raid0
+                disks: "{{ unused_disks }}"
+                mount_point: "{{ mount_location }}"
+                state: absent
 
-    - name: Verify role results - 3
-      include_tasks: verify-role-results.yml
+        - name: Verify role results - 3
+          include_tasks: verify-role-results.yml
+
+      rescue:
+        - name: Gather information for debugging failure
+          include_tasks: tasks/debug.yml
+
+        - name: Fail the test
+          fail:
