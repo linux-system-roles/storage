@@ -3,7 +3,7 @@
   shell:
     executable: /bin/bash
     cmd: |
-      set -euxo pipefail
+      set -uxo pipefail
       exec 1>&2
       if type -p lsblk >/dev/null; then
         lsblk -p --pairs --bytes -o NAME,TYPE,SIZE,FSTYPE,LOG-SEC
@@ -21,15 +21,18 @@
         udevadm settle -t 0
       fi
       ls -alrtFR /dev/md* || :
-      { mdadm -v --misc --examine --scan || : ; } | while read -r array dev other; do
+      mdadm -v --misc --examine --scan | while read -r array dev other; do
         if [[ "$dev" =~ ^/dev ]]; then
           mdadm --detail "$dev"
         fi
       done
+      lvs -a -o name,vgname,segtype,attr,copy_percent,lv_health_status,devices
       pvs -o pv_name,lv_initial_image_sync,lv_image_synced,raid_mismatch_count,raid_sync_action,raid_write_behind,\
-        raid_min_recovery_rate,raid_max_recovery_rate,\
-        raidintegritymode,raidintegrityblocksize,copy_percent,sync_percent,stripes,data_stripes,region_size
+      raid_min_recovery_rate,raid_max_recovery_rate,\
+      raidintegritymode,raidintegrityblocksize,copy_percent,sync_percent,stripes,data_stripes,region_size
       lvs -o lv_name,lv_path,lv_initial_image_sync,lv_image_synced,raid_mismatch_count,raid_sync_action,raid_write_behind,\
-        raid_min_recovery_rate,raid_max_recovery_rate,\
-        raidintegritymode,raidintegrityblocksize,copy_percent,sync_percent,stripes,data_stripes,region_size
+      raid_min_recovery_rate,raid_max_recovery_rate,\
+      raidintegritymode,raidintegrityblocksize,copy_percent,sync_percent,stripes,data_stripes,region_size
+      cat /tmp/blivet.log
+      cat /tmp/lvm.log
   changed_when: false
