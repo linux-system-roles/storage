@@ -23,8 +23,7 @@
       if ! type -p lsof >/dev/null; then
         dnf -y install lsof
       fi
-      lsof /dev/md* || :
-      ls -alrtFR /dev/md* || :
+      ls -alrtFR /dev/md*
       mdadm -v --misc --examine --scan | while read -r array dev other; do
         if [[ "$dev" =~ ^/dev ]]; then
           mdadm --detail "$dev"
