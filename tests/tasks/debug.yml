@@ -20,9 +20,7 @@
       if type -p udevadm >/dev/null; then
         udevadm settle -t 0
       fi
-      if ! type -p lsof >/dev/null; then
-        dnf -y install lsof
-      fi
+      dnf -y install lsof
       ls -alrtFR /dev/md*
       mdadm -v --misc --examine --scan | while read -r array dev other; do
         if [[ "$dev" =~ ^/dev ]]; then
