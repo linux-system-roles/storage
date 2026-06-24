@@ -1,6 +1,20 @@
 Changelog
 =========
 
+[1.21.2] - 2026-06-24
+--------------------
+
+### Bug Fixes
+
+- fix: only install stratis if requested (#624)
+
+### Other Changes
+
+- refactor: use ansible.posix 2.1.X for EL7 compatibility [citest_skip] (#621)
+- ci: Add config file for CodeRabbit with custom rules (#622)
+- ci: Skip reviews for PRs with [citest_skip] in the title (#623)
+- test: remove unused files (#626)
+
 [1.21.1] - 2026-05-07
 --------------------
 
