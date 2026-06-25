@@ -428,7 +428,14 @@ platforms with "buggy" udev.
 
 ## rpm-ostree
 
-See README-ostree.md
+If you are not managing stratis pools or volumes, remove `stratisd` and
+`stratis-cli` from the ostree image package list generated from
+`.ostree/get_ostree_data.sh`.
+
+If you do not want to use VDO, remove the vdo related packages from
+the ostree image package list.
+
+For more information, see README-ostree.md
 
 ## License
 
