@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.21.3] - 2026-06-25
+--------------------
+
+### Other Changes
+
+- docs: move ostree stratis to README.md ostree section [citest_skip] (#628)
+
 [1.21.2] - 2026-06-24
 --------------------
 
