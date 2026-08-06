@@ -27,6 +27,8 @@ __storage_manage_stratis: "{{ (storage_pool_defaults.type | default('lvm')) == '
   (storage_pools | default([]) | selectattr('type', 'defined') | selectattr('type', 'match', '^stratis$') | list | length > 0) or
   (storage_volumes | default([]) | selectattr('type', 'defined') | selectattr('type', 'match', '^stratis$') | list | length > 0) }}"
 
+__storage_write_log_file: false
+
 # BEGIN - DO NOT EDIT THIS BLOCK - rh distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __storage_rh_distros:
