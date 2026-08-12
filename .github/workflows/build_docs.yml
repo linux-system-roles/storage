@@ -27,7 +27,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          persist-credentials: false
+          persist-credentials: true  # needed for commit and push
           fetch-depth: 0
       - name: Ensure the docs branch
         run: |
@@ -51,13 +51,11 @@ jobs:
       - name: Checkout the docs branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          persist-credentials: true  # needed for commit and push
           ref: docs
 
       - name: Fetch README.md and .pandoc_template.html5 template from the workflow branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          persist-credentials: true  # needed for commit and push
           sparse-checkout: |
             README.md
             .pandoc_template.html5
