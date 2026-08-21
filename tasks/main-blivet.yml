@@ -190,10 +190,10 @@
 #     update its view, then set up the new mounts. Otherwise,
 #     systemd will forcibly prevent mounting a new volume to an
 #     existing mount point.
-# ansible 2.9 on EL7 ships mount as a builtin module, so the bare name
-# resolves without the ansible.posix collection (which cannot be installed
-# on ansible 2.9).
-- name: Remove obsolete mounts - EL7
+# The bare module name resolves to the mount builtin on EL7 (ansible 2.9, where
+# the ansible.posix collection cannot be installed) and redirects to
+# ansible.posix.mount on newer systems.
+- name: Remove obsolete mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
     path: "{{ mount_info['path'] }}"
@@ -204,32 +204,16 @@
             selectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
-  when:
-    - __storage_is_rh_distro_7
-
-- name: Remove obsolete mounts
-  ansible.posix.mount:
-    src: "{{ mount_info['src'] | default(omit) }}"
-    path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] | default(omit) }}"
-    opts: "{{ mount_info['opts'] | default(omit) }}"
-    state: "{{ mount_info['state'] }}"
-  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
-            selectattr('state', 'match', '^absent$') | list }}"
-  loop_control:
-    loop_var: mount_info
-  when:
-    - not __storage_is_rh_distro_7
 
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: true
   when: blivet_output['mounts'] | length > 0
 
-# ansible 2.9 on EL7 ships mount as a builtin module, so the bare name
-# resolves without the ansible.posix collection (which cannot be installed
-# on ansible 2.9).
-- name: Set up new/current mounts - EL7
+# The bare module name resolves to the mount builtin on EL7 (ansible 2.9, where
+# the ansible.posix collection cannot be installed) and redirects to
+# ansible.posix.mount on newer systems.
+- name: Set up new/current mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
     path: "{{ mount_info['path'] }}"
@@ -240,22 +224,6 @@
             rejectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
-  when:
-    - __storage_is_rh_distro_7
-
-- name: Set up new/current mounts
-  ansible.posix.mount:
-    src: "{{ mount_info['src'] | default(omit) }}"
-    path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] | default(omit) }}"
-    opts: "{{ mount_info['opts'] | default(omit) }}"
-    state: "{{ mount_info['state'] }}"
-  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
-            rejectattr('state', 'match', '^absent$') | list }}"
-  loop_control:
-    loop_var: mount_info
-  when:
-    - not __storage_is_rh_distro_7
 
 - name: Manage mount ownership/permissions
   file:
