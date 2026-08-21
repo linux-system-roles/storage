@@ -205,8 +205,7 @@
   loop_control:
     loop_var: mount_info
   when:
-    - __storage_is_rh_distro
-    - ansible_facts['distribution_major_version'] == '7'
+    - __storage_is_rh_distro_7
 
 - name: Remove obsolete mounts
   ansible.posix.mount:
@@ -220,8 +219,7 @@
   loop_control:
     loop_var: mount_info
   when:
-    - not (__storage_is_rh_distro and
-        ansible_facts['distribution_major_version'] == '7')
+    - not __storage_is_rh_distro_7
 
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
@@ -243,8 +241,7 @@
   loop_control:
     loop_var: mount_info
   when:
-    - __storage_is_rh_distro
-    - ansible_facts['distribution_major_version'] == '7'
+    - __storage_is_rh_distro_7
 
 - name: Set up new/current mounts
   ansible.posix.mount:
@@ -258,8 +255,7 @@
   loop_control:
     loop_var: mount_info
   when:
-    - not (__storage_is_rh_distro and
-        ansible_facts['distribution_major_version'] == '7')
+    - not __storage_is_rh_distro_7
 
 - name: Manage mount ownership/permissions
   file:
