@@ -190,6 +190,9 @@
 #     update its view, then set up the new mounts. Otherwise,
 #     systemd will forcibly prevent mounting a new volume to an
 #     existing mount point.
+# The bare module name resolves to the mount builtin on EL7 (ansible 2.9, where
+# the ansible.posix collection cannot be installed) and redirects to
+# ansible.posix.mount on newer systems.
 - name: Remove obsolete mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
@@ -207,6 +210,9 @@
     daemon_reload: true
   when: blivet_output['mounts'] | length > 0
 
+# The bare module name resolves to the mount builtin on EL7 (ansible 2.9, where
+# the ansible.posix collection cannot be installed) and redirects to
+# ansible.posix.mount on newer systems.
 - name: Set up new/current mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
