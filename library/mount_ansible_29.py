@@ -212,7 +212,6 @@ import os
 import platform
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.six import iteritems
 from ansible.module_utils._text import to_bytes, to_native
 from ansible.module_utils.parsing.convert_bool import boolean
 
@@ -309,7 +308,7 @@ def _set_mount_save_old(module, args):
     old_lines = []
     exists = False
     changed = False
-    escaped_args = dict([(k, _escape_fstab(v)) for k, v in iteritems(args) if k != 'warnings'])
+    escaped_args = dict([(k, _escape_fstab(v)) for k, v in args.items() if k != 'warnings'])
     new_line = '%(src)s %(name)s %(fstype)s %(opts)s %(dump)s %(passno)s\n'
 
     if platform.system() == 'SunOS':
