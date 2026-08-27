@@ -190,9 +190,26 @@
 #     update its view, then set up the new mounts. Otherwise,
 #     systemd will forcibly prevent mounting a new volume to an
 #     existing mount point.
-# The bare module name resolves to the mount builtin on ansible 2.9 (where
-# the ansible.posix collection cannot be installed) and redirects to
-# ansible.posix.mount on newer systems.
+# ansible 2.9 (ansible-engine) uses the vendored mount_ansible_29 module,
+# since ansible.posix cannot be installed there; other systems use the bare
+# mount name, which redirects to the latest ansible.posix.mount.
+- name: Remove obsolete mounts - ansible 2.9
+  mount_ansible_29:
+    src: "{{ mount_info['src'] | default(omit) }}"
+    path: "{{ mount_info['path'] }}"
+    fstype: "{{ mount_info['fstype'] | default(omit) }}"
+    opts: "{{ mount_info['opts'] | default(omit) }}"
+    state: "{{ mount_info['state'] }}"
+  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
+            selectattr('state', 'match', '^absent$') | list }}"
+  loop_control:
+    loop_var: mount_info
+  when: ansible_version.full is version('2.10', '<')
+
+# Bare module name (not FQCN): on ansible 2.9 the collection is not
+# installable and an unresolvable FQCN aborts play parsing even for a task
+# skipped by "when". The bare name resolves to the ansible 2.9 builtin
+# (skipped here) and redirects to the latest collection module elsewhere.
 - name: Remove obsolete mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
@@ -204,15 +221,33 @@
             selectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
+  when: ansible_version.full is version('2.10', '>=')
 
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: true
   when: blivet_output['mounts'] | length > 0
 
-# The bare module name resolves to the mount builtin on ansible 2.9 (where
-# the ansible.posix collection cannot be installed) and redirects to
-# ansible.posix.mount on newer systems.
+# ansible 2.9 (ansible-engine) uses the vendored mount_ansible_29 module,
+# since ansible.posix cannot be installed there; other systems use the bare
+# mount name, which redirects to the latest ansible.posix.mount.
+- name: Set up new/current mounts - ansible 2.9
+  mount_ansible_29:
+    src: "{{ mount_info['src'] | default(omit) }}"
+    path: "{{ mount_info['path'] }}"
+    fstype: "{{ mount_info['fstype'] | default(omit) }}"
+    opts: "{{ mount_info['opts'] | default(omit) }}"
+    state: "{{ mount_info['state'] }}"
+  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
+            rejectattr('state', 'match', '^absent$') | list }}"
+  loop_control:
+    loop_var: mount_info
+  when: ansible_version.full is version('2.10', '<')
+
+# Bare module name (not FQCN): on ansible 2.9 the collection is not
+# installable and an unresolvable FQCN aborts play parsing even for a task
+# skipped by "when". The bare name resolves to the ansible 2.9 builtin
+# (skipped here) and redirects to the latest collection module elsewhere.
 - name: Set up new/current mounts
   mount:  # noqa fqcn
     src: "{{ mount_info['src'] | default(omit) }}"
@@ -224,6 +259,7 @@
             rejectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
+  when: ansible_version.full is version('2.10', '>=')
 
 - name: Manage mount ownership/permissions
   file:
