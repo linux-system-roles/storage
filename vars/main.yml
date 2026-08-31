@@ -7,6 +7,8 @@ __storage_required_facts:
   - distribution_version
   - os_family
   - pkg_mgr
+  # provides ansible_facts.python_version, used to pick the mount module
+  - python_version
 
 # the subsets of ansible_facts that need to be gathered in case any of the
 # facts in required_facts is missing; see the documentation of

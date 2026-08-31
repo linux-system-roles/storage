@@ -19,7 +19,7 @@ __metaclass__ = type
 
 DOCUMENTATION = r'''
 ---
-module: mount_ansible_29
+module: mount_python_27
 short_description: Control active and configured mount points
 description:
   - This module controls active and configured mount points in C(/etc/fstab).
@@ -149,7 +149,7 @@ notes:
 EXAMPLES = r'''
 # Before 2.3, option 'name' was used instead of 'path'
 - name: Mount DVD read-only
-  mount_ansible_29:
+  mount_python_27:
     path: /mnt/dvd
     src: /dev/sr0
     fstype: iso9660
@@ -157,14 +157,14 @@ EXAMPLES = r'''
     state: present
 
 - name: Mount up device by label
-  mount_ansible_29:
+  mount_python_27:
     path: /srv/disk
     src: LABEL=SOME_LABEL
     fstype: ext4
     state: present
 
 - name: Mount up device by UUID
-  mount_ansible_29:
+  mount_python_27:
     path: /home
     src: UUID=b3e48f45-f933-4c8e-a700-22a159ec9077
     fstype: xfs
@@ -172,12 +172,12 @@ EXAMPLES = r'''
     state: present
 
 - name: Unmount a mounted volume
-  mount_ansible_29:
+  mount_python_27:
     path: /tmp/mnt-pnt
     state: unmounted
 
 - name: Remount a mounted volume
-  mount_ansible_29:
+  mount_python_27:
     path: /tmp/mnt-pnt
     state: remounted
 
@@ -185,13 +185,13 @@ EXAMPLES = r'''
 # a reboot, or until calling "state: unmounted" followed by "state: mounted"
 # on the same "path"
 - name: Remount a mounted volume and append exec to the existing options
-  mount_ansible_29:
+  mount_python_27:
     path: /tmp
     state: remounted
     opts: exec
 
 - name: Mount and bind a volume
-  mount_ansible_29:
+  mount_python_27:
     path: /system/new_volume/boot
     src: /boot
     opts: bind
@@ -199,7 +199,7 @@ EXAMPLES = r'''
     fstype: none
 
 - name: Mount an NFS volume
-  mount_ansible_29:
+  mount_python_27:
     src: 192.168.1.100:/nfs/ssd/shared_data
     path: /mnt/shared_data
     opts: rw,sync,hard
