@@ -1,0 +1,492 @@
+# SPDX-License-Identifier: MIT
+---
+argument_specs:
+  main:
+    short_description: The storage role.
+    description: >
+      The storage role allows you to configure local storage
+      including file systems, LVM volume groups, Stratis pools,
+      RAID arrays, and encrypted volumes with minimal input.
+    options:
+      storage_provider:
+        type: str
+        default: "blivet"
+        description: >
+          The storage management provider used by the role.
+          Currently only `blivet` is supported.
+      storage_safe_mode:
+        type: bool
+        default: true
+        description: >
+          Whether to operate in safe mode. When `true`, the role
+          fails instead of implicitly removing existing devices
+          or formatting.
+      storage_use_partitions:
+        type: raw
+        default: null
+        description: >
+          Whether to use partition-based layout. When `null`, the
+          role selects an appropriate layout automatically.
+      storage_disklabel_type:
+        type: raw
+        default: null
+        description: >
+          The disk label type to use for partitioning, such as
+          `gpt` or `msdos`. When `null`, the role selects an
+          appropriate label type automatically.
+      storage_udevadm_trigger:
+        type: bool
+        default: false
+        description: >
+          Whether to use udevadm trigger to cause udev changes
+          to take effect immediately. May help on some platforms
+          with udev issues.
+      storage_volumes:
+        type: list
+        elements: dict
+        default: []
+        description: >
+          List of standalone volumes to manage. Each volume
+          represents a storage device with a file system, such
+          as a disk, partition, or LVM logical volume.
+        options: &volume_options
+          name:
+            type: str
+            required: true
+            description: >
+              The name of the volume.
+          type:
+            type: str
+            choices:
+              - lvm
+              - disk
+              - partition
+              - raid
+            description: >
+              The type of volume. Valid values are `lvm` for LVM
+              logical volumes, `disk` for whole disk volumes,
+              `partition` for partition-based volumes, and `raid`
+              for RAID volumes.
+          state:
+            type: str
+            choices:
+              - present
+              - absent
+            description: >
+              Whether the volume should exist (`present`) or be
+              removed (`absent`).
+          size:
+            type: raw
+            description: >
+              The size of the volume. Accepts human-readable size
+              notation such as `10G` or `500M`, a percentage of
+              pool size such as `50%`, or `0` to use all
+              available space.
+          disks:
+            type: list
+            elements: str
+            description: >
+              List of disks to use as backing storage for the
+              volume. For `disk` type volumes, this must contain
+              exactly one item.
+          fs_type:
+            type: str
+            description: >
+              The desired file system type, such as `xfs`, `ext4`,
+              or `swap`. Use `unformatted` to leave the volume
+              without a file system.
+          fs_label:
+            type: str
+            description: >
+              Label for the file system.
+          fs_create_options:
+            type: str
+            description: >
+              Custom arguments to pass to `mkfs`.
+          fs_overwrite_existing:
+            type: bool
+            description: >
+              Whether to overwrite an existing file system if one
+              is detected on the volume.
+          mount_point:
+            type: str
+            description: >
+              Directory path where the file system will be
+              mounted.
+          mount_options:
+            type: str
+            description: >
+              Custom mount options as a string, such as `ro` or
+              `noatime`.
+          mount_user:
+            type: str
+            description: >
+              Desired owner of the mount directory.
+          mount_group:
+            type: str
+            description: >
+              Desired group of the mount directory.
+          mount_mode:
+            type: str
+            description: >
+              Desired permissions of the mount directory.
+          mount_check:
+            type: int
+            description: >
+              Mount check pass number for `/etc/fstab`.
+          mount_passno:
+            type: int
+            description: >
+              Mount pass number for fsck ordering in
+              `/etc/fstab`.
+          mount_device_identifier:
+            type: str
+            choices:
+              - uuid
+              - label
+              - path
+            description: >
+              Method used to identify the device in
+              `/etc/fstab`. Valid values are `uuid`, `label`,
+              and `path`.
+          raid_level:
+            type: str
+            description: >
+              RAID level for the volume. For `raid` type volumes,
+              accepted values are `linear`, `raid0`, `raid1`,
+              `raid4`, `raid5`, `raid6`, `raid10`. For LVM RAID,
+              accepted values also include `striped` and
+              `mirror`.
+          raid_device_count:
+            type: int
+            description: >
+              Number of active RAID devices for the volume.
+          raid_spare_count:
+            type: int
+            description: >
+              Number of spare RAID devices for the volume.
+          raid_chunk_size:
+            type: str
+            description: >
+              RAID chunk size as a string, such as `512 KiB`.
+              Must be a multiple of 4 KiB.
+          raid_stripe_size:
+            type: str
+            description: >
+              LVM RAID stripe size as a string, such as
+              `512 KiB`.
+          raid_metadata_version:
+            type: str
+            description: >
+              RAID metadata version as a string, such as `1.0`.
+          raid_disks:
+            type: list
+            elements: str
+            description: >
+              Disks to use for an LVM RAID volume. Must be a
+              subset of the parent pool's `disks`. Requires
+              `raid_level` to be specified.
+          encryption:
+            type: bool
+            description: >
+              Whether the volume will be encrypted using LUKS.
+          encryption_password:
+            type: str
+            description: >
+              Password or passphrase used to unlock the LUKS
+              volume.
+          encryption_key:
+            type: str
+            description: >
+              Full path to the key file on the managed nodes
+              used to unlock the LUKS volume.
+          encryption_cipher:
+            type: str
+            description: >
+              Non-default cipher to be used by LUKS for the
+              volume.
+          encryption_key_size:
+            type: int
+            description: >
+              LUKS key size in bits for the volume.
+          encryption_luks_version:
+            type: int
+            description: >
+              LUKS version to use for the volume.
+          compression:
+            type: bool
+            description: >
+              Whether to enable VDO compression on the volume.
+              Volume must be part of an LVM pool.
+          deduplication:
+            type: bool
+            description: >
+              Whether to enable VDO deduplication on the volume.
+              Volume must be part of an LVM pool.
+          vdo_pool_size:
+            type: str
+            description: >
+              Actual physical size of the VDO volume. Accepts
+              human-readable size notation such as `30G` or
+              `50GiB`.
+          cached:
+            type: bool
+            description: >
+              Whether the volume should be cached using
+              dm-cache. Supported only for LVM volumes.
+          cache_size:
+            type: raw
+            description: >
+              Size of the cache. Accepts human-readable size
+              notation such as `30G` or `50GiB`, or `0` for
+              no cache.
+          cache_mode:
+            type: str
+            choices:
+              - writethrough
+              - writeback
+            description: >
+              Cache mode. Valid values are `writethrough` and
+              `writeback`.
+          cache_devices:
+            type: list
+            elements: str
+            description: >
+              List of devices to use for the cache. Should be
+              fast devices such as SSD or NVMe drives.
+          thin:
+            type: bool
+            description: >
+              Whether the volume should be thinly provisioned.
+              Supported only for LVM volumes.
+          thin_pool_name:
+            type: str
+            description: >
+              Name of the LVM thin pool for thin volumes. If
+              the named pool exists, the volume is added to it.
+              If it does not exist, a new pool is created.
+          thin_pool_size:
+            type: str
+            description: >
+              Size for the thin pool. Accepts human-readable
+              size notation such as `30G` or `50GiB`.
+          part_type:
+            type: str
+            choices:
+              - primary
+              - extended
+              - logical
+            description: >
+              Partition type for newly created partitions on
+              MSDOS/MBR partition tables. Ignored on GPT.
+      storage_pools:
+        type: list
+        elements: dict
+        default: []
+        description: >
+          List of storage pools to manage. Each pool represents
+          a collection of storage devices grouped together,
+          such as an LVM volume group or a Stratis pool.
+        options:
+          name:
+            type: str
+            required: true
+            description: >
+              The name of the pool. For LVM this is the volume
+              group name.
+          type:
+            type: str
+            choices:
+              - lvm
+              - stratis
+            description: >
+              The type of storage pool. Valid values are `lvm`
+              for LVM volume groups and `stratis` for Stratis
+              pools.
+          state:
+            type: str
+            choices:
+              - present
+              - absent
+            description: >
+              Whether the pool should exist (`present`) or be
+              removed (`absent`).
+          grow_to_fill:
+            type: bool
+            description: >
+              Whether to resize pool physical volumes to match
+              their respective device sizes. Useful after
+              virtual machine disk size increases. Valid only
+              for LVM pools.
+          shared:
+            type: bool
+            description: >
+              Whether to create or manage a shared volume group.
+              Requires lvmlockd and dlm services configured and
+              running. Valid only for LVM pools.
+          disks:
+            type: list
+            elements: str
+            description: >
+              List of disks to use as backing storage for the
+              pool. Supported identifiers include device node
+              paths such as `/dev/sda`, device node basenames
+              such as `sda`, and `/dev/disk/` symlinks.
+          raid_level:
+            type: str
+            choices:
+              - linear
+              - raid0
+              - raid1
+              - raid4
+              - raid5
+              - raid6
+              - raid10
+            description: >
+              RAID level for the pool. When used with
+              `type: lvm`, manages a volume group with an MD
+              RAID array of the given level. Input `disks` are
+              used as RAID members.
+          raid_device_count:
+            type: int
+            description: >
+              Number of active RAID devices for the pool.
+          raid_spare_count:
+            type: int
+            description: >
+              Number of spare RAID devices for the pool.
+          raid_chunk_size:
+            type: str
+            description: >
+              RAID chunk size as a string, such as `512 KiB`.
+              Must be a multiple of 4 KiB.
+          raid_metadata_version:
+            type: str
+            description: >
+              RAID metadata version as a string, such as `1.0`.
+          volumes:
+            type: list
+            elements: dict
+            description: >
+              List of volumes that belong to this pool. Each
+              volume follows the same structure as entries in
+              `storage_volumes`.
+            options: *volume_options
+          encryption:
+            type: bool
+            description: >
+              Whether the pool will be encrypted using LUKS.
+          encryption_password:
+            type: str
+            description: >
+              Password or passphrase used to unlock the LUKS
+              volume(s) in the pool.
+          encryption_key:
+            type: str
+            description: >
+              Full path to the key file on the managed nodes
+              used to unlock the LUKS volume(s) in the pool.
+          encryption_cipher:
+            type: str
+            description: >
+              Non-default cipher to be used by LUKS for the
+              pool.
+          encryption_key_size:
+            type: int
+            description: >
+              LUKS key size in bits for the pool.
+          encryption_luks_version:
+            type: int
+            description: >
+              LUKS version to use for the pool.
+          encryption_clevis_pin:
+            type: str
+            choices:
+              - tang
+              - tpm2
+            description: >
+              For Stratis pools, the clevis method used to
+              encrypt the pool. Valid values are `tang` for
+              NBDE and `tpm2` for TPM-based encryption.
+          encryption_tang_url:
+            type: str
+            description: >
+              URL of the tang server when encrypting a Stratis
+              pool via NBDE.
+          encryption_tang_thumbprint:
+            type: str
+            description: >
+              Thumbprint of the tang server when encrypting a
+              Stratis pool via NBDE.
+      storage_pool_defaults:
+        type: dict
+        description: >
+          Default values for pool entries in `storage_pools`.
+          Keys correspond to pool entry fields such as `state`,
+          `type`, `disks`, `encryption`, and `raid_level`.
+          Overriding this dict changes the defaults applied to
+          all pools.
+        default:
+          state: "present"
+          type: lvm
+          disks: []
+          volumes: []
+          grow_to_fill: false
+          encryption: false
+          encryption_password: null
+          encryption_key: null
+          encryption_cipher: null
+          encryption_key_size: null
+          encryption_luks_version: null
+          raid_level: null
+          raid_device_count: null
+          raid_spare_count: null
+          raid_chunk_size: null
+          raid_metadata_version: null
+          shared: false
+      storage_volume_defaults:
+        type: dict
+        description: >
+          Default values for volume entries in
+          `storage_volumes` and in `volumes` within
+          `storage_pools`. Keys correspond to volume entry
+          fields such as `state`, `type`, `size`, `fs_type`,
+          `mount_point`, `encryption`, and `raid_level`.
+          Overriding this dict changes the defaults applied to
+          all volumes.
+        default:
+          state: "present"
+          type: lvm
+          size: 0
+          disks: []
+          fs_type: "xfs"
+          fs_label: ""
+          fs_create_options: ""
+          fs_overwrite_existing: true
+          mount_point: ""
+          mount_options: "defaults"
+          mount_check: 0
+          mount_passno: 0
+          mount_device_identifier: "uuid"
+          raid_level: null
+          raid_device_count: null
+          raid_spare_count: null
+          raid_chunk_size: null
+          raid_stripe_size: null
+          raid_metadata_version: null
+          encryption: false
+          encryption_password: null
+          encryption_key: null
+          encryption_cipher: null
+          encryption_key_size: null
+          encryption_luks_version: null
+          compression: null
+          deduplication: null
+          vdo_pool_size: null
+          thin: null
+          thin_pool_name: null
+          thin_pool_size: null
+          cached: false
+          cache_size: 0
+          cache_mode: null
+          cache_devices: []
