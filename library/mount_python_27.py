@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# flake8 does not like this file
+# flake8: noqa
 
 # Copyright: (c) 2012, Red Hat, inc
 # Written by Seth Vidal
