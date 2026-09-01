@@ -1,0 +1,603 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Verify invalid parameters are rejected
+  hosts: all
+  tasks:
+    - name: Run invalid input tests
+      block:
+        # ====================================================
+        # Section 1: Verify role works with valid defaults
+        # ====================================================
+        - name: Run role with valid defaults
+          ansible.builtin.include_role:
+            name: linux-system-roles.storage
+
+        # ====================================================
+        # Section 2: argument_specs validation (Ansible 2.11+)
+        # ====================================================
+        - name: Run argument specs validation tests
+          when: ansible_version.full is version("2.11", ">=")
+          block:
+            # --- Test: non-bool storage_safe_mode ---
+            - name: Argument specs reject non-bool storage_safe_mode
+              block:
+                - name: Run role with non-bool storage_safe_mode
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_safe_mode: "not_a_bool"
+              rescue:
+                - name: Mark invalid storage_safe_mode type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_safe_mode_type_failed: true
+
+            - name: Assert invalid storage_safe_mode type was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_safe_mode_type_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_safe_mode
+                  with a non-boolean value
+
+            # --- Test: non-bool storage_udevadm_trigger ---
+            - name: Argument specs reject non-bool storage_udevadm_trigger
+              block:
+                - name: Run role with non-bool storage_udevadm_trigger
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_udevadm_trigger: "not_a_bool"
+              rescue:
+                - name: Mark invalid storage_udevadm_trigger type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_udevadm_trigger_type_failed: true
+
+            - name: Assert invalid storage_udevadm_trigger type was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_udevadm_trigger_type_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_udevadm_trigger
+                  with a non-boolean value
+
+            # --- Test: non-list storage_volumes ---
+            - name: Argument specs reject non-list storage_volumes
+              block:
+                - name: Run role with non-list storage_volumes
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_volumes: "not_a_list"
+              rescue:
+                - name: Mark invalid storage_volumes type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_volumes_type_failed: true
+
+            - name: Assert invalid storage_volumes type was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_volumes_type_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_volumes
+                  with a non-list value
+
+            # --- Test: non-list storage_pools ---
+            - name: Argument specs reject non-list storage_pools
+              block:
+                - name: Run role with non-list storage_pools
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_pools: "not_a_list"
+              rescue:
+                - name: Mark invalid storage_pools type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_pools_type_failed: true
+
+            - name: Assert invalid storage_pools type was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_pools_type_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_pools
+                  with a non-list value
+
+            # --- Test: missing required pool name ---
+            - name: Argument specs reject pool missing required name
+              block:
+                - name: Run role with pool missing name
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_pools:
+                      - type: lvm
+                        disks: []
+              rescue:
+                - name: Mark missing pool name rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_pool_missing_name_failed: true
+                  when: >-
+                    'missing required arguments' in
+                    (ansible_failed_result | default({}) | to_json)
+
+            - name: Assert missing pool name was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_pool_missing_name_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_pools
+                  entries missing the required name field
+
+            # --- Test: missing required volume name ---
+            - name: Argument specs reject volume missing required name
+              block:
+                - name: Run role with volume missing name
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_volumes:
+                      - type: disk
+                        disks: []
+              rescue:
+                - name: Mark missing volume name rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_vol_missing_name_failed: true
+                  when: >-
+                    'missing required arguments' in
+                    (ansible_failed_result | default({}) | to_json)
+
+            - name: Assert missing volume name was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_vol_missing_name_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_volumes
+                  entries missing the required name field
+
+            # --- Test: invalid pool type choice ---
+            - name: Argument specs reject invalid pool type
+              block:
+                - name: Run role with invalid pool type
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_pools:
+                      - name: testpool
+                        type: invalid_type
+                        disks: []
+              rescue:
+                - name: Mark invalid pool type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_pool_type_choice_failed: true
+
+            - name: Assert invalid pool type was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_pool_type_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_pools
+                  with invalid type value
+
+            # --- Test: invalid volume state choice ---
+            - name: Argument specs reject invalid volume state
+              block:
+                - name: Run role with invalid volume state
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_volumes:
+                      - name: testvol
+                        state: invalid_state
+              rescue:
+                - name: Mark invalid volume state rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_vol_state_choice_failed: true
+
+            - name: Assert invalid volume state was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_vol_state_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_volumes
+                  with invalid state value
+
+            # --- Test: invalid mount_device_identifier choice ---
+            - name: Argument specs reject invalid mount_device_identifier
+              block:
+                - name: Run role with invalid mount_device_identifier
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_volumes:
+                      - name: testvol
+                        mount_device_identifier: invalid_id
+              rescue:
+                - name: Mark invalid mount_device_identifier rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_mount_id_choice_failed: true
+
+            - name: Assert invalid mount_device_identifier was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_mount_id_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_volumes
+                  with invalid mount_device_identifier value
+
+            # --- Test: invalid cache_mode choice ---
+            - name: Argument specs reject invalid cache_mode
+              block:
+                - name: Run role with invalid cache_mode
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_volumes:
+                      - name: testvol
+                        cache_mode: invalid_mode
+              rescue:
+                - name: Mark invalid cache_mode rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_cache_mode_choice_failed: true
+
+            - name: Assert invalid cache_mode was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_cache_mode_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_volumes
+                  with invalid cache_mode value
+
+            # --- Test: invalid volume type choice ---
+            - name: Argument specs reject invalid volume type
+              block:
+                - name: Run role with invalid volume type
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_volumes:
+                      - name: testvol
+                        type: invalid_type
+              rescue:
+                - name: Mark invalid volume type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_vol_type_choice_failed: true
+
+            - name: Assert invalid volume type was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_vol_type_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_volumes
+                  with invalid type value
+
+            # --- Test: invalid part_type choice ---
+            - name: Argument specs reject invalid part_type
+              block:
+                - name: Run role with invalid part_type
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_volumes:
+                      - name: testvol
+                        part_type: invalid_part
+              rescue:
+                - name: Mark invalid part_type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_part_type_choice_failed: true
+
+            - name: Assert invalid part_type was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_part_type_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_volumes
+                  with invalid part_type value
+
+            # --- Test: invalid pool raid_level choice ---
+            - name: Argument specs reject invalid pool raid_level
+              block:
+                - name: Run role with invalid pool raid_level
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_pools:
+                      - name: testpool
+                        raid_level: invalid_level
+                        disks: []
+              rescue:
+                - name: Mark invalid pool raid_level rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_pool_raid_choice_failed: true
+
+            - name: Assert invalid pool raid_level was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_pool_raid_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_pools
+                  with invalid raid_level value
+
+            # --- Test: invalid encryption_clevis_pin choice ---
+            - name: Argument specs reject invalid encryption_clevis_pin
+              block:
+                - name: Run role with invalid encryption_clevis_pin
+                  ansible.builtin.include_role:
+                    name: linux-system-roles.storage
+                  vars:
+                    storage_pools:
+                      - name: testpool
+                        encryption_clevis_pin: invalid_pin
+                        disks: []
+              rescue:
+                - name: Mark invalid encryption_clevis_pin rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_clevis_pin_choice_failed: true
+
+            - name: Assert invalid encryption_clevis_pin was rejected
+              ansible.builtin.assert:
+                that:
+                  - >-
+                    __invalid_input_clevis_pin_choice_failed
+                    | default(false)
+                fail_msg: >-
+                  argument_specs should reject storage_pools
+                  with invalid encryption_clevis_pin value
+
+        # ====================================================
+        # Section 3: assert_role_vars validation (all versions)
+        # ====================================================
+
+        # --- Test: storage_use_partitions as string ---
+        - name: Assert rejects storage_use_partitions as string
+          block:
+            - name: Run role with storage_use_partitions as string
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_use_partitions: "not_a_bool"
+          rescue:
+            - name: Mark storage_use_partitions string rejected
+              ansible.builtin.set_fact:
+                __invalid_input_use_partitions_str_failed: true
+
+        - name: Assert storage_use_partitions as string was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_use_partitions_str_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject
+              storage_use_partitions when given a string value
+
+        # --- Test: storage_use_partitions as integer ---
+        - name: Assert rejects storage_use_partitions as integer
+          block:
+            - name: Run role with storage_use_partitions as integer
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_use_partitions: 42
+          rescue:
+            - name: Mark storage_use_partitions integer rejected
+              ansible.builtin.set_fact:
+                __invalid_input_use_partitions_int_failed: true
+
+        - name: Assert storage_use_partitions as integer was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_use_partitions_int_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject
+              storage_use_partitions when given an integer value
+
+        # --- Test: storage_disklabel_type as integer ---
+        - name: Assert rejects storage_disklabel_type as integer
+          block:
+            - name: Run role with storage_disklabel_type as integer
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_disklabel_type: 123
+          rescue:
+            - name: Mark storage_disklabel_type integer rejected
+              ansible.builtin.set_fact:
+                __invalid_input_disklabel_type_int_failed: true
+
+        - name: Assert storage_disklabel_type as integer was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_disklabel_type_int_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject
+              storage_disklabel_type when given an integer value
+
+        # --- Test: storage_disklabel_type as boolean ---
+        - name: Assert rejects storage_disklabel_type as boolean
+          block:
+            - name: Run role with storage_disklabel_type as boolean
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_disklabel_type: true
+          rescue:
+            - name: Mark storage_disklabel_type boolean rejected
+              ansible.builtin.set_fact:
+                __invalid_input_disklabel_type_bool_failed: true
+
+        - name: Assert storage_disklabel_type as boolean was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_disklabel_type_bool_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject
+              storage_disklabel_type when given a boolean value
+
+        # --- Test: volume size as boolean ---
+        - name: Assert rejects volume size as boolean
+          block:
+            - name: Run role with volume size as boolean
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_volumes:
+                  - name: testvol
+                    type: disk
+                    disks: []
+                    size: true
+          rescue:
+            - name: Mark volume size boolean rejected
+              ansible.builtin.set_fact:
+                __invalid_input_vol_size_bool_failed: true
+
+        - name: Assert volume size as boolean was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_vol_size_bool_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject storage_volumes
+              size when given a boolean value
+
+        # --- Test: volume cache_size as boolean ---
+        - name: Assert rejects volume cache_size as boolean
+          block:
+            - name: Run role with volume cache_size as boolean
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_volumes:
+                  - name: testvol
+                    type: disk
+                    disks: []
+                    cache_size: true
+          rescue:
+            - name: Mark volume cache_size boolean rejected
+              ansible.builtin.set_fact:
+                __invalid_input_vol_cache_size_bool_failed: true
+
+        - name: Assert volume cache_size as boolean was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_vol_cache_size_bool_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject storage_volumes
+              cache_size when given a boolean value
+
+        # --- Test: pool volume size as boolean ---
+        - name: Assert rejects pool volume size as boolean
+          block:
+            - name: Run role with pool volume size as boolean
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_pools:
+                  - name: testpool
+                    disks: []
+                    volumes:
+                      - name: testvol
+                        size: true
+          rescue:
+            - name: Mark pool volume size boolean rejected
+              ansible.builtin.set_fact:
+                __invalid_input_pool_vol_size_bool_failed: true
+
+        - name: Assert pool volume size as boolean was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_pool_vol_size_bool_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject pool volume size
+              when given a boolean value
+
+        # --- Test: pool volume cache_size as boolean ---
+        - name: Assert rejects pool volume cache_size as boolean
+          block:
+            - name: Run role with pool volume cache_size as boolean
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_pools:
+                  - name: testpool
+                    disks: []
+                    volumes:
+                      - name: testvol
+                        cache_size: true
+          rescue:
+            - name: Mark pool volume cache_size boolean rejected
+              ansible.builtin.set_fact:
+                __invalid_input_pool_vol_cache_size_bool_failed: true
+
+        - name: Assert pool volume cache_size as boolean was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_pool_vol_cache_size_bool_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject pool volume
+              cache_size when given a boolean value
+
+      always:
+        - name: Clear test facts
+          ansible.builtin.set_fact:
+            __invalid_input_safe_mode_type_failed:
+            __invalid_input_udevadm_trigger_type_failed:
+            __invalid_input_volumes_type_failed:
+            __invalid_input_pools_type_failed:
+            __invalid_input_pool_missing_name_failed:
+            __invalid_input_vol_missing_name_failed:
+            __invalid_input_pool_type_choice_failed:
+            __invalid_input_vol_state_choice_failed:
+            __invalid_input_mount_id_choice_failed:
+            __invalid_input_cache_mode_choice_failed:
+            __invalid_input_vol_type_choice_failed:
+            __invalid_input_part_type_choice_failed:
+            __invalid_input_pool_raid_choice_failed:
+            __invalid_input_clevis_pin_choice_failed:
+            __invalid_input_use_partitions_str_failed:
+            __invalid_input_use_partitions_int_failed:
+            __invalid_input_disklabel_type_int_failed:
+            __invalid_input_disklabel_type_bool_failed:
+            __invalid_input_vol_size_bool_failed:
+            __invalid_input_vol_cache_size_bool_failed:
+            __invalid_input_pool_vol_size_bool_failed:
+            __invalid_input_pool_vol_cache_size_bool_failed:
+          tags: tests::cleanup

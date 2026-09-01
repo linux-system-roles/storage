@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Assert storage_use_partitions is null or a boolean
+  ansible.builtin.assert:
+    that:
+      - >-
+        (storage_use_partitions is none)
+        or (storage_use_partitions is sameas true)
+        or (storage_use_partitions is sameas false)
+    fail_msg: >-
+      storage_use_partitions must be null or a boolean,
+      got {{ storage_use_partitions | type_debug }}
+
+- name: Assert storage_disklabel_type is null or a string
+  ansible.builtin.assert:
+    that:
+      - >-
+        (storage_disklabel_type is none)
+        or (storage_disklabel_type is string)
+    fail_msg: >-
+      storage_disklabel_type must be null or a string,
+      got {{ storage_disklabel_type | type_debug }}
+
+- name: Assert size in storage_volumes is a string or integer
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.size is string
+        or (item.size | type_debug) == 'int'
+    fail_msg: >-
+      storage_volumes[{{ idx }}].size must be a string or integer,
+      got {{ item.size | type_debug }}
+  loop: "{{ storage_volumes | default([]) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ item.name | d('unnamed') }}"
+  when: item.size is defined
+
+- name: Assert cache_size in storage_volumes is a string or integer
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.cache_size is string
+        or (item.cache_size | type_debug) == 'int'
+    fail_msg: >-
+      storage_volumes[{{ idx }}].cache_size must be a string
+      or integer, got {{ item.cache_size | type_debug }}
+  loop: "{{ storage_volumes | default([]) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ item.name | d('unnamed') }}"
+  when: item.cache_size is defined
+
+- name: Assert size in pool volumes is a string or integer
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.1.size is string
+        or (item.1.size | type_debug) == 'int'
+    fail_msg: >-
+      storage_pools[{{ item.0.name }}].volumes[].size must be
+      a string or integer, got {{ item.1.size | type_debug }}
+  loop: >-
+    {{ storage_pools | default([])
+       | subelements('volumes', skip_missing=True) }}
+  loop_control:
+    label: "{{ item.0.name | d('unnamed') }}/{{ item.1.name | d('unnamed') }}"
+  when: item.1.size is defined
+
+- name: Assert cache_size in pool volumes is a string or integer
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.1.cache_size is string
+        or (item.1.cache_size | type_debug) == 'int'
+    fail_msg: >-
+      storage_pools[{{ item.0.name }}].volumes[].cache_size must
+      be a string or integer,
+      got {{ item.1.cache_size | type_debug }}
+  loop: >-
+    {{ storage_pools | default([])
+       | subelements('volumes', skip_missing=True) }}
+  loop_control:
+    label: "{{ item.0.name | d('unnamed') }}/{{ item.1.name | d('unnamed') }}"
+  when: item.1.cache_size is defined
