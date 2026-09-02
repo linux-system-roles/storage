@@ -635,6 +635,128 @@
               assert_role_vars should reject pool volume
               cache_size when given a boolean value
 
+        # --- Test: volume size as negative integer ---
+        - name: Assert rejects volume size as negative integer
+          block:
+            - name: Run role with volume size as negative integer
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_volumes:
+                  - name: testvol
+                    type: disk
+                    disks: []
+                    size: -1
+          rescue:
+            - name: Mark volume size negative rejected
+              ansible.builtin.set_fact:
+                __invalid_input_vol_size_neg_failed: true
+              when: >-
+                'size must be' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert volume size as negative integer was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_vol_size_neg_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject storage_volumes
+              size when given a negative integer
+
+        # --- Test: volume cache_size as negative integer ---
+        - name: Assert rejects volume cache_size as negative integer
+          block:
+            - name: Run role with volume cache_size as negative integer
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_volumes:
+                  - name: testvol
+                    type: disk
+                    disks: []
+                    cache_size: -5
+          rescue:
+            - name: Mark volume cache_size negative rejected
+              ansible.builtin.set_fact:
+                __invalid_input_vol_cache_size_neg_failed: true
+              when: >-
+                'cache_size must be' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert volume cache_size as negative integer was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_vol_cache_size_neg_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject storage_volumes
+              cache_size when given a negative integer
+
+        # --- Test: pool volume size as negative integer ---
+        - name: Assert rejects pool volume size as negative integer
+          block:
+            - name: Run role with pool volume size as negative integer
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_pools:
+                  - name: testpool
+                    disks: []
+                    volumes:
+                      - name: testvol
+                        size: -10
+          rescue:
+            - name: Mark pool volume size negative rejected
+              ansible.builtin.set_fact:
+                __invalid_input_pool_vol_size_neg_failed: true
+              when: >-
+                'size must be' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert pool volume size as negative integer was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_pool_vol_size_neg_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject pool volume size
+              when given a negative integer
+
+        # --- Test: pool volume cache_size as negative integer ---
+        - name: Assert rejects pool volume cache_size as negative int
+          block:
+            - name: Run role with pool volume cache_size as negative int
+              ansible.builtin.include_role:
+                name: linux-system-roles.storage
+              vars:
+                storage_pools:
+                  - name: testpool
+                    disks: []
+                    volumes:
+                      - name: testvol
+                        cache_size: -3
+          rescue:
+            - name: Mark pool volume cache_size negative rejected
+              ansible.builtin.set_fact:
+                __invalid_input_pool_vol_cache_size_neg_failed: true
+              when: >-
+                'cache_size must be' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert pool volume cache_size as negative int was rejected
+          ansible.builtin.assert:
+            that:
+              - >-
+                __invalid_input_pool_vol_cache_size_neg_failed
+                | default(false)
+            fail_msg: >-
+              assert_role_vars should reject pool volume
+              cache_size when given a negative integer
+
       always:
         - name: Clear test facts
           ansible.builtin.set_fact:
@@ -660,4 +782,8 @@
             __invalid_input_vol_cache_size_bool_failed:
             __invalid_input_pool_vol_size_bool_failed:
             __invalid_input_pool_vol_cache_size_bool_failed:
+            __invalid_input_vol_size_neg_failed:
+            __invalid_input_vol_cache_size_neg_failed:
+            __invalid_input_pool_vol_size_neg_failed:
+            __invalid_input_pool_vol_cache_size_neg_failed:
           tags: tests::cleanup
