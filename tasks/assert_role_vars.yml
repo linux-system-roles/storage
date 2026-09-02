@@ -27,9 +27,14 @@
       - >-
         item.size is string
         or (item.size | type_debug) == 'int'
+      - >-
+        (item.size | type_debug) == 'int'
+        or item.size == '0'
+        or item.size is match('^[1-9][0-9]*')
     fail_msg: >-
-      storage_volumes[{{ idx }}].size must be a string or integer,
-      got {{ item.size | type_debug }}
+      storage_volumes[{{ idx }}].size must be a string starting
+      with a non-zero digit (or "0") or an integer,
+      got {{ item.size | type_debug }}: {{ item.size }}
   loop: "{{ storage_volumes | default([]) }}"
   loop_control:
     index_var: idx
@@ -42,9 +47,14 @@
       - >-
         item.cache_size is string
         or (item.cache_size | type_debug) == 'int'
+      - >-
+        (item.cache_size | type_debug) == 'int'
+        or item.cache_size == '0'
+        or item.cache_size is match('^[1-9][0-9]*')
     fail_msg: >-
       storage_volumes[{{ idx }}].cache_size must be a string
-      or integer, got {{ item.cache_size | type_debug }}
+      starting with a non-zero digit (or "0") or an integer,
+      got {{ item.cache_size | type_debug }}: {{ item.cache_size }}
   loop: "{{ storage_volumes | default([]) }}"
   loop_control:
     index_var: idx
@@ -57,9 +67,14 @@
       - >-
         item.1.size is string
         or (item.1.size | type_debug) == 'int'
+      - >-
+        (item.1.size | type_debug) == 'int'
+        or item.1.size == '0'
+        or item.1.size is match('^[1-9][0-9]*')
     fail_msg: >-
       storage_pools[{{ item.0.name }}].volumes[].size must be
-      a string or integer, got {{ item.1.size | type_debug }}
+      a string starting with a non-zero digit (or "0") or an
+      integer, got {{ item.1.size | type_debug }}: {{ item.1.size }}
   loop: >-
     {{ storage_pools | default([])
        | subelements('volumes', skip_missing=True) }}
@@ -73,10 +88,15 @@
       - >-
         item.1.cache_size is string
         or (item.1.cache_size | type_debug) == 'int'
+      - >-
+        (item.1.cache_size | type_debug) == 'int'
+        or item.1.cache_size == '0'
+        or item.1.cache_size is match('^[1-9][0-9]*')
     fail_msg: >-
       storage_pools[{{ item.0.name }}].volumes[].cache_size must
-      be a string or integer,
-      got {{ item.1.cache_size | type_debug }}
+      be a string starting with a non-zero digit (or "0") or an
+      integer,
+      got {{ item.1.cache_size | type_debug }}: {{ item.1.cache_size }}
   loop: >-
     {{ storage_pools | default([])
        | subelements('volumes', skip_missing=True) }}
