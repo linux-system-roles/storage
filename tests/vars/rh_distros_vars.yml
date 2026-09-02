@@ -18,3 +18,9 @@ __storage_is_rh_distro: "{{ ansible_facts['distribution'] in __storage_rh_distro
 
 # Use this in conditionals to check if distro is Red Hat or clone, or Fedora
 __storage_is_rh_distro_fedora: "{{ ansible_facts['distribution'] in __storage_rh_distros_fedora }}"
+
+# Use these in conditionals to check if distro is Red Hat or clone of a specific major version
+__storage_is_rh_distro_7: "{{ __storage_is_rh_distro and ansible_facts['distribution_major_version'] == '7' }}"
+__storage_is_rh_distro_8: "{{ __storage_is_rh_distro and ansible_facts['distribution_major_version'] == '8' }}"
+__storage_is_rh_distro_9: "{{ __storage_is_rh_distro and ansible_facts['distribution_major_version'] == '9' }}"
+__storage_is_rh_distro_10: "{{ __storage_is_rh_distro and ansible_facts['distribution_major_version'] == '10' }}"
