@@ -10,7 +10,9 @@ argument_specs:
     options:
       storage_provider:
         type: str
-        default: "blivet"
+        default: blivet
+        choices:
+          - blivet
         description: >
           The storage management provider used by the role.
           Currently only `blivet` is supported.
@@ -25,8 +27,9 @@ argument_specs:
         type: raw
         default: null
         description: >
-          Whether to use partition-based layout. When `null`, the
-          role selects an appropriate layout automatically.
+          Whether to use partition-based layout. Accepts `true`,
+          `false`, or `null`. When `null`, the role selects an
+          appropriate layout automatically.
       storage_disklabel_type:
         type: raw
         default: null
@@ -151,12 +154,19 @@ argument_specs:
               and `path`.
           raid_level:
             type: str
+            choices:
+              - linear
+              - raid0
+              - raid1
+              - raid4
+              - raid5
+              - raid6
+              - raid10
+              - striped
+              - mirror
             description: >
-              RAID level for the volume. For `raid` type volumes,
-              accepted values are `linear`, `raid0`, `raid1`,
-              `raid4`, `raid5`, `raid6`, `raid10`. For LVM RAID,
-              accepted values also include `striped` and
-              `mirror`.
+              RAID level for the volume. Values `striped` and
+              `mirror` apply only to LVM RAID volumes.
           raid_device_count:
             type: int
             description: >

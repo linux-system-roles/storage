@@ -30,6 +30,9 @@
                 - name: Mark invalid storage_safe_mode type rejected
                   ansible.builtin.set_fact:
                     __invalid_input_safe_mode_type_failed: true
+                  when: >-
+                    'is of type' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid storage_safe_mode type was rejected
               ansible.builtin.assert:
@@ -53,6 +56,9 @@
                 - name: Mark invalid storage_udevadm_trigger type rejected
                   ansible.builtin.set_fact:
                     __invalid_input_udevadm_trigger_type_failed: true
+                  when: >-
+                    'is of type' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid storage_udevadm_trigger type was rejected
               ansible.builtin.assert:
@@ -76,6 +82,9 @@
                 - name: Mark invalid storage_volumes type rejected
                   ansible.builtin.set_fact:
                     __invalid_input_volumes_type_failed: true
+                  when: >-
+                    'is of type' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid storage_volumes type was rejected
               ansible.builtin.assert:
@@ -99,6 +108,9 @@
                 - name: Mark invalid storage_pools type rejected
                   ansible.builtin.set_fact:
                     __invalid_input_pools_type_failed: true
+                  when: >-
+                    'is of type' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid storage_pools type was rejected
               ansible.builtin.assert:
@@ -181,6 +193,9 @@
                 - name: Mark invalid pool type rejected
                   ansible.builtin.set_fact:
                     __invalid_input_pool_type_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid pool type was rejected
               ansible.builtin.assert:
@@ -206,6 +221,9 @@
                 - name: Mark invalid volume state rejected
                   ansible.builtin.set_fact:
                     __invalid_input_vol_state_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid volume state was rejected
               ansible.builtin.assert:
@@ -231,6 +249,9 @@
                 - name: Mark invalid mount_device_identifier rejected
                   ansible.builtin.set_fact:
                     __invalid_input_mount_id_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid mount_device_identifier was rejected
               ansible.builtin.assert:
@@ -256,6 +277,9 @@
                 - name: Mark invalid cache_mode rejected
                   ansible.builtin.set_fact:
                     __invalid_input_cache_mode_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid cache_mode was rejected
               ansible.builtin.assert:
@@ -281,6 +305,9 @@
                 - name: Mark invalid volume type rejected
                   ansible.builtin.set_fact:
                     __invalid_input_vol_type_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid volume type was rejected
               ansible.builtin.assert:
@@ -306,6 +333,9 @@
                 - name: Mark invalid part_type rejected
                   ansible.builtin.set_fact:
                     __invalid_input_part_type_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid part_type was rejected
               ansible.builtin.assert:
@@ -332,6 +362,9 @@
                 - name: Mark invalid pool raid_level rejected
                   ansible.builtin.set_fact:
                     __invalid_input_pool_raid_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid pool raid_level was rejected
               ansible.builtin.assert:
@@ -358,6 +391,9 @@
                 - name: Mark invalid encryption_clevis_pin rejected
                   ansible.builtin.set_fact:
                     __invalid_input_clevis_pin_choice_failed: true
+                  when: >-
+                    'must be one of' in
+                    (ansible_failed_result | default({}) | to_json)
 
             - name: Assert invalid encryption_clevis_pin was rejected
               ansible.builtin.assert:
@@ -385,6 +421,9 @@
             - name: Mark storage_use_partitions string rejected
               ansible.builtin.set_fact:
                 __invalid_input_use_partitions_str_failed: true
+              when: >-
+                'storage_use_partitions must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert storage_use_partitions as string was rejected
           ansible.builtin.assert:
@@ -408,6 +447,9 @@
             - name: Mark storage_use_partitions integer rejected
               ansible.builtin.set_fact:
                 __invalid_input_use_partitions_int_failed: true
+              when: >-
+                'storage_use_partitions must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert storage_use_partitions as integer was rejected
           ansible.builtin.assert:
@@ -431,6 +473,9 @@
             - name: Mark storage_disklabel_type integer rejected
               ansible.builtin.set_fact:
                 __invalid_input_disklabel_type_int_failed: true
+              when: >-
+                'storage_disklabel_type must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert storage_disklabel_type as integer was rejected
           ansible.builtin.assert:
@@ -454,6 +499,9 @@
             - name: Mark storage_disklabel_type boolean rejected
               ansible.builtin.set_fact:
                 __invalid_input_disklabel_type_bool_failed: true
+              when: >-
+                'storage_disklabel_type must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert storage_disklabel_type as boolean was rejected
           ansible.builtin.assert:
@@ -481,6 +529,9 @@
             - name: Mark volume size boolean rejected
               ansible.builtin.set_fact:
                 __invalid_input_vol_size_bool_failed: true
+              when: >-
+                'size must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert volume size as boolean was rejected
           ansible.builtin.assert:
@@ -508,6 +559,9 @@
             - name: Mark volume cache_size boolean rejected
               ansible.builtin.set_fact:
                 __invalid_input_vol_cache_size_bool_failed: true
+              when: >-
+                'cache_size must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert volume cache_size as boolean was rejected
           ansible.builtin.assert:
@@ -536,6 +590,9 @@
             - name: Mark pool volume size boolean rejected
               ansible.builtin.set_fact:
                 __invalid_input_pool_vol_size_bool_failed: true
+              when: >-
+                'size must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert pool volume size as boolean was rejected
           ansible.builtin.assert:
@@ -564,6 +621,9 @@
             - name: Mark pool volume cache_size boolean rejected
               ansible.builtin.set_fact:
                 __invalid_input_pool_vol_cache_size_bool_failed: true
+              when: >-
+                'cache_size must be' in
+                (ansible_failed_result | default({}) | to_json)
 
         - name: Assert pool volume cache_size as boolean was rejected
           ansible.builtin.assert:
