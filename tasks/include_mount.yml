@@ -1,0 +1,21 @@
+---
+# Shared helper included from main-blivet.yml with include_tasks. The mount
+# module arguments are passed in as the __storage_mount_args dict; the loop is
+# handled by the parent include_tasks task. include_tasks is dynamic: its tasks
+# are only parsed when the include runs, and a task skipped by its "when" (the
+# ansible.posix module on ansible 2.9) never has its FQCN resolved, so it cannot
+# abort play parsing the way it would in a statically parsed task file.
+
+# On managed nodes with python 2 (EL7 with ansible 2.9, where the ansible.posix
+# collection cannot be installed), use the dependency-free vendored
+# mount_python_27 module, which retains python 2 support.
+- name: Manage mount - python 2
+  mount_python_27: "{{ __storage_mount_args }}"  # noqa args[module]
+  when:
+    - ansible_facts['python_version'] is version('3', '<')
+
+# On managed nodes with python 3, use ansible.posix.mount.
+- name: Manage mount
+  ansible.posix.mount: "{{ __storage_mount_args }}"  # noqa args[module]
+  when:
+    - ansible_facts['python_version'] is version('3', '>=')
