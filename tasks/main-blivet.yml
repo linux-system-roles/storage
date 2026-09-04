@@ -190,76 +190,46 @@
 #     update its view, then set up the new mounts. Otherwise,
 #     systemd will forcibly prevent mounting a new volume to an
 #     existing mount point.
-# On managed nodes with python 2 (EL7 with ansible 2.9, where the
-# ansible.posix collection cannot be installed), use the dependency-free
-# vendored mount_python_27 module, which retains python 2 support.
-- name: Remove obsolete mounts - python 2
-  mount_python_27:
-    src: "{{ mount_info['src'] | default(omit) }}"
-    path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] | default(omit) }}"
-    opts: "{{ mount_info['opts'] | default(omit) }}"
-    state: "{{ mount_info['state'] }}"
-  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
-            selectattr('state', 'match', '^absent$') | list }}"
-  loop_control:
-    loop_var: mount_info
-  when: ansible_facts['python_version'] is version('3', '<')
-
-# Bare module name (not FQCN): an unresolvable FQCN aborts play parsing on
-# ansible 2.9 even for a task skipped by "when", so the bare name is used.
-# This runs only on managed nodes with python 3, where the bare name resolves
-# to the latest ansible.posix.mount.
+# The vendored (python 2) and ansible.posix (python 3) mount calls live in
+# include_mount.yml; it is pulled in with include_tasks so the ansible.posix
+# FQCN is only parsed at runtime and cannot abort play parsing on ansible 2.9.
+# The loop is handled here.
 - name: Remove obsolete mounts
-  mount:  # noqa fqcn
-    src: "{{ mount_info['src'] | default(omit) }}"
-    path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] | default(omit) }}"
-    opts: "{{ mount_info['opts'] | default(omit) }}"
-    state: "{{ mount_info['state'] }}"
+  include_tasks: include_mount.yml
+  vars:
+    __storage_mount_args:
+      src: "{{ mount_info['src'] | default(omit) }}"
+      path: "{{ mount_info['path'] }}"
+      fstype: "{{ mount_info['fstype'] | default(omit) }}"
+      opts: "{{ mount_info['opts'] | default(omit) }}"
+      state: "{{ mount_info['state'] }}"
   loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
             selectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
-  when: ansible_facts['python_version'] is version('3', '>=')
 
 - name: Tell systemd to refresh its view of /etc/fstab
   systemd:
     daemon_reload: true
   when: blivet_output['mounts'] | length > 0
 
-# On managed nodes with python 2 (EL7 with ansible 2.9, where the
-# ansible.posix collection cannot be installed), use the dependency-free
-# vendored mount_python_27 module, which retains python 2 support.
-- name: Set up new/current mounts - python 2
-  mount_python_27:
-    src: "{{ mount_info['src'] | default(omit) }}"
-    path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] | default(omit) }}"
-    opts: "{{ mount_info['opts'] | default(omit) }}"
-    state: "{{ mount_info['state'] }}"
-  loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
-            rejectattr('state', 'match', '^absent$') | list }}"
-  loop_control:
-    loop_var: mount_info
-  when: ansible_facts['python_version'] is version('3', '<')
-
-# Bare module name (not FQCN): an unresolvable FQCN aborts play parsing on
-# ansible 2.9 even for a task skipped by "when", so the bare name is used.
-# This runs only on managed nodes with python 3, where the bare name resolves
-# to the latest ansible.posix.mount.
+# The vendored (python 2) and ansible.posix (python 3) mount calls live in
+# include_mount.yml; it is pulled in with include_tasks so the ansible.posix
+# FQCN is only parsed at runtime and cannot abort play parsing on ansible 2.9.
+# The loop is handled here.
 - name: Set up new/current mounts
-  mount:  # noqa fqcn
-    src: "{{ mount_info['src'] | default(omit) }}"
-    path: "{{ mount_info['path'] }}"
-    fstype: "{{ mount_info['fstype'] | default(omit) }}"
-    opts: "{{ mount_info['opts'] | default(omit) }}"
-    state: "{{ mount_info['state'] }}"
+  include_tasks: include_mount.yml
+  vars:
+    __storage_mount_args:
+      src: "{{ mount_info['src'] | default(omit) }}"
+      path: "{{ mount_info['path'] }}"
+      fstype: "{{ mount_info['fstype'] | default(omit) }}"
+      opts: "{{ mount_info['opts'] | default(omit) }}"
+      state: "{{ mount_info['state'] }}"
   loop: "{{ blivet_output.mounts | selectattr('state', 'defined') |
             rejectattr('state', 'match', '^absent$') | list }}"
   loop_control:
     loop_var: mount_info
-  when: ansible_facts['python_version'] is version('3', '>=')
 
 - name: Manage mount ownership/permissions
   file:
