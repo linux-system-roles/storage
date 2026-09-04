@@ -1,0 +1,16 @@
+---
+# mount module call split by python version; args come from __storage_mount_args.
+
+# python 2 (EL7/ansible 2.9, no ansible.posix collection): use the vendored
+# mount_python_27 copy, which retains python 2 support.
+- name: Manage mount - python 2
+  mount_python_27: "{{ __storage_mount_args }}"  # noqa args[module]
+  when:
+    - ansible_facts['python_version'] is version('3', '<')
+
+# python 3: bare name, not FQCN, because an unresolvable FQCN aborts play
+# parsing on ansible 2.9 even when skipped; resolves to ansible.posix.mount.
+- name: Manage mount
+  mount: "{{ __storage_mount_args }}"  # noqa fqcn args[module]
+  when:
+    - ansible_facts['python_version'] is version('3', '>=')
