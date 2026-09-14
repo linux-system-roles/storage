@@ -10,7 +10,6 @@
     volume_size_after: '9g'
     invalid_size1: xyz GiB
     invalid_size2: none
-    unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
     too_large_size: '{{ unused_disk_subfact.sectors | int * 1.2 * 512 }}'
     acc_large_size: '{{ unused_disk_subfact.sectors | int * 1.015 * 512 }}'
     acc_small_size: '{{ unused_disk_subfact.sectors | int * 0.985 * 512 }}'
@@ -24,6 +23,10 @@
       ansible.builtin.include_tasks: tasks/setup.yml
       vars:
         __storage_get_package_facts: true
+
+    - name: Set unused_disk_subfact
+      set_fact:
+        unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
 
     # For ext4 FS
 
@@ -140,7 +143,7 @@
         - name: Test for correct handling of invalid size specification
           include_tasks: verify-role-failed.yml
           vars:
-            __storage_failed_regex: invalid.+size
+            __storage_failed_exception: size must be a non-negative integer or a size string starting with a digit
             __storage_failed_msg: >-
               Unexpected behavior w/ invalid volume size
             __storage_failed_params:
@@ -156,7 +159,7 @@
         - name: Test for correct handling of invalid size specification - 2
           include_tasks: verify-role-failed.yml
           vars:
-            __storage_failed_regex: invalid.+size
+            __storage_failed_exception: size must be a non-negative integer or a size string starting with a digit
             __storage_failed_msg: >-
               Unexpected behavior w/ invalid volume size
             __storage_failed_params:
