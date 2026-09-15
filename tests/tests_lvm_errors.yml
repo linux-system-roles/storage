@@ -36,7 +36,7 @@
     - name: Test for correct handling of invalid size specification.
       include_tasks: verify-role-failed.yml
       vars:
-        __storage_failed_regex: invalid size specification
+        __storage_failed_exception: size must be a non-negative integer or a size string starting with a digit
         __storage_failed_msg: Role did not report that the size spec is invalid
         __storage_failed_params:
           storage_pools:

@@ -164,9 +164,11 @@ argument_specs:
               - raid10
               - striped
               - mirror
+              - "null"
             description: >
               RAID level for the volume. Values `striped` and
-              `mirror` apply only to LVM RAID volumes.
+              `mirror` apply only to LVM RAID volumes. The string
+              `"null"` indicates no RAID configuration.
           raid_device_count:
             type: int
             description: >
@@ -309,10 +311,11 @@ argument_specs:
             choices:
               - lvm
               - stratis
+              - partition
             description: >
               The type of storage pool. Valid values are `lvm`
-              for LVM volume groups and `stratis` for Stratis
-              pools.
+              for LVM volume groups, `stratis` for Stratis
+              pools, and `partition` for partition-based pools.
           state:
             type: str
             choices:
@@ -352,11 +355,13 @@ argument_specs:
               - raid5
               - raid6
               - raid10
+              - "null"
             description: >
               RAID level for the pool. When used with
               `type: lvm`, manages a volume group with an MD
               RAID array of the given level. Input `disks` are
-              used as RAID members.
+              used as RAID members. The string `"null"` indicates
+              no RAID configuration.
           raid_device_count:
             type: int
             description: >

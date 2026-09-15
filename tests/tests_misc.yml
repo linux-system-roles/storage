@@ -7,7 +7,6 @@
     mount_location: /opt/test1
     volume_group_size: "5g"
     volume1_size: "4g"
-    unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
     too_large_size: "{{ (unused_disk_subfact.sectors | int * 1.2) * 512 }}"
     __storage_min_size: "{{ volume_group_size }}"
     __storage_max_return: 1
@@ -16,6 +15,10 @@
   tasks:
     - name: Prep storage role and discover unused disks
       ansible.builtin.include_tasks: tasks/setup.yml
+
+    - name: Set unused_disk_subfact
+      set_fact:
+        unused_disk_subfact: "{{ ansible_facts['devices'][unused_disks[0]] }}"
 
     - name: Test creating ext4 filesystem with valid parameter "-Fb 4096"
       include_tasks: tasks/run_role_with_clear_facts.yml
