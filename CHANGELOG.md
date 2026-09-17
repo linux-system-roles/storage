@@ -1,6 +1,31 @@
 Changelog
 =========
 
+[1.22.1] - 2026-09-17
+--------------------
+
+### Bug Fixes
+
+- fix: Select mount module by managed node python version (#647)
+- fix: Move mount calls to a shared include task file (#660)
+
+### Other Changes
+
+- ci: use commit hash for github action, add persist-credentials false [citest_skip] (#644)
+- ci: refactor build_docs so that pandoc runs in isolated read-only job [citest_skip] (#645)
+- ci: use exact match for systemroller instead of contains [citest_skip] (#646)
+- ci(build_docs): fix pandoc container syntax [citest_skip] (#648)
+- ci: [citest_skip] bump github/codeql-action/init from 4.37.4 to 4.37.9 (#649)
+- ci: [citest_skip] bump myrotvorets/set-commit-status-action from 2774e1f040c82ed70a76b4b5cd53bb11ffaedd0a to c0f880c99d91381c6fdb97726f03feb8004409b4 (#650)
+- ci: [citest_skip] bump actions/download-artifact from 7.0.0 to 8.0.1 (#651)
+- ci: [citest_skip] bump codespell-project/actions-codespell from 2.1 to 2.2 (#652)
+- ci: [citest_skip] bump github/codeql-action/analyze from 4.37.4 to 4.37.9 (#653)
+- ci: tell flake8 to ignore copied mount_python_27.py (#655)
+- refactor: Relax collection constraints, gate vendored modules by python version, update ci versions [citest_skip] (#656)
+- ci: do not run ci tests by default, require citest comment or label [citest_skip] (#657)
+- ci: replace weekly_ci with periodic_ci, stagger schedules [citest_skip] (#658)
+- ci: update status when action triggered by issue comment (#659)
+
 [1.22.0] - 2026-08-06
 --------------------
 
