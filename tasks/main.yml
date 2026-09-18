@@ -2,6 +2,9 @@
 - name: Set platform/version specific variables
   include_tasks: tasks/set_vars.yml
 
+- name: Validate role parameters
+  ansible.builtin.include_tasks: assert_role_vars.yml
+
 - name: Define an empty list of pools to be used in testing
   set_fact:
     _storage_pools_list: []
