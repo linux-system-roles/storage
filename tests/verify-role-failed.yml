@@ -60,5 +60,5 @@
         msg_stderr: "{{ ansible_failed_result.msg.module_stderr | d('') }}"
         stdout: "{{ ansible_failed_result.module_stdout | d('') }}"
         stderr: "{{ ansible_failed_result.module_stderr | d('') }}"
-        exception_msg_in_list: "{{ ansible_failed_result.results | d([]) |
-          selectattr('msg', 'search', __storage_failed_exception) | list | length > 0 }}"
+        exception_msg_in_list: "{{ (ansible_failed_result.results | d([]) |
+          selectattr('msg', 'search', __storage_failed_exception) | list | length > 0) | bool }}"
