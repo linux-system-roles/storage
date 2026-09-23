@@ -49,7 +49,8 @@
           msg_stdout is search(__storage_failed_exception) or
           msg_stderr is search(__storage_failed_exception) or
           stdout is search(__storage_failed_exception) or
-          stderr is search(__storage_failed_exception)
+          stderr is search(__storage_failed_exception) or
+          exception_msg_in_list
       when: __storage_failed_exception is defined
       vars:
         result_msg: "{{ ansible_failed_result.msg | d('') }}"
@@ -59,3 +60,5 @@
         msg_stderr: "{{ ansible_failed_result.msg.module_stderr | d('') }}"
         stdout: "{{ ansible_failed_result.module_stdout | d('') }}"
         stderr: "{{ ansible_failed_result.module_stderr | d('') }}"
+        exception_msg_in_list: "{{ (ansible_failed_result.results | d([]) |
+          selectattr('msg', 'search', __storage_failed_exception) | list | length > 0) | bool }}"
