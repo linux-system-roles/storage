@@ -69,7 +69,10 @@ argument_specs:
               The type of volume. Valid values are `lvm` for LVM
               logical volumes, `disk` for whole disk volumes,
               `partition` for partition-based volumes, and `raid`
-              for RAID volumes.
+              for RAID volumes. When not specified, the type is
+              inherited from the parent pool (for volumes in
+              `storage_pools`) or defaults to `lvm` (for
+              standalone volumes in `storage_volumes`).
           state:
             type: str
             choices:
@@ -222,9 +225,10 @@ argument_specs:
             description: >
               LUKS key size in bits for the volume.
           encryption_luks_version:
-            type: int
+            type: str
             description: >
-              LUKS version to use for the volume.
+              LUKS version to use for the volume, such as
+              `luks1` or `luks2`.
           compression:
             type: bool
             description: >
@@ -411,9 +415,10 @@ argument_specs:
             description: >
               LUKS key size in bits for the pool.
           encryption_luks_version:
-            type: int
+            type: str
             description: >
-              LUKS version to use for the pool.
+              LUKS version to use for the pool, such as
+              `luks1` or `luks2`.
           encryption_clevis_pin:
             type: str
             choices:

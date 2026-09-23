@@ -6,9 +6,6 @@
     storage_safe_mode: false
     mount_location: '/opt/test1'
     volume_size: '5g'
-    fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
-                   ansible_facts['distribution_major_version'] == '6') |
-                  ternary('ext4', 'xfs') }}"
     __storage_min_size: "{{ volume_size }}"
     __storage_max_return: 1
   tags:
@@ -17,6 +14,17 @@
   tasks:
     - name: Prep storage role and discover unused disks
       ansible.builtin.include_tasks: tasks/setup.yml
+
+    # NOTE: This must be a fact (not a lazily evaluated play var) because
+    # it is referenced by tasks that run after "Clear facts", by which
+    # point the role's own argument spec validation (which runs before
+    # ansible_facts is regathered) would otherwise fail trying to
+    # template this value.
+    - name: Determine file system type to change to
+      ansible.builtin.set_fact:
+        fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
+                       ansible_facts['distribution_major_version'] == '6') |
+                      ternary('ext4', 'xfs') }}"
 
     - name: Create a LVM logical volume with default fs_type
       include_tasks: tasks/run_role_with_clear_facts.yml

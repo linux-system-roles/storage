@@ -16,6 +16,18 @@
     - name: Prep storage role and discover unused disks
       ansible.builtin.include_tasks: tasks/setup.yml
 
+    # NOTE: This must be a fact (not a lazily evaluated expression at the
+    # point of use) because it is referenced by a task that runs after
+    # "Clear facts", by which point the role's own argument spec
+    # validation (which runs before ansible_facts is regathered) would
+    # otherwise fail trying to template this value.
+    - name: Determine file system type to change thinlv to
+      ansible.builtin.set_fact:
+        thinlv_fs_type_after: "{{
+          (ansible_facts['distribution'] == 'RedHat' and
+           ansible_facts['distribution_major_version'] == '6') |
+          ternary('ext4', 'xfs') }}"
+
     - name: Create a thinpool device
       include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
@@ -64,10 +76,7 @@
               - name: lv1
                 thin_pool_name: tpool1
                 thin: true
-                fs_type: "{{
-                  (ansible_facts['distribution'] == 'RedHat' and
-                   ansible_facts['distribution_major_version'] == '6') |
-                  ternary('ext4', 'xfs') }}"
+                fs_type: "{{ thinlv_fs_type_after }}"
 
     - name: Verify role results - 3
       include_tasks: verify-role-results.yml
