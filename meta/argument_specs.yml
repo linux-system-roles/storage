@@ -86,7 +86,8 @@ argument_specs:
             description: >
               The size of the volume. Accepts human-readable size
               notation such as `10G` or `500M`, a percentage of
-              pool size such as `50%`, or `0` to use all
+              pool size such as `50%`, a non-negative integer or
+              float number of bytes, or `0` to use all
               available space.
           disks:
             type: list
@@ -254,7 +255,8 @@ argument_specs:
             type: raw
             description: >
               Size of the cache. Accepts human-readable size
-              notation such as `30G` or `50GiB`, or `0` for
+              notation such as `30G` or `50GiB`, a non-negative
+              integer or float number of bytes, or `0` for
               no cache.
           cache_mode:
             type: str
