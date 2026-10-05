@@ -48,7 +48,8 @@
 - name: Set expected pv type - 2
   set_fact:
     _storage_test_expected_pv_type: "{{ 'partition'
-      if storage_use_partitions | d(false) else 'disk' }}"
+      if (storage_use_partitions | d(false)) or
+      (__storage_test_pv_is_partition | d(false)) else 'disk' }}"
   when: storage_test_pool.type == 'lvm' and not storage_test_pool.encryption
 
 - name: Set expected pv type - 3
