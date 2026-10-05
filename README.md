@@ -90,6 +90,13 @@ keys:
   device node basename (like `sda` or `mpathb`), /dev/disk/ symlink
   (like `/dev/disk/by-id/wwn-0x5000c5005bc37f3f`).
 
+  For LVM pools an existing partition (like `sdb1` or `/dev/disk/by-partlabel/data`) can be
+  listed instead of a whole disk and is used as a physical volume as it is. The partition
+  itself is never created, resized or deleted by the role: anything on it is removed
+  (not in `storage_safe_mode`) and it is formatted as a PV; when the pool or the member is
+  removed the partition is wiped but kept, as is the partition table. Extended partitions
+  cannot be used. `storage_use_partitions` does not apply to members that are already partitions.
+
   For LVM pools this can be also used to add and remove disks to/from an existing pool.
   Disks in the list that are not used by the pool will be added to the pool.
   Disks that are currently used by the pool but not present in the list will be removed
