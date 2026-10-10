@@ -1590,8 +1590,9 @@ class BlivetPool(BlivetBase):
                 log.info("scheduling destruction of %s", ancestor.name)
                 if ancestor.is_disk:
                     self._blivet.devicetree.recursive_remove(ancestor)
-                elif ancestor.type == "partition" and not use_partitions:
-                    # wipe partition contents first; optionally destroy the partition itself
+                elif ancestor.type == "partition" and ancestor in self._disks:
+                    # partition specified by the user: wipe its contents first,
+                    # then optionally destroy the partition itself
                     self._blivet.devicetree.recursive_remove(ancestor, remove_device=False)
                     if destroy_partition_device:
                         self._blivet.destroy_device(ancestor)
