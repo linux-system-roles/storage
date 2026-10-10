@@ -65,7 +65,52 @@
         - name: Verify role results - 2
           include_tasks: verify-role-results.yml
 
-        - name: Remove the volume group
+        - name: Remove the volume group and preserve the partition
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_destroy_partition_device: false
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                state: absent
+                volumes: []
+
+        - name: Verify role results after preserving the partition
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the partition and the partition table survived
+          command: parted -s {{ __disk }} print
+          register: __parted_preserved
+          changed_when: false
+          failed_when: >-
+            'gpt' not in __parted_preserved.stdout
+            or ' 1 ' not in __parted_preserved.stdout
+
+        - name: Check that the PV signature is gone
+          command: blkid -p -o value -s TYPE {{ __part1 }}
+          register: __blkid_preserved
+          changed_when: false
+          failed_when: false
+
+        - name: Assert there is no filesystem or PV signature left on the partition
+          assert:
+            that: __blkid_preserved.stdout | trim | length == 0
+
+        - name: Recreate the volume group for the default partition destruction test
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    fs_type: ext4
+
+        - name: Verify role results after recreating the volume group
+          include_tasks: verify-role-results.yml
+
+        - name: Remove the volume group and destroy the partition by default
           include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
@@ -74,24 +119,14 @@
                 state: absent
                 volumes: []
 
-        - name: Verify role results - 3
+        - name: Verify role results after destroying the partition
           include_tasks: verify-role-results.yml
 
-        - name: Check that the partition and the partition table survived
+        - name: Check that the partition was destroyed
           command: parted -s {{ __disk }} print
-          register: __parted
+          register: __parted_destroyed
           changed_when: false
-          failed_when: "'gpt' not in __parted.stdout or ' 1 ' not in __parted.stdout"
-
-        - name: Check that the PV signature is gone
-          command: blkid -p -o value -s TYPE {{ __part1 }}
-          register: __blkid
-          changed_when: false
-          failed_when: false
-
-        - name: Assert there is no filesystem or PV signature left on the partition
-          assert:
-            that: __blkid.stdout | trim | length == 0
+          failed_when: "' 1 ' in __parted_destroyed.stdout"
 
         # 2. the partition is created in the same role call as the VG on it
         - name: Wipe the disk
@@ -154,7 +189,7 @@
           assert:
             that: not blivet_output.changed
 
-        - name: Remove the volume group again
+        - name: Remove the volume group and destroy the partition by default - 2
           include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
@@ -162,6 +197,15 @@
                 disks: ["{{ __part1 }}"]
                 state: absent
                 volumes: []
+
+        - name: Verify role results after destroying the partition - 2
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the partition created by the role was destroyed
+          command: parted -s {{ __disk }} print
+          register: __parted_destroyed2
+          changed_when: false
+          failed_when: "' 1 ' in __parted_destroyed2.stdout"
 
         # 3. adding a second partition to the VG and removing it again
         - name: Wipe the disk - 2
@@ -198,6 +242,7 @@
         - name: Remove the second partition from the volume group
           include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
+            storage_destroy_partition_device: false
             storage_pools:
               - name: foo
                 disks: ["{{ __part1 }}"]
@@ -211,7 +256,17 @@
           changed_when: false
           failed_when: "' 2 ' not in __parted2.stdout"
 
-        - name: Remove the volume group - 2
+        - name: Check the PV signature on the removed member
+          command: blkid -p -o value -s TYPE {{ __part2 }}
+          register: __blkid3
+          changed_when: false
+          failed_when: false
+
+        - name: Assert no PV signature remains on the removed member
+          assert:
+            that: __blkid3.stdout | trim | length == 0
+
+        - name: Remove the remaining volume group
           include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools:
@@ -262,6 +317,11 @@
       always:
         - name: Remove any leftover volume group
           command: vgremove -ff -y foo
+          changed_when: true
+          failed_when: false
+
+        - name: Wipe signatures from the partition at the end
+          command: wipefs --all --force {{ __part1 }}
           changed_when: true
           failed_when: false
 
