@@ -1,0 +1,331 @@
+---
+- name: Test existing and newly created partitions as physical volumes of LVM pools
+  hosts: all
+  become: true
+  vars:
+    storage_safe_mode: false
+    volume_group_size: '10g'
+    volume_size: '4g'
+    __storage_min_size: "{{ volume_group_size }}"
+    __storage_max_return: 1
+    # tells test-verify-pool-members.yml that the PVs are partitions
+    __storage_test_pv_is_partition: true
+    __disk: "/dev/{{ unused_disks[0] }}"
+    # nvme and mmcblk devices separate the partition number with a 'p'
+    __sep: "{{ 'p' if unused_disks[0] is match('.*[0-9]$') else '' }}"
+    __part1: "{{ __disk }}{{ __sep }}1"
+    __part2: "{{ __disk }}{{ __sep }}2"
+  tags:
+    - tests::lvm
+
+  tasks:
+    - name: Prep storage role and discover unused disks
+      ansible.builtin.include_tasks: tasks/setup.yml
+
+    - name: Test
+      block:
+        # 1. an existing partition used as the only PV of a VG
+        - name: Create a partition table with one partition on the disk
+          command: parted -s {{ __disk }} mklabel gpt mkpart primary 1MiB 100%
+          changed_when: true
+
+        - name: Wait for the partition to appear
+          command: udevadm settle
+          changed_when: false
+
+        - name: Create a volume group on the existing partition
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    fs_type: ext4
+
+        - name: Verify role results
+          include_tasks: verify-role-results.yml
+
+        - name: Repeat the previous invocation to verify idempotence
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    fs_type: ext4
+
+        - name: Assert the role did not change anything
+          assert:
+            that: not blivet_output.changed
+
+        - name: Verify role results - 2
+          include_tasks: verify-role-results.yml
+
+        - name: Remove the volume group and preserve the partition
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_destroy_partition_device: false
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                state: absent
+                volumes: []
+
+        - name: Verify role results after preserving the partition
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the partition and the partition table survived
+          command: parted -s {{ __disk }} print
+          register: __parted_preserved
+          changed_when: false
+          failed_when: >-
+            'gpt' not in __parted_preserved.stdout
+            or ' 1 ' not in __parted_preserved.stdout
+
+        - name: Check that the PV signature is gone
+          command: blkid -p -o value -s TYPE {{ __part1 }}
+          register: __blkid_preserved
+          changed_when: false
+          failed_when: false
+
+        - name: Assert there is no filesystem or PV signature left on the partition
+          assert:
+            that: __blkid_preserved.stdout | trim | length == 0
+
+        - name: Recreate the volume group for the default partition destruction test
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    fs_type: ext4
+
+        - name: Verify role results after recreating the volume group
+          include_tasks: verify-role-results.yml
+
+        - name: Remove the volume group and destroy the partition by default
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                state: absent
+                volumes: []
+
+        - name: Verify role results after destroying the partition
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the partition was destroyed
+          command: parted -s {{ __disk }} print
+          register: __parted_destroyed
+          changed_when: false
+          failed_when: "' 1 ' in __parted_destroyed.stdout"
+
+        # 2. the partition is created in the same role call as the VG on it
+        - name: Wipe the disk
+          command: wipefs --all --force {{ __disk }}
+          changed_when: true
+
+        - name: Create the partition and the volume group in a single call
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_disklabel_type: gpt
+            storage_pools:
+              - name: "{{ unused_disks[0] }}"
+                type: partition
+                disks: ["{{ unused_disks[0] }}"]
+                volumes:
+                  - name: "1"
+                    type: partition
+                    size: "0"
+                    fs_type: lvmpv
+              - name: foo
+                type: lvm
+                disks: ["{{ __part1 }}"]
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    fs_type: ext4
+
+        - name: Get the PVs
+          command: pvs --noheadings -o pv_name,vg_name
+          register: __pvs
+          changed_when: false
+
+        - name: Assert the partition is the PV of the volume group
+          assert:
+            that:
+              - __pvs.stdout is search(__part1 ~ '\s+foo')
+
+        - name: Repeat the single call to verify idempotence
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_disklabel_type: gpt
+            storage_pools:
+              - name: "{{ unused_disks[0] }}"
+                type: partition
+                disks: ["{{ unused_disks[0] }}"]
+                volumes:
+                  - name: "1"
+                    type: partition
+                    size: "0"
+                    fs_type: lvmpv
+              - name: foo
+                type: lvm
+                disks: ["{{ __part1 }}"]
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    fs_type: ext4
+
+        - name: Assert the second run of the single call changed nothing
+          assert:
+            that: not blivet_output.changed
+
+        - name: Remove the volume group and destroy the partition by default - 2
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                state: absent
+                volumes: []
+
+        - name: Verify role results after destroying the partition - 2
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the partition created by the role was destroyed
+          command: parted -s {{ __disk }} print
+          register: __parted_destroyed2
+          changed_when: false
+          failed_when: "' 1 ' in __parted_destroyed2.stdout"
+
+        # 3. adding a second partition to the VG and removing it again
+        - name: Wipe the disk - 2
+          command: wipefs --all --force {{ __disk }}
+          changed_when: true
+
+        - name: Create two partitions
+          command: >-
+            parted -s {{ __disk }} mklabel gpt
+            mkpart primary 1MiB 50% mkpart primary 50% 100%
+          changed_when: true
+
+        - name: Wait for the partitions to appear
+          command: udevadm settle
+          changed_when: false
+
+        - name: Create a volume group on the first partition
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+
+        - name: Add the second partition to the volume group
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}", "{{ __part2 }}"]
+
+        - name: Verify role results - 4
+          include_tasks: verify-role-results.yml
+
+        - name: Remove the second partition from the volume group
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_destroy_partition_device: false
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+
+        - name: Verify role results - 5
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the removed member partition still exists
+          command: parted -s {{ __disk }} print
+          register: __parted2
+          changed_when: false
+          failed_when: "' 2 ' not in __parted2.stdout"
+
+        - name: Check the PV signature on the removed member
+          command: blkid -p -o value -s TYPE {{ __part2 }}
+          register: __blkid3
+          changed_when: false
+          failed_when: false
+
+        - name: Assert no PV signature remains on the removed member
+          assert:
+            that: __blkid3.stdout | trim | length == 0
+
+        - name: Remove the remaining volume group
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                state: absent
+                volumes: []
+
+        # 4. safe mode must not wipe a partition that holds a file system
+        - name: Wipe the disk - 3
+          command: wipefs --all --force {{ __disk }}
+          changed_when: true
+
+        - name: Create a partition with a file system
+          command: >-
+            parted -s {{ __disk }} mklabel gpt mkpart primary 1MiB 100%
+          changed_when: true
+
+        - name: Wait for the partition to appear - 3
+          command: udevadm settle
+          changed_when: false
+
+        - name: Create the file system
+          command: mkfs.ext4 -F {{ __part1 }}
+          changed_when: true
+
+        - name: Verify that the role refuses in safe mode
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: >-
+              cannot remove existing formatting .+? and/or devices on
+              disk .+?pool .+?in safe mode
+            __storage_failed_msg: >-
+              Role did not report the correct message about making changes
+              in safe mode
+            __storage_failed_params:
+              storage_safe_mode: true
+              storage_pools:
+                - name: foo
+                  disks: ["{{ __part1 }}"]
+
+        - name: Check that the file system is still there
+          command: blkid -p -o value -s TYPE {{ __part1 }}
+          register: __blkid2
+          changed_when: false
+          failed_when: __blkid2.stdout | trim != 'ext4'
+
+      always:
+        - name: Remove any leftover volume group
+          command: vgremove -ff -y foo
+          changed_when: true
+          failed_when: false
+
+        - name: Wipe signatures from the partition at the end
+          command: wipefs --all --force {{ __part1 }}
+          changed_when: true
+          failed_when: false
+
+        - name: Wipe the disk at the end
+          command: wipefs --all --force {{ __disk }}
+          changed_when: true
+          failed_when: false

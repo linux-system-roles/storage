@@ -306,6 +306,10 @@ options:
     use_partitions:
         description: boolean indicating whether to create partitions on disks for pool backing devices
         type: bool
+    destroy_partition_device:
+        description: boolean indicating whether to destroy partition devices when removing pools
+        type: bool
+        default: true
     diskvolume_mkfs_option_map:
         description:
             - dict which maps filesystem names to additional mkfs options that should be used
@@ -447,6 +451,7 @@ if BLIVET_PACKAGE:
 MAX_TRIM_PERCENT = 2
 
 use_partitions = None  # create partitions on pool backing device disks?
+destroy_partition_device = None  # destroy partition backing devices when removing pools?
 disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
 pool_defaults = dict()
@@ -1585,6 +1590,12 @@ class BlivetPool(BlivetBase):
                 log.info("scheduling destruction of %s", ancestor.name)
                 if ancestor.is_disk:
                     self._blivet.devicetree.recursive_remove(ancestor)
+                elif ancestor.type == "partition" and ancestor in self._disks:
+                    # partition specified by the user: wipe its contents first,
+                    # then optionally destroy the partition itself
+                    self._blivet.devicetree.recursive_remove(ancestor, remove_device=False)
+                    if destroy_partition_device:
+                        self._blivet.destroy_device(ancestor)
                 else:
                     self._blivet.destroy_device(ancestor)
 
@@ -1694,6 +1705,18 @@ class BlivetPool(BlivetBase):
                     self._pool[name] = default
 
     def _create_one_member(self, disk):
+        # an existing partition specified by the user is used as the member as it is:
+        # never delete the partition itself, only what is on it
+        is_partition = disk.type == "partition"
+
+        if is_partition and disk.is_extended:
+            raise BlivetAnsibleError("'%s' specified for pool '%s' is not a usable partition" % (disk.name, self._pool['name']))
+
+        if is_partition and not disk.format.exists and disk.format.type == ("mdmember" if self._is_raid else self._get_format().type):
+            # the partition is scheduled for creation in this very run (e.g. by a partition volume
+            # with fs_type 'lvmpv') and already has the right format
+            return disk
+
         if not disk.isleaf or disk.format.type is not None:
             if safe_mode and disk.format.name != get_format(None).name:
                 raise BlivetAnsibleError(
@@ -1701,9 +1724,9 @@ class BlivetPool(BlivetBase):
                     (disk.format.type, disk.name, self._pool['name'])
                 )
             else:
-                self._blivet.devicetree.recursive_remove(disk)
+                self._blivet.devicetree.recursive_remove(disk, remove_device=not is_partition)
 
-        if use_partitions:
+        if use_partitions and not is_partition:
             label = get_format("disklabel", device=disk.path)
             self._blivet.format_device(disk, label)
             member = self._blivet.new_partition(parents=[disk], size=Size("256MiB"), grow=True)
@@ -1716,7 +1739,7 @@ class BlivetPool(BlivetBase):
         else:
             self._blivet.format_device(member, self._get_format())
 
-        if use_partitions:
+        if use_partitions and not is_partition:
             try:
                 do_partitioning(self._blivet)
             except Exception:
@@ -2004,6 +2027,13 @@ class BlivetLVMPool(BlivetPool):
                                                                                               str(e)))
             # XXX workaround for https://github.com/storaged-project/blivet/pull/1040
             pv.format.vg_name = None
+
+            if pv.raw_device.type == "partition" and not use_partitions:
+                # partition specified by the user: wipe it, and optionally keep the partition
+                # and the disklabel
+                self._blivet.devicetree.recursive_remove(pv.raw_device,
+                                                         remove_device=bool(destroy_partition_device))
+                continue
 
             self._blivet.devicetree.recursive_remove(pv.raw_device)
 
@@ -2491,6 +2521,7 @@ def run_module():
         pool_defaults=dict(type='dict', required=False),
         volume_defaults=dict(type='dict', required=False),
         use_partitions=dict(type='bool', required=False),
+        destroy_partition_device=dict(type='bool', required=False, default=True),
         diskvolume_mkfs_option_map=dict(type='dict', required=False, default={}),
         uses_kmod_kvdo=dict(type='bool', required=False, default=False),
     )
@@ -2536,6 +2567,9 @@ def run_module():
 
     global use_partitions
     use_partitions = module.params['use_partitions']
+
+    global destroy_partition_device
+    destroy_partition_device = module.params['destroy_partition_device']
 
     global safe_mode
     safe_mode = module.params['safe_mode']
