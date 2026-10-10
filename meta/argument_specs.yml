@@ -23,6 +23,13 @@ argument_specs:
           Whether to operate in safe mode. When `true`, the role
           fails instead of implicitly removing existing devices
           or formatting.
+      storage_destroy_partition_device:
+        type: bool
+        default: true
+        description: >
+          Whether to destroy partition devices when removing pools.
+          When `false`, partition contents are removed but the
+          partition device itself is preserved.
       storage_use_partitions:
         type: raw
         default: null

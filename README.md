@@ -92,10 +92,12 @@ keys:
 
   For LVM pools an existing partition (like `sdb1` or `/dev/disk/by-partlabel/data`) can be
   listed instead of a whole disk and is used as a physical volume as it is. The partition
-  itself is never created, resized or deleted by the role: anything on it is removed
-  (not in `storage_safe_mode`) and it is formatted as a PV; when the pool or the member is
-  removed the partition is wiped but kept, as is the partition table. Extended partitions
-  cannot be used. `storage_use_partitions` does not apply to members that are already partitions.
+  itself is never created or resized by the role: anything on it is removed
+  (not in `storage_safe_mode`) and it is formatted as a PV. When the pool is removed
+  or the partition is removed from the pool, the partition is destroyed by default. Set `storage_destroy_partition_device` to
+  `false` to wipe the partition contents while preserving the partition itself and
+  the partition table. Extended partitions cannot be used. `storage_use_partitions`
+  does not apply to members that are already partitions.
 
   For LVM pools this can be also used to add and remove disks to/from an existing pool.
   Disks in the list that are not used by the pool will be added to the pool.
@@ -395,6 +397,12 @@ variables:
 ### `storage_safe_mode`
 
 When true (the default), an error will occur instead of automatically removing existing devices and/or formatting.
+
+### `storage_destroy_partition_device`
+
+When true (the default), partitions that were given as pool members in `disks` are
+destroyed when the pool is removed or when they are removed from the pool. When false,
+only the contents of such partitions are wiped; the partition and the partition table are kept.
 
 ### `storage_udevadm_trigger`
 
