@@ -275,7 +275,72 @@
                 state: absent
                 volumes: []
 
-        # 4. safe mode must not wipe a partition that holds a file system
+        # 4. removing a listed partition from the VG while storage_use_partitions is true
+        - name: Wipe the disk for the use_partitions member removal test
+          command: wipefs --all --force {{ __disk }}
+          changed_when: true
+
+        - name: Create two partitions for the use_partitions member removal test
+          command: >-
+            parted -s {{ __disk }} mklabel gpt
+            mkpart primary 1MiB 50% mkpart primary 50% 100%
+          changed_when: true
+
+        - name: Wait for the partitions to appear for the use_partitions test
+          command: udevadm settle
+          changed_when: false
+
+        - name: Create a volume group on both partitions with storage_use_partitions
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_use_partitions: true
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}", "{{ __part2 }}"]
+
+        - name: Verify role results - use_partitions member removal setup
+          include_tasks: verify-role-results.yml
+
+        - name: Remove the second listed partition from the volume group and keep it
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_use_partitions: true
+            storage_destroy_partition_device: false
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+
+        - name: Verify role results - use_partitions member removal
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the removed member partition still exists with use_partitions
+          command: parted -s {{ __disk }} print
+          register: __parted_up_member
+          changed_when: false
+          failed_when: >-
+            'gpt' not in __parted_up_member.stdout
+            or ' 2 ' not in __parted_up_member.stdout
+
+        - name: Check the PV signature on the removed member with use_partitions
+          command: blkid -p -o value -s TYPE {{ __part2 }}
+          register: __blkid_up_member
+          changed_when: false
+          failed_when: false
+
+        - name: Assert no PV signature remains on the removed member with use_partitions
+          assert:
+            that: __blkid_up_member.stdout | trim | length == 0
+
+        - name: Remove the remaining volume group for the use_partitions test
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                state: absent
+                volumes: []
+
+        # 5. safe mode must not wipe a partition that holds a file system
         - name: Wipe the disk - 3
           command: wipefs --all --force {{ __disk }}
           changed_when: true
