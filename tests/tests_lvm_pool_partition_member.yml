@@ -319,13 +319,16 @@
           command: vgremove -ff -y foo
           changed_when: true
           failed_when: false
+          tags: tests::cleanup
 
         - name: Wipe signatures from the partition at the end
           command: wipefs --all --force {{ __part1 }}
           changed_when: true
           failed_when: false
+          tags: tests::cleanup
 
         - name: Wipe the disk at the end
           command: wipefs --all --force {{ __disk }}
           changed_when: true
           failed_when: false
+          tags: tests::cleanup
