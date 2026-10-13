@@ -2028,11 +2028,10 @@ class BlivetLVMPool(BlivetPool):
             # XXX workaround for https://github.com/storaged-project/blivet/pull/1040
             pv.format.vg_name = None
 
-            if pv.raw_device.type == "partition" and not use_partitions:
-                # partition specified by the user: wipe it, and optionally keep the partition
-                # and the disklabel
-                self._blivet.devicetree.recursive_remove(pv.raw_device,
-                                                         remove_device=bool(destroy_partition_device))
+            if pv.raw_device.type == "partition" and not destroy_partition_device:
+                # any partition member (listed by the user or not): only wipe it, keep the
+                # partition and the disklabel
+                self._blivet.devicetree.recursive_remove(pv.raw_device, remove_device=False)
                 continue
 
             self._blivet.devicetree.recursive_remove(pv.raw_device)
