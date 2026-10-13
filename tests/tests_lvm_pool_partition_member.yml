@@ -340,7 +340,61 @@
                 state: absent
                 volumes: []
 
-        # 5. safe mode must not wipe a partition that holds a file system
+        # 5. removing a pool by name only must keep the partitions when asked to
+        - name: Wipe the disk for the name only removal test
+          command: wipefs --all --force {{ __disk }}
+          changed_when: true
+
+        - name: Create a partition for the name only removal test
+          command: parted -s {{ __disk }} mklabel gpt mkpart primary 1MiB 100%
+          changed_when: true
+
+        - name: Wait for the partition to appear for the name only removal test
+          command: udevadm settle
+          changed_when: false
+
+        - name: Create a volume group on the existing partition for the name only removal test
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                disks: ["{{ __part1 }}"]
+                volumes:
+                  - name: test1
+                    size: "{{ volume_size }}"
+                    fs_type: ext4
+
+        - name: Remove the volume group by name only and preserve the partition
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_destroy_partition_device: false
+            storage_pools:
+              - name: foo
+                state: absent
+                volumes: []
+
+        - name: Verify role results after the name only removal
+          include_tasks: verify-role-results.yml
+
+        - name: Check that the partition and the partition table survived the name only removal
+          command: parted -s {{ __disk }} print
+          register: __parted_name_only
+          changed_when: false
+          failed_when: >-
+            'gpt' not in __parted_name_only.stdout
+            or ' 1 ' not in __parted_name_only.stdout
+
+        - name: Check the PV signature after the name only removal
+          command: blkid -p -o value -s TYPE {{ __part1 }}
+          register: __blkid_name_only
+          changed_when: false
+          failed_when: false
+
+        - name: Assert there is no PV signature left after the name only removal
+          assert:
+            that: __blkid_name_only.stdout | trim | length == 0
+
+        # 6. safe mode must not wipe a partition that holds a file system
         - name: Wipe the disk - 3
           command: wipefs --all --force {{ __disk }}
           changed_when: true
