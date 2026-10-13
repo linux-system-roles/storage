@@ -96,8 +96,10 @@ keys:
   (not in `storage_safe_mode`) and it is formatted as a PV. When the pool is removed
   or the partition is removed from the pool, the partition is destroyed by default. Set `storage_destroy_partition_device` to
   `false` to wipe the partition contents while preserving the partition itself and
-  the partition table. Extended partitions cannot be used. `storage_use_partitions`
-  does not apply to members that are already partitions.
+  the partition table. This applies to every partition below the pool, also when the
+  pool is removed without repeating `disks`, and also to partitions that were created
+  by the role because of `storage_use_partitions`. Extended partitions cannot be used.
+  `storage_use_partitions` does not apply to members that are already partitions.
 
   For LVM pools this can be also used to add and remove disks to/from an existing pool.
   Disks in the list that are not used by the pool will be added to the pool.
