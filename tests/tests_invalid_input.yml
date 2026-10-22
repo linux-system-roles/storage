@@ -2,6 +2,13 @@
 ---
 - name: Verify invalid parameters are rejected
   hosts: all
+  vars:
+    __invalid_input_failure_messages: >-
+      {{ ([ansible_failed_result.msg | default('') | string,
+           ansible_failed_result.msg.msg | default('') | string]
+          + (ansible_failed_result.results | default([])
+             | map(attribute='msg') | map('default', '') | list))
+         | join(' ') }}
   tasks:
     - name: Run invalid input tests
       block:
@@ -31,8 +38,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_safe_mode_type_failed: true
                   when: >-
-                    'is of type' in
-                    (ansible_failed_result | default({}) | to_json)
+                    "argument 'storage_safe_mode'" in
+                    __invalid_input_failure_messages and
+                    'convert to bool' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid storage_safe_mode type was rejected
               ansible.builtin.assert:
@@ -57,8 +66,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_udevadm_trigger_type_failed: true
                   when: >-
-                    'is of type' in
-                    (ansible_failed_result | default({}) | to_json)
+                    "argument 'storage_udevadm_trigger'" in
+                    __invalid_input_failure_messages and
+                    'convert to bool' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid storage_udevadm_trigger type was rejected
               ansible.builtin.assert:
@@ -83,8 +94,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_volumes_type_failed: true
                   when: >-
-                    'is of type' in
-                    (ansible_failed_result | default({}) | to_json)
+                    "Elements value for option 'storage_volumes'" in
+                    __invalid_input_failure_messages and
+                    'convert to dict' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid storage_volumes type was rejected
               ansible.builtin.assert:
@@ -109,8 +122,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_pools_type_failed: true
                   when: >-
-                    'is of type' in
-                    (ansible_failed_result | default({}) | to_json)
+                    "Elements value for option 'storage_pools'" in
+                    __invalid_input_failure_messages and
+                    'convert to dict' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid storage_pools type was rejected
               ansible.builtin.assert:
@@ -137,8 +152,8 @@
                   ansible.builtin.set_fact:
                     __invalid_input_pool_missing_name_failed: true
                   when: >-
-                    'missing required arguments' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'missing required arguments: name found in storage_pools' in
+                    __invalid_input_failure_messages
 
             - name: Assert missing pool name was rejected
               ansible.builtin.assert:
@@ -165,8 +180,8 @@
                   ansible.builtin.set_fact:
                     __invalid_input_vol_missing_name_failed: true
                   when: >-
-                    'missing required arguments' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'missing required arguments: name found in storage_volumes' in
+                    __invalid_input_failure_messages
 
             - name: Assert missing volume name was rejected
               ansible.builtin.assert:
@@ -194,8 +209,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_pool_type_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of type must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_type found in storage_pools' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid pool type was rejected
               ansible.builtin.assert:
@@ -222,8 +239,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_vol_state_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of state must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_state found in storage_volumes' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid volume state was rejected
               ansible.builtin.assert:
@@ -250,8 +269,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_mount_id_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of mount_device_identifier must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_id found in storage_volumes' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid mount_device_identifier was rejected
               ansible.builtin.assert:
@@ -278,8 +299,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_cache_mode_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of cache_mode must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_mode found in storage_volumes' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid cache_mode was rejected
               ansible.builtin.assert:
@@ -306,8 +329,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_vol_type_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of type must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_type found in storage_volumes' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid volume type was rejected
               ansible.builtin.assert:
@@ -334,8 +359,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_part_type_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of part_type must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_part found in storage_volumes' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid part_type was rejected
               ansible.builtin.assert:
@@ -363,8 +390,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_pool_raid_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of raid_level must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_level found in storage_pools' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid pool raid_level was rejected
               ansible.builtin.assert:
@@ -392,8 +421,10 @@
                   ansible.builtin.set_fact:
                     __invalid_input_clevis_pin_choice_failed: true
                   when: >-
-                    'must be one of' in
-                    (ansible_failed_result | default({}) | to_json)
+                    'value of encryption_clevis_pin must be one of' in
+                    __invalid_input_failure_messages and
+                    'got: invalid_pin found in storage_pools' in
+                    __invalid_input_failure_messages
 
             - name: Assert invalid encryption_clevis_pin was rejected
               ansible.builtin.assert:
@@ -422,8 +453,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_use_partitions_str_failed: true
               when: >-
-                'storage_use_partitions must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_use_partitions must be null or a boolean' in
+                __invalid_input_failure_messages and
+                ('got str' in __invalid_input_failure_messages or
+                 'got AnsibleUnicode' in __invalid_input_failure_messages)
 
         - name: Assert storage_use_partitions as string was rejected
           ansible.builtin.assert:
@@ -448,8 +481,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_use_partitions_int_failed: true
               when: >-
-                'storage_use_partitions must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_use_partitions must be null or a boolean, got int' in
+                __invalid_input_failure_messages
 
         - name: Assert storage_use_partitions as integer was rejected
           ansible.builtin.assert:
@@ -474,8 +507,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_disklabel_type_int_failed: true
               when: >-
-                'storage_disklabel_type must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_disklabel_type must be null or a string, got int' in
+                __invalid_input_failure_messages
 
         - name: Assert storage_disklabel_type as integer was rejected
           ansible.builtin.assert:
@@ -500,8 +533,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_disklabel_type_bool_failed: true
               when: >-
-                'storage_disklabel_type must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_disklabel_type must be null or a string, got bool' in
+                __invalid_input_failure_messages
 
         - name: Assert storage_disklabel_type as boolean was rejected
           ansible.builtin.assert:
@@ -530,8 +563,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_vol_size_bool_failed: true
               when: >-
-                'size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_volumes[0].size must be a non-negative' in
+                __invalid_input_failure_messages and
+                'got bool: True' in
+                __invalid_input_failure_messages
 
         - name: Assert volume size as boolean was rejected
           ansible.builtin.assert:
@@ -560,8 +595,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_vol_cache_size_bool_failed: true
               when: >-
-                'cache_size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_volumes[0].cache_size must be a non-negative' in
+                __invalid_input_failure_messages and
+                'got bool: True' in
+                __invalid_input_failure_messages
 
         - name: Assert volume cache_size as boolean was rejected
           ansible.builtin.assert:
@@ -591,8 +628,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_pool_vol_size_bool_failed: true
               when: >-
-                'size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_pools[testpool].volumes[].size must be' in
+                __invalid_input_failure_messages and
+                'got bool: True' in
+                __invalid_input_failure_messages
 
         - name: Assert pool volume size as boolean was rejected
           ansible.builtin.assert:
@@ -622,8 +661,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_pool_vol_cache_size_bool_failed: true
               when: >-
-                'cache_size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_pools[testpool].volumes[].cache_size must' in
+                __invalid_input_failure_messages and
+                'got bool: True' in
+                __invalid_input_failure_messages
 
         - name: Assert pool volume cache_size as boolean was rejected
           ansible.builtin.assert:
@@ -652,8 +693,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_vol_size_neg_failed: true
               when: >-
-                'size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_volumes[0].size must be a non-negative' in
+                __invalid_input_failure_messages and
+                'got int: -1' in
+                __invalid_input_failure_messages
 
         - name: Assert volume size as negative integer was rejected
           ansible.builtin.assert:
@@ -682,8 +725,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_vol_cache_size_neg_failed: true
               when: >-
-                'cache_size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_volumes[0].cache_size must be a non-negative' in
+                __invalid_input_failure_messages and
+                'got int: -5' in
+                __invalid_input_failure_messages
 
         - name: Assert volume cache_size as negative integer was rejected
           ansible.builtin.assert:
@@ -713,8 +758,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_pool_vol_size_neg_failed: true
               when: >-
-                'size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_pools[testpool].volumes[].size must be' in
+                __invalid_input_failure_messages and
+                'got int: -10' in
+                __invalid_input_failure_messages
 
         - name: Assert pool volume size as negative integer was rejected
           ansible.builtin.assert:
@@ -744,8 +791,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_pool_vol_cache_size_neg_failed: true
               when: >-
-                'cache_size must be' in
-                (ansible_failed_result | default({}) | to_json)
+                'storage_pools[testpool].volumes[].cache_size must' in
+                __invalid_input_failure_messages and
+                'got int: -3' in
+                __invalid_input_failure_messages
 
         - name: Assert pool volume cache_size as negative int was rejected
           ansible.builtin.assert:
