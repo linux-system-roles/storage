@@ -6,6 +6,7 @@ blivet_package_list:
   - libblockdev-fs
   - libblockdev-lvm
   - libblockdev-mdraid
+  - mdadm
   - libblockdev-swap
   - xfsprogs
   # XXX libblockdev-s390 is available only on s390 so just add 'libblockdev' everywhere
