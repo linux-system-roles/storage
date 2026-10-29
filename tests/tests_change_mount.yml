@@ -71,3 +71,119 @@
 
     - name: Verify role results - 4
       include_tasks: verify-role-results.yml
+
+- name: Test that mounts are done in the order of the mount point hierarchy
+  hosts: all
+  become: true
+  vars:
+    # The pool with the nested mount points is deliberately configured before
+    # the pool that holds their parent, and within that pool the deepest mount
+    # point comes first. The role has to mount the parents first anyway.
+    mount_order_top: '/opt/test_order'
+    mount_order_sub: '/opt/test_order/sub'
+    mount_order_deep: '/opt/test_order/sub/deep'
+    mount_order_prefix: "{{ '/var' if __storage_is_ostree | d(false) else '' }}"
+    volume_size: '2g'
+    __storage_min_size: "{{ volume_size }}"
+    __storage_max_return: 2
+    __storage_disks_needed: 2
+  tags:
+    - tests::lvm
+
+  tasks:
+    - name: Prep storage role and discover unused disks
+      ansible.builtin.include_tasks: tasks/setup.yml
+
+    - name: Create pools with the nested mount points before their parent
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
+        storage_pools:
+          - name: foo_nested
+            disks: "{{ [unused_disks[0]] }}"
+            volumes:
+              - name: deep
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_deep }}"
+              - name: sub
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_sub }}"
+          - name: foo_parent
+            disks: "{{ [unused_disks[1]] }}"
+            volumes:
+              - name: top
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_top }}"
+
+    - name: Verify role results
+      include_tasks: verify-role-results.yml
+
+    - name: Get the mount ids of the mount points, parent first
+      command: >-
+        findmnt --raw --noheadings --output ID
+        --mountpoint {{ mount_order_prefix ~ item }}
+      loop:
+        - "{{ mount_order_top }}"
+        - "{{ mount_order_sub }}"
+        - "{{ mount_order_deep }}"
+      register: __mount_order_ids
+      changed_when: false
+
+    - name: Verify that the parents are mounted before their children
+      vars:
+        __ids: "{{ __mount_order_ids.results | map(attribute='stdout') | map('int') | list }}"
+      assert:
+        that:
+          - __ids | length == 3
+          - __ids == __ids | sort
+          - __ids | unique | list | length == 3
+        msg: >-
+          The mounts of {{ mount_order_top }}, {{ mount_order_sub }} and
+          {{ mount_order_deep }} were not done in this order (mount ids: {{ __ids }})
+
+    - name: Repeat the previous invocation to verify idempotence
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
+        storage_pools:
+          - name: foo_nested
+            disks: "{{ [unused_disks[0]] }}"
+            volumes:
+              - name: deep
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_deep }}"
+              - name: sub
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_sub }}"
+          - name: foo_parent
+            disks: "{{ [unused_disks[1]] }}"
+            volumes:
+              - name: top
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_top }}"
+
+    - name: Verify role results - 2
+      include_tasks: verify-role-results.yml
+
+    - name: Clean up
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
+        storage_pools:
+          - name: foo_nested
+            disks: "{{ [unused_disks[0]] }}"
+            state: absent
+            volumes:
+              - name: deep
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_deep }}"
+              - name: sub
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_sub }}"
+          - name: foo_parent
+            disks: "{{ [unused_disks[1]] }}"
+            state: absent
+            volumes:
+              - name: top
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_order_top }}"
+
+    - name: Verify role results - 3
+      include_tasks: verify-role-results.yml
