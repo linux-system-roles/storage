@@ -2298,6 +2298,16 @@ def get_mount_info(pools, volumes, actions, fstab):
             if mounted:
                 mount_vols.append(volume)
 
+    # mount parents before their children (e.g. / before /boot before /boot/efi)
+    # regardless of the order of the pools and volumes in the configuration;
+    # the sort is stable, so unrelated mounts and swap keep their order
+    def mount_depth(volume):
+        if volume['fs_type'] == "swap":
+            return 0
+        return len([part for part in volume['mount_point'].split('/') if part])
+
+    mount_vols.sort(key=mount_depth)
+
     for volume in mount_vols:
         mount_info.append({'src': volume['_mount_id'],
                            'path': volume['mount_point'] if volume['fs_type'] != "swap" else "none",
