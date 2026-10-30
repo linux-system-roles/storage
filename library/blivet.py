@@ -2308,10 +2308,14 @@ def get_mount_info(pools, volumes, actions, fstab):
 
     mount_vols.sort(key=mount_depth)
 
+    # the type to mount with can differ from the type to create, e.g. efi is mounted as vfat
+    def mount_fstype(volume):
+        return getattr(get_format(volume['fs_type']), 'mount_type', None) or volume['fs_type']
+
     for volume in mount_vols:
         mount_info.append({'src': volume['_mount_id'],
                            'path': volume['mount_point'] if volume['fs_type'] != "swap" else "none",
-                           'fstype': volume['fs_type'],
+                           'fstype': mount_fstype(volume),
                            'opts': volume['mount_options'],
                            'dump': volume['mount_check'],
                            'passno': volume['mount_passno'],
