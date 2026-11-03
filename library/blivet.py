@@ -2310,7 +2310,7 @@ def get_mount_info(pools, volumes, actions, fstab):
 
     # the type to mount with can differ from the type to create, e.g. efi is mounted as vfat
     def mount_fstype(volume):
-        return getattr(get_format(volume['fs_type']), 'mount_type', None) or volume['fs_type']
+        return getattr(get_format(volume['fs_type']), 'mount_type', volume['fs_type'])
 
     for volume in mount_vols:
         mount_info.append({'src': volume['_mount_id'],
