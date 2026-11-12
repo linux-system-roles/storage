@@ -375,10 +375,10 @@
                   encryption: true
                   encryption_luks_version: luks2
 
-    - name: Create an encrypted lvm volume w/ default fs
+    - name: Create an encrypted lvm volume w/ default fs in safe mode
       include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
-        storage_safe_mode: false
+        storage_safe_mode: true
         storage_pools:
           - name: foo
             type: lvm
@@ -399,7 +399,7 @@
     - name: Verify preservation of encryption settings on existing LVM volume
       include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
-        storage_safe_mode: false
+        storage_safe_mode: true
         storage_pools:
           - name: foo
             type: lvm

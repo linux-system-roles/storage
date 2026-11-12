@@ -497,8 +497,11 @@ class BlivetBase(object):
         if device == device.raw_device and self._spec_dict['encryption']:
             # add luks
             luks_name = "luks-%s" % device._name
-            if safe_mode and (device.original_format.type is not None
-                              or device.original_format.name != get_format(None).name):
+            # Assisted by OpenCode using model GPT-6.1 Sol
+            # New devices can already have a planned format that does not exist yet.
+            if safe_mode and device.original_format.exists and (
+                    device.original_format.type is not None
+                    or device.original_format.name != get_format(None).name):
                 raise BlivetAnsibleError("cannot remove existing formatting on device '%s' in safe mode due to adding encryption" %
                                          device._name)
             if not device.format.exists:
