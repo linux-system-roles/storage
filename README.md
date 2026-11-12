@@ -296,6 +296,13 @@ variables:
               all data on that volume will be removed as part of the process of
               adding/removing the encryption layer.
 
+  Providing a passphrase or key file lets the role reopen a closed encrypted
+  volume to inspect its existing filesystem. In check mode, mappings opened for
+  this inspection are closed again before the module returns, including on
+  failure. Mappings that were already open are left open. Check mode does not
+  mount or reformat the filesystem. Failure to close a temporary mapping is
+  reported as an error.
+
 - `encryption_password`
 
   This string specifies a password or passphrase used to unlock/open the LUKS volume.

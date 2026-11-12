@@ -345,6 +345,52 @@
 
         - name: Verify role results - 6
           include_tasks: verify-role-results.yml
+
+        # Assisted by OpenCode using model GPT-6.1 Sol
+        - name: Create test file before key-file reopening
+          import_tasks: create-test-file.yml
+
+        - name: Record identifiers before reopening a key-file volume
+          set_fact:
+            storage_test_luks_device: "{{ blivet_output.pools[0].volumes[0]._device }}"
+            storage_test_luks_mount_id: "{{ blivet_output.pools[0].volumes[0]._mount_id }}"
+
+        - name: Unmount the key-file volume
+          command:
+            argv: [umount, --, "{{ mount_location }}"]
+          changed_when: true
+
+        - name: Close the key-file volume
+          command:
+            argv: [cryptsetup, close, "{{ storage_test_luks_device | basename }}"]
+          changed_when: true
+
+        - name: Reopen the volume with its key file in safe mode
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_key: "{{ storage_test_key_file.path }}"
+                    encryption_luks_version: luks2
+
+        - name: Assert preservation of the reopened key-file volume
+          assert:
+            that:
+              - not blivet_output.changed
+              - blivet_output.pools[0].volumes[0]._device == storage_test_luks_device
+              - blivet_output.pools[0].volumes[0]._mount_id == storage_test_luks_mount_id
+
+        - name: Verify data preservation after key-file reopening
+          import_tasks: verify-data-preservation.yml
       always:
         - name: Remove the key file
           file:
@@ -396,10 +442,31 @@
     - name: Verify role results - 7
       include_tasks: verify-role-results.yml
 
-    - name: Verify preservation of encryption settings on existing LVM volume
-      include_tasks: tasks/run_role_with_clear_facts.yml
+    - name: Create test file - 5
+      import_tasks: create-test-file.yml
+
+    - name: Record identifiers before reopening the LVM volume
+      set_fact:
+        storage_test_luks_device: "{{ blivet_output.pools[0].volumes[0]._device }}"
+        storage_test_luks_mount_id: "{{ blivet_output.pools[0].volumes[0]._mount_id }}"
+
+    - name: Unmount the LVM volume
+      command:
+        argv: [umount, --, "{{ mount_location }}"]
+      changed_when: true
+
+    - name: Close the LVM volume
+      command:
+        argv: [cryptsetup, close, "{{ storage_test_luks_device | basename }}"]
+      changed_when: true
+
+    - name: Check reopening without leaving the LVM mapping open
+      include_tasks:
+        file: tasks/run_role_with_clear_facts.yml
+        apply:
+          check_mode: true
       vars:
-        storage_safe_mode: false
+        storage_safe_mode: true
         storage_pools:
           - name: foo
             type: lvm
@@ -408,6 +475,30 @@
               - name: test1
                 mount_point: "{{ mount_location }}"
                 size: 4g
+                encryption_password: yabbadabbadoo
+
+    - name: Inspect the mapping after check mode
+      stat:
+        path: "{{ storage_test_luks_device }}"
+      register: storage_test_luks_after_check
+
+    - name: Assert that check mode restored the closed mapping
+      assert:
+        that: not storage_test_luks_after_check.stat.exists
+
+    - name: Verify preservation of encryption settings on a reopened LVM volume
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
+        storage_safe_mode: true
+        storage_pools:
+          - name: foo
+            type: lvm
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                mount_point: "{{ mount_location }}"
+                size: 4g
+                encryption_password: yabbadabbadoo
 
     - name: Assert preservation of encryption settings on existing LVM volume
       assert:
@@ -415,12 +506,14 @@
           - not blivet_output.changed
           - blivet_output.pools[0].volumes[0].encryption
           - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks2'
+          - blivet_output.pools[0].volumes[0]._device == storage_test_luks_device
+          - blivet_output.pools[0].volumes[0]._mount_id == storage_test_luks_mount_id
+
+    - name: Verify data preservation after reopening the LVM volume
+      import_tasks: verify-data-preservation.yml
 
     - name: Verify role results - 8
       include_tasks: verify-role-results.yml
-
-    - name: Create test file - 5
-      import_tasks: create-test-file.yml
 
     - name: Test for correct handling of safe_mode - 5
       include_tasks: verify-role-failed.yml
