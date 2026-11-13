@@ -356,169 +356,188 @@
     ## LVM
     ##
 
-    - name: Test for correct handling of new encrypted volume w/ no key - 3
-      include_tasks: verify-role-failed.yml
-      vars:
-        __storage_failed_regex: encrypted volume.*missing key
-        __storage_failed_msg: >-
-          Unexpected behavior w/ encrypted pool w/ no key
-        __storage_failed_params:
-          storage_safe_mode: false
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  mount_point: "{{ mount_location }}"
-                  size: 4g
-                  encryption: true
-                  encryption_luks_version: luks2
+    # Assisted by OpenCode using model GPT-6.1 Sol
+    - name: Test encrypted LVM volumes with guaranteed cleanup
+      block:
+        - name: Remove the partition fixture before safe-mode LVM creation
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools: []
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                state: absent
+          tags: tests::cleanup
 
-    - name: Create an encrypted lvm volume w/ default fs
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
-                encryption: true
-                encryption_password: yabbadabbadoo
-                encryption_luks_version: luks2
-                encryption_key_size: 512
-                encryption_cipher: "{{ __luks_cipher }}"
+        - name: Test for correct handling of new encrypted volume w/ no key - 3
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: encrypted volume.*missing key
+            __storage_failed_msg: >-
+              Unexpected behavior w/ encrypted pool w/ no key
+            __storage_failed_params:
+              storage_safe_mode: false
+              storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      mount_point: "{{ mount_location }}"
+                      size: 4g
+                      encryption: true
+                      encryption_luks_version: luks2
 
-    - name: Verify role results - 7
-      include_tasks: verify-role-results.yml
+        - name: Create an encrypted lvm volume w/ default fs in safe mode
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_password: yabbadabbadoo
+                    encryption_luks_version: luks2
+                    encryption_key_size: 512
+                    encryption_cipher: "{{ __luks_cipher }}"
 
-    - name: Verify preservation of encryption settings on existing LVM volume
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
+        - name: Verify role results - 7
+          include_tasks: verify-role-results.yml
 
-    - name: Assert preservation of encryption settings on existing LVM volume
-      assert:
-        that:
-          - not blivet_output.changed
-          - blivet_output.pools[0].volumes[0].encryption
-          - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks2'
+        - name: Verify preservation of encryption settings on existing LVM volume
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
 
-    - name: Verify role results - 8
-      include_tasks: verify-role-results.yml
+        - name: Assert preservation of encryption settings on existing LVM volume
+          assert:
+            that:
+              - not blivet_output.changed
+              - blivet_output.pools[0].volumes[0].encryption
+              - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks2'
 
-    - name: Create test file - 5
-      import_tasks: create-test-file.yml
+        - name: Verify role results - 8
+          include_tasks: verify-role-results.yml
 
-    - name: Test for correct handling of safe_mode - 5
-      include_tasks: verify-role-failed.yml
-      vars:
-        __storage_failed_regex: >-
-          cannot remove existing formatting.*in safe mode due to encryption
-          removal
-        __storage_failed_msg: >-
-          Unexpected behavior w/ existing volume in safe mode
-        __storage_failed_params:
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  mount_point: "{{ mount_location }}"
-                  size: 4g
-                  encryption: false
-                  encryption_password: yabbadabbadoo
-                  encryption_luks_version: luks2
+        - name: Create test file - 5
+          import_tasks: create-test-file.yml
 
-    - name: Verify data preservation - 5
-      import_tasks: verify-data-preservation.yml
+        - name: Test for correct handling of safe_mode - 5
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: >-
+              cannot remove existing formatting.*in safe mode due to encryption
+              removal
+            __storage_failed_msg: >-
+              Unexpected behavior w/ existing volume in safe mode
+            __storage_failed_params:
+              storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      mount_point: "{{ mount_location }}"
+                      size: 4g
+                      encryption: false
+                      encryption_password: yabbadabbadoo
+                      encryption_luks_version: luks2
 
-    - name: Remove the encryption layer - 3
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
-                encryption: false
-                encryption_password: yabbadabbadoo
-                encryption_luks_version: luks2
+        - name: Verify data preservation - 5
+          import_tasks: verify-data-preservation.yml
 
-    - name: Verify role results - 9
-      include_tasks: verify-role-results.yml
+        - name: Remove the encryption layer - 3
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: false
+                    encryption_password: yabbadabbadoo
+                    encryption_luks_version: luks2
 
-    - name: Create test file - 6
-      import_tasks: create-test-file.yml
+        - name: Verify role results - 9
+          include_tasks: verify-role-results.yml
 
-    - name: Test for correct handling of safe_mode - 6
-      include_tasks: verify-role-failed.yml
-      vars:
-        __storage_failed_regex: >-
-          cannot remove existing formatting.*in safe mode due to adding
-          encryption
-        __storage_failed_msg: >-
-          Unexpected behavior w/ existing volume in safe mode
-        __storage_failed_params:
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  mount_point: "{{ mount_location }}"
-                  size: 4g
-                  encryption: true
-                  encryption_password: yabbadabbadoo
-                  encryption_luks_version: luks2
+        - name: Create test file - 6
+          import_tasks: create-test-file.yml
 
-    - name: Verify data preservation - 6
-      import_tasks: verify-data-preservation.yml
+        - name: Test for correct handling of safe_mode - 6
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: >-
+              cannot remove existing formatting.*in safe mode due to adding
+              encryption
+            __storage_failed_msg: >-
+              Unexpected behavior w/ existing volume in safe mode
+            __storage_failed_params:
+              storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      mount_point: "{{ mount_location }}"
+                      size: 4g
+                      encryption: true
+                      encryption_password: yabbadabbadoo
+                      encryption_luks_version: luks2
 
-    - name: Add encryption to the volume - 3
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
-                encryption: true
-                encryption_password: yabbadabbadoo
-                encryption_luks_version: luks2
+        - name: Verify data preservation - 6
+          import_tasks: verify-data-preservation.yml
 
-    - name: Verify role results - 10
-      include_tasks: verify-role-results.yml
+        - name: Add encryption to the volume - 3
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_password: yabbadabbadoo
+                    encryption_luks_version: luks2
 
-    - name: Clean up
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_volumes:
-          - name: foo
-            type: disk
-            disks: "{{ unused_disks }}"
-            state: absent
+        - name: Verify role results - 10
+          include_tasks: verify-role-results.yml
+      always:
+        - name: Clean up the LVM fixture
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools: []
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                state: absent
+          tags: tests::cleanup
 
-    - name: Verify role results - 11
-      include_tasks: verify-role-results.yml
+        - name: Verify role results - 11
+          include_tasks: verify-role-results.yml
+          tags: tests::cleanup
