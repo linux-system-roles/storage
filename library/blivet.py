@@ -397,7 +397,7 @@ try:
     from blivet3 import devices
     from blivet3.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
     from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
-    from blivet3.errors import RaidError
+    from blivet3.errors import LUKSError, RaidError
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import fslib, get_format
     from blivet3.partitioning import do_partitioning, parted
@@ -414,7 +414,7 @@ except ImportError:
         from blivet import devices
         from blivet.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
         from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
-        from blivet.errors import RaidError
+        from blivet.errors import LUKSError, RaidError
         from blivet.flags import flags as blivet_flags
         from blivet.formats import fslib, get_format
         from blivet.partitioning import do_partitioning, parted
@@ -454,6 +454,8 @@ use_partitions = None  # create partitions on pool backing device disks?
 destroy_partition_device = None  # destroy partition backing devices when removing pools?
 disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
+check_mode = False
+temporary_luks_formats = []
 pool_defaults = dict()
 volume_defaults = dict()
 
@@ -476,6 +478,38 @@ def find_duplicate_names(dicts):
 
 class BlivetAnsibleError(Exception):
     pass
+
+
+def get_existing_luks_map_name(blivet_obj, device):
+    """Find an unambiguous, unused crypttab name for a closed LUKS device."""
+    if not os.path.exists('/etc/crypttab'):
+        return None
+
+    entries = []
+    with open('/etc/crypttab') as stream:
+        for line in stream:
+            if line.lstrip().startswith('#'):
+                continue
+            fields = line.split()
+            if len(fields) >= 2:
+                entries.append((fields[0], blivet_obj.devicetree.resolve_device(fields[1])))
+
+    names = set(name for name, backing in entries if backing == device)
+    if not names:
+        return None
+    if len(names) != 1:
+        raise BlivetAnsibleError("ambiguous crypttab names for device '%s'" % device.path)
+
+    name = names.pop()
+    if any(entry_name == name and backing != device for entry_name, backing in entries):
+        raise BlivetAnsibleError("ambiguous crypttab name '%s'" % name)
+    if name in ('.', '..') or '/' in name or '\x00' in name:
+        raise BlivetAnsibleError("invalid crypttab name '%s'" % name)
+
+    path = '/dev/mapper/' + name
+    if blivet_obj.devicetree.resolve_device(path) is not None or os.path.lexists(path):
+        raise BlivetAnsibleError("crypttab name '%s' is already in use" % name)
+    return name
 
 
 class BlivetBase(object):
@@ -663,14 +697,28 @@ class BlivetVolume(BlivetBase):
             return
 
         if device.format.type == 'luks':
-            # XXX If we have no key we will always re-encrypt.
-            device.format._key_file = self._volume.get('encryption_key')
-            device.format.passphrase = self._volume.get('encryption_password')
-
-            # set up the original format as well since it'll get used for processing
-            device.original_format._key_file = self._volume.get('encryption_key')
-            device.original_format.passphrase = self._volume.get('encryption_password')
+            # Assisted by OpenCode using model GPT-6.1 Sol
+            # Keep both formats configured for subsequent action processing.
+            for fmt in (device.format, device.original_format):
+                if self._volume.get('encryption_key'):
+                    fmt.key_file = self._volume['encryption_key']
+                if self._volume.get('encryption_password'):
+                    fmt.passphrase = self._volume['encryption_password']
             if device.isleaf:
+                if device.format.has_key and self._volume.get('encryption') is not False:
+                    # Populate discovers mappings but does not reopen known formats.
+                    was_open = device.format.status
+                    if not was_open:
+                        name = get_existing_luks_map_name(self._blivet, device)
+                        if name:
+                            for fmt in (device.format, device.original_format):
+                                fmt.map_name = name
+                    try:
+                        device.format.setup()
+                    except LUKSError as e:
+                        raise BlivetAnsibleError("failed to unlock volume '%s': %s" % (self._volume['name'], str(e)))
+                    if check_mode and not was_open:
+                        temporary_luks_formats.append(device.format)
                 self._blivet.devicetree.populate()
 
             if not device.isleaf:
@@ -2381,7 +2429,8 @@ def update_fstab_identifiers(b, pools, volumes):
             if device is None:
                 raise BlivetAnsibleError("failed to look up device for volume %s (%s/%s)" % (volume['name'], volume['_device'], volume['_mount_id']))
             volume['_mount_id'] = device.fstab_spec
-            if device.format.type == 'swap':
+            # Do not activate swap on a mapping opened only for check-mode inspection.
+            if device.format.type == 'swap' and not (check_mode and device.raw_device.format in temporary_luks_formats):
                 device.format.setup()
 
             if device.status:
@@ -2402,7 +2451,7 @@ def activate_swaps(b, pools, volumes):
     for volume in all_volumes:
         if volume['state'] == 'present':
             device = b.devicetree.resolve_device(volume['_mount_id'])
-            if device.format.type == 'swap':
+            if device.format.type == 'swap' and not (check_mode and device.raw_device.format in temporary_luks_formats):
                 device.format.setup()
 
 
@@ -2601,17 +2650,39 @@ def run_module():
     global uses_kmod_kvdo
     uses_kmod_kvdo = module.params['uses_kmod_kvdo']
 
+    global check_mode
+    check_mode = module.check_mode
+    del temporary_luks_formats[:]
+
+    # Finish discovery and restore temporary mappings before emitting any JSON.
+    errors = []
+    try:
+        _run_storage(module, result)
+    except Exception as e:
+        errors.append(str(e))
+    finally:
+        while temporary_luks_formats:
+            fmt = temporary_luks_formats.pop()
+            try:
+                fmt.teardown()
+            except Exception as e:
+                errors.append("failed to close temporary LUKS mapping '%s': %s" % (fmt.map_name, str(e)))
+
+    if errors:
+        module.fail_json(msg="; ".join(errors), **result)
+    module.exit_json(**result)
+
+
+def _run_storage(module, result):
+    """Collect results before returning control for cleanup and JSON output."""
     b = Blivet()
     b.reset()
     fstab = FSTab(b)
     actions = list()
 
     if module.params['packages_only']:
-        try:
-            result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
-        except BlivetAnsibleError as e:
-            module.fail_json(msg=str(e), **result)
-        module.exit_json(**result)
+        result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        return
 
     def record_action(action):
         if action.is_format and action.format.type is None:
@@ -2633,28 +2704,19 @@ def run_module():
 
     duplicates = find_duplicate_names(module.params['pools'])
     if duplicates:
-        module.fail_json(msg="multiple pools with the same name: {0}".format(",".join(duplicates)),
-                         **result)
+        raise BlivetAnsibleError("multiple pools with the same name: {0}".format(",".join(duplicates)))
     for pool in module.params['pools']:
         duplicates = find_duplicate_names(pool.get('volumes', list()))
         if duplicates:
-            module.fail_json(msg="multiple volumes in pool '{0}' with the "
-                                 "same name: {1}".format(pool['name'], ",".join(duplicates)),
-                             **result)
-        try:
-            manage_pool(b, pool)
-        except BlivetAnsibleError as e:
-            module.fail_json(msg=str(e), **result)
+            raise BlivetAnsibleError("multiple volumes in pool '{0}' with the "
+                                     "same name: {1}".format(pool['name'], ",".join(duplicates)))
+        manage_pool(b, pool)
 
     duplicates = find_duplicate_names(module.params['volumes'])
     if duplicates:
-        module.fail_json(msg="multiple volumes with the same name: {0}".format(",".join(duplicates)),
-                         **result)
+        raise BlivetAnsibleError("multiple volumes with the same name: {0}".format(",".join(duplicates)))
     for volume in module.params['volumes']:
-        try:
-            manage_volume(b, volume)
-        except BlivetAnsibleError as e:
-            module.fail_json(msg=str(e), **result)
+        manage_volume(b, volume)
 
     scheduled = b.devicetree.actions.find()
     result['packages'] = b.packages[:]
@@ -2672,7 +2734,7 @@ def run_module():
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         except Exception as e:
-            module.fail_json(msg="Failed to commit changes to disk: %s" % str(e), **result)
+            raise BlivetAnsibleError("Failed to commit changes to disk: %s" % str(e))
         finally:
             result['changed'] = True
             result['actions'] = [action_dict(a) for a in actions]
@@ -2685,9 +2747,6 @@ def run_module():
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']
-
-    # success - return result
-    module.exit_json(**result)
 
 
 def main():
