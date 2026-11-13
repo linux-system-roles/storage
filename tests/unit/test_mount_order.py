@@ -13,6 +13,17 @@ class FakeFstab(object):
         return None
 
 
+class FakeFormat(object):
+    def __init__(self, fs_type):
+        self.mount_type = "vfat" if fs_type == "efi" else fs_type
+
+
+@pytest.fixture(autouse=True)
+def mock_get_format(monkeypatch):
+    # Unit tests do not require an installed Blivet library.
+    monkeypatch.setattr(blivet, "get_format", FakeFormat, raising=False)
+
+
 def make_volume(name, mount_point, fs_type="ext4", state="present"):
     return dict(name=name,
                 state=state,
@@ -49,6 +60,7 @@ def test_pool_with_children_before_pool_with_root():
 
     assert paths(mount_info) == ["none", "/", "/boot", "/boot/efi"]
     assert [mount["state"] for mount in mount_info] == ["present", "mounted", "mounted", "mounted"]
+    assert [mount["fstype"] for mount in mount_info] == ["swap", "ext4", "ext4", "vfat"]
 
 
 def test_nested_mounts_in_reverse_order():
