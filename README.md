@@ -303,6 +303,10 @@ variables:
   mount or reformat the filesystem. Failure to close a temporary mapping is
   reported as an error.
 
+  The role temporarily masks discovered cryptsetup services during inspection,
+  including in check mode, and restores their unmasked state in its cleanup block.
+  Services already masked (persistently or at runtime) are left masked.
+
   When reopening, an unambiguous existing `/etc/crypttab` entry supplies the mapper
   name. Conflicting or occupied names cause an error; already-open mappings keep
   their names. Reopening does not rewrite crypttab or change LUKS keys or options.
