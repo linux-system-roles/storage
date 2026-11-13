@@ -1,21 +1,22 @@
 # SPDX-License-Identifier: MIT
 """The actual role expressions must preserve pre-existing service masks."""
-import pathlib
+import os
 import unittest
 
 import jinja2
 import yaml
-from ansible.plugins.test.core import TestModule
+from ansible.plugins.test.core import TestModule as AnsibleTestModule
 
 
 class TestCryptsetupServices(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        path = pathlib.Path(__file__).resolve().parents[2] / 'tasks/main-blivet.yml'
-        tasks = yaml.safe_load(path.read_text())
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+        with open(os.path.join(root, 'tasks', 'main-blivet.yml')) as stream:
+            tasks = yaml.safe_load(stream)
         cls.block = next(task for task in tasks if task['name'] == 'Manage storage devices and check for errors')
         cls.env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-        cls.env.tests.update(TestModule().tests())
+        cls.env.tests.update(AnsibleTestModule().tests())
 
     def services(self, facts):
         expression = self.block['vars']['storage_cryptsetup_services'].strip()[2:-2]
