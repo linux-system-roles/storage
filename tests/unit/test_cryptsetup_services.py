@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# Assisted by OpenCode using model GPT-6.1 Sol
 """The actual role expressions must preserve pre-existing service masks."""
 import os
 import unittest
