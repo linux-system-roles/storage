@@ -303,6 +303,11 @@ variables:
   mount or reformat the filesystem. Failure to close a temporary mapping is
   reported as an error.
 
+  When reopening, an unambiguous existing `/etc/crypttab` entry supplies the mapper
+  name. Conflicting or occupied names cause an error; already-open mappings keep
+  their names. Reopening does not rewrite crypttab or change LUKS keys or options.
+  Swap on a mapping opened only for check-mode inspection is not activated.
+
 - `encryption_password`
 
   This string specifies a password or passphrase used to unlock/open the LUKS volume.
@@ -449,6 +454,43 @@ platforms with "buggy" udev.
           fs_label: images
 
 ```
+
+### Inspect an existing encrypted volume
+
+This example checks an existing encrypted LV using a passphrase supplied by an
+encrypted variable file (for example, Ansible Vault). No plaintext passphrase is
+stored in the playbook. Alternatively, replace `encryption_password` with
+`encryption_key: /root/existing-volume.key`; the key file must already exist on
+the managed host.
+
+```yaml
+- name: Check an existing encrypted volume
+  hosts: storage_hosts
+  check_mode: true
+  vars:
+    storage_safe_mode: true
+    storage_pools:
+      - name: app
+        type: lvm
+        volumes:
+          - name: secret
+            encryption: true
+            encryption_password: "{{ vault_existing_volume_passphrase }}"
+            mount_point: /srv/secret
+  tasks:
+    - name: Inspect storage without logging credential-bearing results
+      include_role:
+        name: linux-system-roles.storage
+        apply:
+          no_log: true
+      no_log: true
+```
+
+Check mode can temporarily open the closed mapping to inspect its existing
+filesystem, but closes that temporary mapping before returning, even on failure.
+It does not mount or reformat the filesystem. A mapping that was already open
+stays open. Omitting `check_mode: true` applies the declaration normally and leaves
+the declared encrypted volume open and mounted.
 
 ## rpm-ostree
 

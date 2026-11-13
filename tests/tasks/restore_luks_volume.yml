@@ -1,0 +1,43 @@
+---
+# Restore the initially open/mounted fixture independently of the role under test.
+# Assisted by OpenCode using model GPT-6.1 Sol
+- name: Inspect the original test mapping for cleanup
+  stat:
+    path: "{{ storage_test_luks_restore.device }}"
+    follow: true
+  register: storage_test_luks_cleanup_mapping
+  tags: tests::cleanup
+
+- name: Restore the original test mapping before removing credentials
+  command:
+    argv:
+      - cryptsetup
+      - open
+      - --key-file
+      - "{{ storage_test_luks_restore.key | default('-') }}"
+      - "{{ storage_test_luks_restore.raw_device }}"
+      - "{{ storage_test_luks_restore.device | basename }}"
+    stdin: "{{ storage_test_luks_restore.password | default(omit) }}"
+    stdin_add_newline: false
+  no_log: true
+  changed_when: true
+  check_mode: false
+  when: not storage_test_luks_cleanup_mapping.stat.exists
+  tags: tests::cleanup
+
+- name: Inspect the original test mount for cleanup
+  command:
+    argv: [mountpoint, --quiet, --, "{{ mount_location }}"]
+  register: storage_test_luks_cleanup_mount
+  changed_when: false
+  failed_when: storage_test_luks_cleanup_mount.rc not in [0, 1, 32]
+  check_mode: false
+  tags: tests::cleanup
+
+- name: Restore the original test mount
+  command:
+    argv: [mount, --, "{{ mount_location }}"]
+  changed_when: true
+  check_mode: false
+  when: storage_test_luks_cleanup_mount.rc != 0
+  tags: tests::cleanup
