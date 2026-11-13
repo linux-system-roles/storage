@@ -243,11 +243,6 @@
   loop_control:
     loop_var: mount_info
 
-- name: Tell systemd to refresh its view of /etc/fstab
-  systemd:
-    daemon_reload: true
-  when: blivet_output['mounts'] | length > 0
-
 #
 # Manage /etc/crypttab
 #
@@ -256,6 +251,7 @@
     path: /etc/crypttab
   register: __storage_crypttab
 
+# Assisted by OpenCode using model GPT-6.1 Sol
 - name: Manage /etc/crypttab to account for changes we just made
   lineinfile:
     path: /etc/crypttab
@@ -272,6 +268,12 @@
   loop: "{{ blivet_output.crypts }}"
   loop_control:
     loop_var: entry
+  register: __storage_crypttab_update
+
+- name: Tell systemd to refresh its view of /etc/fstab and /etc/crypttab
+  systemd:
+    daemon_reload: true
+  when: blivet_output['mounts'] | length > 0 or __storage_crypttab_update is changed
 
 #
 # Update facts since we may have changed system state.
