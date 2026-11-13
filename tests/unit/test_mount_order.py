@@ -1,3 +1,4 @@
+# Assisted by OpenCode using model GPT-6.1 Sol
 """This module tests the order of the mounts returned by get_mount_info in blivet.py"""
 from __future__ import absolute_import, division, print_function
 
