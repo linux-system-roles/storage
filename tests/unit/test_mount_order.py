@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
+from unittest import mock
+
 import pytest
 
 import blivet
@@ -11,6 +13,26 @@ import blivet
 class FakeFstab(object):
     def lookup(self, key, value):
         return None
+
+
+def fake_get_format(fs_type, *args, **kwargs):
+    """Stand-in for blivet.formats.get_format.
+
+    library/blivet.py imports get_format from the blivet library, which is
+    not available in the test environment.  The only behavior the tests rely
+    on is the mount_type of the format, which can differ from the type to
+    create, e.g. efi is mounted as vfat.
+    """
+    mount_type = "vfat" if fs_type == "efi" else fs_type
+    return mock.Mock(mount_type=mount_type)
+
+
+@pytest.fixture(autouse=True)
+def mock_get_format():
+    # library/blivet.py only defines get_format when the blivet library is
+    # installed, hence create=True
+    with mock.patch("blivet.get_format", fake_get_format, create=True):
+        yield
 
 
 def make_volume(name, mount_point, fs_type="ext4", state="present"):
@@ -49,6 +71,7 @@ def test_pool_with_children_before_pool_with_root():
 
     assert paths(mount_info) == ["none", "/", "/boot", "/boot/efi"]
     assert [mount["state"] for mount in mount_info] == ["present", "mounted", "mounted", "mounted"]
+    assert [mount["fstype"] for mount in mount_info] == ["swap", "ext4", "ext4", "vfat"]
 
 
 def test_nested_mounts_in_reverse_order():
