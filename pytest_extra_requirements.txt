@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
 
+mock ; python_version < "3.0"
 # ansible and dependencies for all supported platforms
 ansible-core ; python_version > "2.6"
