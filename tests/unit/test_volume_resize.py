@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 import logging
+from collections import namedtuple
 
 import pytest
 
@@ -44,6 +45,7 @@ class Device(object):
         self.name = name
         self.type = "luks/dm-crypt" if raw else "lvmlv"
         self.size = Bytes(size)
+        self.sector_size = 1
         self.format = fmt
         self.raw_device = raw if raw else self
         self.parents = [raw] if raw else []
@@ -78,6 +80,11 @@ def volume(monkeypatch):
     monkeypatch.setattr(blivet, "safe_mode", True)
     refreshed = []
     raw = Device("vg-lv", 100, Format("luks", refreshed))
+    raw.path = "/dev/vg/lv"
+    raw.format._header_size = Bytes(10)
+    info = namedtuple("LUKSInfo", ["metadata_size"])(10)
+    monkeypatch.setattr(blivet, "BlockDev", type("BD", (), {"crypto_luks_info": staticmethod(lambda path: info)}), raising=False)
+    monkeypatch.setattr(blivet, "Size", Bytes, raising=False)
     fs = Device("custom-map", 90, Format("xfs", refreshed), raw)
     volume = blivet.BlivetVolume(Backend(), dict(name="lv"))
     volume._device = fs
@@ -99,6 +106,37 @@ def test_matching_raw_size_is_unchanged(volume):
     v._resize()
     assert not refreshed
     assert not v._blivet.calls
+
+
+# Assisted by OpenCode using model GPT-6.2 Astra
+def test_legacy_header_size_blocks_resize_but_not_unchanged_volume(volume, monkeypatch):
+    v, raw, fs, refreshed = volume
+    del raw.format._header_size
+    crypto = type("Crypto", (), {"LUKS_METADATA_SIZE": Bytes(2)})
+    monkeypatch.setattr(blivet, "devicelibs", type("Libs", (), {"crypto": crypto}), raising=False)
+    monkeypatch.setattr(blivet.BlockDev, "crypto_luks_get_metadata_size", staticmethod(lambda path: 10), raising=False)
+    with pytest.raises(blivet.BlivetAnsibleError, match="Blivet assumes a LUKS data offset"):
+        v._resize()
+    v._get_size = lambda: raw.size
+    v._resize()
+    assert not refreshed and not fs.format.unmounted and not v._blivet.calls
+
+
+def test_matching_raw_target_with_short_mapping_is_not_converged(volume):
+    v, raw, fs, refreshed = volume
+    raw.size = Bytes(120)
+    with pytest.raises(blivet.BlivetAnsibleError, match="LUKS mapping.*payload"):
+        v._resize()
+    assert not refreshed and not fs.format.unmounted and not v._blivet.calls
+
+
+def test_unmappable_tail_is_not_a_short_mapping(volume):
+    v, raw, fs, refreshed = volume
+    fs.sector_size = 4
+    fs.size = Bytes(88)  # 90 bytes of payload, 88 whole-sector bytes.
+    v._get_size = lambda: raw.size
+    v._resize()
+    assert not refreshed and not v._blivet.calls
 
 
 def test_inferred_size_preserves_raw_volume(volume):
@@ -139,13 +177,25 @@ def test_filesystem_limit_includes_luks_metadata(volume):
     assert not v._blivet.calls
 
 
-def test_safe_mode_keeps_offline_resize_mounted(volume):
+@pytest.mark.parametrize("target,safe", [(120, True), (80, True), (80, False)])
+def test_mounted_offline_resize(volume, monkeypatch, target, safe):
     v, raw, fs, refreshed = volume
     fs.format._resize_support = 0
-    with pytest.raises(blivet.BlivetAnsibleError, match="must be unmounted"):
+    raw.min_size, fs.min_size = Bytes(40), Bytes(30)
+    v._get_size = lambda: Bytes(target)
+    monkeypatch.setattr(blivet, "safe_mode", safe)
+    if safe:
+        with pytest.raises(blivet.BlivetAnsibleError, match="must be unmounted"):
+            v._resize()
+        assert not fs.format.unmounted
+        assert not v._blivet.calls
+    else:
+        def resize_after_unmount(device, size):
+            assert fs.format.unmounted
+            v._blivet.calls.append((device, size))
+        monkeypatch.setattr(v._blivet, "resize_device", resize_after_unmount)
         v._resize()
-    assert not fs.format.unmounted
-    assert not v._blivet.calls
+        assert v._blivet.calls == [(raw, target)]
 
 
 def test_plain_volume_still_targets_itself(volume):

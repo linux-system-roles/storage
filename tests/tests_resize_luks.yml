@@ -33,6 +33,12 @@
       vars:
         __storage_get_package_facts: true
 
+    - name: Install cryptsetup for the LUKS fixture
+      ansible.builtin.package:
+        name: cryptsetup
+        state: present
+        use: "{{ (__storage_is_ostree | d(false)) | ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
+
     - name: Check whether the fixture mountpoint already exists
       ansible.builtin.stat:
         path: "{{ storage_test_resize_mount }}"
@@ -293,19 +299,66 @@
             that: storage_test_resize_crypttab_after.content ==
               storage_test_resize_crypttab_before.content
 
+      # Assisted by OpenCode using model GPT-6.2 Astra
+      rescue:
+        - name: Only accept a check-mode refusal for an incompatible Blivet offset
+          ansible.builtin.assert:
+            that:
+              - storage_test_resize_before is defined
+              - blivet_output is failed
+              - not blivet_output.changed
+              - "'Blivet assumes a LUKS data offset' in blivet_output.msg"
+
+        - name: Read the size Blivet reserves for a new LUKS2 header
+          ansible.builtin.command:
+            argv:
+              - "{{ ansible_facts['python']['executable'] | d('/usr/bin/python3') }}"
+              - -c
+              - |
+                try:
+                    from blivet3.formats import get_format
+                except ImportError:
+                    from blivet.formats import get_format
+                print(int(get_format("luks", luks_version="luks2").min_size))
+          register: storage_test_resize_header
+          changed_when: false
+
+        - name: Confirm that this provider cannot plan the fixture's actual offset
+          ansible.builtin.assert:
+            that: storage_test_resize_header.stdout | int != storage_test_resize_before.offset
+
+        - name: Require the same refusal when applying the resize
+          ansible.builtin.include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: Blivet assumes a LUKS data offset
+            __storage_failed_msg: Incompatible LUKS resize was not rejected before applying changes
+            __storage_failed_params:
+              storage_pools: ["{{ storage_test_resize_pool }}"]
+              storage_safe_mode: true
+
+        - name: Read the state after refusing the resize
+          ansible.builtin.include_tasks: tasks/get_luks_resize_state.yml
+
+        - name: Verify neither attempt changed the encrypted stack
+          ansible.builtin.assert:
+            that: storage_test_resize_state == storage_test_resize_before
+
       always:
         - name: Remove only the fixture mount and its fstab entry
+          tags: [tests::cleanup]
           ansible.posix.mount:
             path: "{{ storage_test_resize_mount }}"
             state: absent
 
         - name: Remove only the fixture crypttab row
+          tags: [tests::cleanup]
           ansible.builtin.lineinfile:
             path: /etc/crypttab
             regexp: "^{{ storage_test_resize_mapper }}\\s"
             state: absent
 
         - name: Remove the disposable pool
+          tags: [tests::cleanup]
           ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_safe_mode: false
@@ -316,5 +369,6 @@
                 state: absent
 
         - name: Refresh systemd after removing fixture mount and crypttab entries
+          tags: [tests::cleanup]
           ansible.builtin.systemd:
             daemon_reload: true

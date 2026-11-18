@@ -436,6 +436,8 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage_lsr.argument_validator import validate_parameters
 
 if BLIVET_PACKAGE:
+    from gi.repository import BlockDev, GLib
+
     blivet_flags.debug = True
     blivet_flags.allow_online_fs_resize = True
     blivet_flags.gfs2 = True
@@ -793,11 +795,38 @@ class BlivetVolume(BlivetBase):
     def _manage_cache(self):
         pass
 
+    # Assisted by OpenCode using model GPT-6.2 Astra
+    def _check_luks_resize(self, raw, size):
+        """Validate a direct, existing LUKS mapping before scheduling any resize."""
+        try:
+            if hasattr(BlockDev, "crypto_luks_get_metadata_size"):  # libblockdev 2
+                offset = Size(BlockDev.crypto_luks_get_metadata_size(raw.path))
+            else:  # libblockdev 3
+                offset = Size(BlockDev.crypto_luks_info(raw.path).metadata_size)
+        except (GLib.Error, AttributeError) as e:
+            raise BlivetAnsibleError("cannot read LUKS data offset for '%s': %s" % (raw.path, e))
+
+        payload_size = raw.size - offset
+        # The last partial encryption sector cannot be mapped.
+        unused = payload_size - self._device.size
+        if unused < 0 or unused >= self._device.sector_size:
+            raise BlivetAnsibleError("LUKS mapping '%s' is %s, but its backing device has %s of payload"
+                                     % (self._device.name, self._device.size, payload_size))
+        if size != raw.size:
+            # Older Blivet planners subtract the same constant for both LUKS versions.
+            planned_offset = getattr(raw.format, '_header_size', None) or devicelibs.crypto.LUKS_METADATA_SIZE
+            if planned_offset != offset:
+                raise BlivetAnsibleError("cannot resize '%s': Blivet assumes a LUKS data offset of %s, but the on-disk offset is %s"
+                                         % (raw.path, planned_offset, offset))
+
     def _resize(self):
         """ Schedule actions as needed to ensure the device has the desired size. """
         size = self._get_size()
         # Match creation: size describes the backing volume, not the LUKS payload.
         device = self._device.raw_device
+
+        if size and self._device.exists and self._device.type == "luks/dm-crypt" and self._device.parents[0] == device:
+            self._check_luks_resize(device, size)
 
         if size and device.size != size:
             if device != self._device:
@@ -915,6 +944,7 @@ class BlivetVolume(BlivetBase):
         # look up the device
         self._look_up_device()
 
+        inherit_size = self._device is not None and self._volume.get('size') is None
         self._apply_defaults()
 
         # schedule destroy if appropriate
@@ -940,7 +970,7 @@ class BlivetVolume(BlivetBase):
             raise BlivetAnsibleError("volume '%s' has a mount point but no mountable file system" % self._volume['name'])
 
         # schedule resize if appropriate
-        if self._device.raw_device.exists and self._volume['size']:
+        if self._device.raw_device.exists and self._volume['size'] and not inherit_size:
             self._resize()
 
         # save device identifiers for use by the role
