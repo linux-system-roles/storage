@@ -99,6 +99,9 @@ options:
                 default: []
                 elements: dict
                 suboptions:
+                    crypttab_options:
+                        description: Comma-separated options for the LUKS volume in /etc/crypttab
+                        type: str
                     encryption:
                         description: encryption
                         type: bool
@@ -207,6 +210,9 @@ options:
         type: list
         elements: dict
         suboptions:
+            crypttab_options:
+                description: Comma-separated options for the LUKS volume in /etc/crypttab
+                type: str
             encryption:
                 description: encryption
                 type: bool
@@ -438,7 +444,7 @@ except ImportError:
         devices = FakeDevices()
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.storage_lsr.argument_validator import validate_parameters
+from ansible.module_utils.storage_lsr.argument_validator import STRING_TYPE, validate_parameters
 
 if BLIVET_PACKAGE:
     from gi.repository import BlockDev, GLib
@@ -848,6 +854,9 @@ class BlivetVolume(BlivetBase):
             self._volume['encryption_cipher'] = luks_fmt.cipher
         elif param_name == 'encryption_luks_version' and encrypted:
             self._volume['encryption_luks_version'] = luks_fmt.luks_version
+        elif param_name == 'crypttab_options' and encrypted:
+            # Leave the entry alone rather than applying a creation default.
+            return True
         else:
             return False
 
@@ -1087,6 +1096,17 @@ class BlivetVolume(BlivetBase):
         if not self.ultimately_present:
             self._destroy()
             return
+
+        options = self._volume.get('crypttab_options')
+        if options is not None:
+            if not self._volume['encryption']:
+                raise BlivetAnsibleError("crypttab_options requires a LUKS volume: '%s'" % self._volume['name'])
+            if self._device and self._device.format.type == 'luks' and self._device == self._device.raw_device:
+                raise BlivetAnsibleError("cannot manage crypttab_options for closed LUKS volume '%s'"
+                                         % self._volume['name'])
+            if not isinstance(options, STRING_TYPE) or re.search(r'[\s\x00]|^#', options):
+                raise BlivetAnsibleError("crypttab_options must be a single crypttab field for volume '%s'"
+                                         % self._volume['name'])
 
         # schedule create if appropriate
         self._create()
@@ -2521,17 +2541,106 @@ def get_mount_info(pools, volumes, actions, fstab):
     return mount_info
 
 
-def get_crypt_info(actions):
-    info = list()
+# Assisted by OpenCode using model GPT-6.2 Astra
+class CryptTab(object):
+    """Snapshot boot identities before blivet renames or removes devices."""
+
+    def __init__(self, devicetree, path='/etc/crypttab'):
+        self.entries = []
+        if not os.path.exists(path):
+            return
+        with open(path) as stream:
+            for line in stream:
+                fields = line.split()
+                if len(fields) < 2 or fields[0].startswith('#'):
+                    continue
+                backing = devicetree.resolve_device(fields[1])
+                if backing is None and fields[1].startswith('/dev/'):
+                    # Some blivet versions do not resolve all device symlinks.
+                    real_path = os.path.realpath(fields[1])
+                    backing = next((d for d in devicetree.devices if os.path.realpath(d.path) == real_path), None)
+                self.entries.append((getattr(backing, 'path', fields[1]), fields[0], line.rstrip('\r\n')))
+
+    def lookup(self, device, map_name):
+        matches = [entry for entry in self.entries if entry[0] == device.path]
+        if len(matches) > 1:
+            raise BlivetAnsibleError("multiple crypttab entries for device '%s'" % device.path)
+        name = matches[0][1] if matches else map_name
+        if any(backing != device.path and other == name for backing, other, unused in self.entries):
+            raise BlivetAnsibleError("crypttab name '%s' refers to a different device" % name)
+        return matches[0][2] if matches else None
+
+
+def get_volume_crypttab_options(devicetree, pools, volumes):
+    options = {}
+    volumes = volumes[:]
+    for pool in pools:
+        if pool['state'] == 'present':
+            volumes.extend(pool['volumes'])
+    for volume in volumes:
+        if volume['state'] != 'present' or volume.get('crypttab_options') is None:
+            continue
+        raw = devicetree.resolve_device(volume['_raw_device'])
+        if raw is None or raw.format.type != 'luks':
+            raise BlivetAnsibleError("no LUKS backing device for volume '%s'" % volume['name'])
+        if raw in options and options[raw] != volume['crypttab_options']:
+            raise BlivetAnsibleError("conflicting crypttab_options for device '%s'" % raw.path)
+        options[raw] = volume['crypttab_options']
+    return options
+
+
+def set_crypttab_options(line, options):
+    """Replace only field four, retaining the original spelling, spacing and comment."""
+    fields = []
+    for field in re.finditer(r'\S+', line):
+        if field.group().startswith('#'):
+            break
+        fields.append(field)
+    if len(fields) not in (2, 3, 4):
+        raise BlivetAnsibleError("invalid crypttab entry for '%s'" % line.split()[0])
+    if len(fields) == 4:
+        start = fields[3].start() if options else fields[2].end()
+        return line[:start] + options + line[fields[3].end():]
+    if options:
+        end = fields[-1].end()
+        return line[:end] + (' - ' if len(fields) == 2 else ' ') + options + line[end:]
+    return line
+
+
+def get_crypt_info(actions, options=None, crypttab=None):
+    """Account for LUKS lifecycle actions and explicitly managed boot options."""
+    options = options or {}
+    changes = []
     for action in actions:
         if not (action.is_format and action.format.type == 'luks'
                 and (action.is_create or action.is_destroy)):
             continue
+        changes.append((action.device, action.format, 'present' if action.is_create else 'absent'))
 
-        info.append(dict(backing_device=action.device.path,
-                         name=action.format.map_name,
-                         password=action.format.key_file or '-',
-                         state='present' if action.is_create else 'absent'))
+    created = {dev for dev, fmt, state in changes if state == 'present'}
+    removed = {dev.path for dev, fmt, state in changes if state == 'absent'}
+    changes.extend((dev, dev.format, 'present') for dev in options if dev not in created)
+
+    info = []
+    for device, fmt, state in changes:
+        entry = dict(backing_device=device.path, name=fmt.map_name, password=fmt.key_file or '-', state=state)
+        old = None
+        # A replacement format must not retain the old LUKS UUID or key file.
+        if crypttab is not None and (state == 'absent' or (device in options and device.path not in removed)):
+            old = crypttab.lookup(device, fmt.map_name)
+        if old:
+            fields = old.split()
+            entry['name'], entry['backing_device'] = fields[:2]
+            # The third column is a boot-time key file, not the password used to unlock the volume.
+            entry['password'] = fields[2] if len(fields) > 2 and not fields[2].startswith('#') else '-'
+        if state == 'present' and device in options:
+            if old:
+                entry['line'] = set_crypttab_options(old, options[device])
+                if entry['line'] == old:
+                    continue
+            elif options[device]:
+                entry['line'] = '%(name)s %(backing_device)s %(password)s ' % entry + options[device]
+        info.append(entry)
 
     return sorted(info, key=lambda e: e['state'])
 
@@ -2656,7 +2765,8 @@ def run_module():
     # thinks that it should be marked as no_log, so we have to explicitly mark
     # it as no_log=False for ansible-test.
     # see https://github.com/linux-system-roles/storage/pull/546
-    common_volume_opts = dict(encryption=dict(type='bool'),
+    common_volume_opts = dict(crypttab_options=dict(type='str'),
+                              encryption=dict(type='bool'),
                               encryption_cipher=dict(type='str'),
                               encryption_key=dict(type='str', no_log=False),
                               encryption_key_size=dict(type='int'),
@@ -2838,6 +2948,8 @@ def _run_storage(module, result):
         result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
         return
 
+    crypttab = CryptTab(b.devicetree)
+
     def record_action(action):
         if action.is_format and action.format.type is None:
             return
@@ -2894,6 +3006,9 @@ def _run_storage(module, result):
         manage_volume(b, volume)
 
     scheduled = b.devicetree.actions.find()
+    crypttab_options = get_volume_crypttab_options(b.devicetree, module.params['pools'], module.params['volumes'])
+    # Catch ambiguous boot identities before committing storage changes.
+    result['crypts'] = get_crypt_info(scheduled, crypttab_options, crypttab)
     result['packages'] = b.packages[:]
 
     for action in scheduled:
@@ -2923,7 +3038,9 @@ def _run_storage(module, result):
     activate_swaps(b, module.params['pools'], module.params['volumes'])
 
     result['mounts'] = get_mount_info(module.params['pools'], module.params['volumes'], actions, fstab)
-    result['crypts'] = get_crypt_info(actions)
+    if not module.check_mode and scheduled:
+        # Blivet assigns final LUKS mapper names during format creation.
+        result['crypts'] = get_crypt_info(actions, crypttab_options, crypttab)
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']

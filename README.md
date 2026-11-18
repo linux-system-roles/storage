@@ -342,6 +342,19 @@ variables:
 
   This integer specifies the LUKS version to use.
 
+- `crypttab_options`
+
+  Set the fourth field of this LUKS volume's `/etc/crypttab` entry to a
+  comma-separated string, for example `crypttab_options: noauto` or
+  `crypttab_options: tpm2-device=auto,nofail`.
+  This applies to standalone volumes and volumes in a pool, not to encrypted
+  pool members. Omitting the setting preserves existing options; on a new
+  volume the default is to write no options. Use `""` to clear the field.
+  Existing mapper names, device identifiers and key files are preserved.
+  The role must be able to open an existing volume to manage it.
+  These options control unlocking, independently of `mount_options` in
+  `/etc/fstab`. Specifying a TPM option does not enroll a token.
+
 - `deduplication`
 
   This specifies whether the Virtual Data Optimizer (VDO) will be used.

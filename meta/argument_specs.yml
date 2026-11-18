@@ -237,6 +237,13 @@ argument_specs:
             description: >
               LUKS version to use for the volume, such as
               `luks1` or `luks2`.
+          crypttab_options:
+            type: str
+            description: >
+              Comma-separated options for the volume's entry in
+              `/etc/crypttab`. Omit to preserve existing options;
+              use an empty string to remove the options field.
+              Applies to volumes with their own LUKS encryption.
           compression:
             type: bool
             description: >
@@ -509,6 +516,7 @@ argument_specs:
           encryption_cipher: null
           encryption_key_size: null
           encryption_luks_version: null
+          crypttab_options: null
           compression: null
           deduplication: null
           vdo_pool_size: null

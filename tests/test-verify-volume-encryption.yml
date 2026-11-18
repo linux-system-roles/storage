@@ -147,6 +147,16 @@
       {{ storage_test_volume.name }}
   when: _storage_test_expected_crypttab_entries | int == 1
 
+# Assisted by OpenCode using model GPT-6.2 Astra
+- name: Check unlock options of crypttab entry
+  ansible.builtin.assert:
+    that: >-
+      (_storage_test_crypttab_entries[0].split()[3] | d('')) ==
+      storage_test_volume.crypttab_options
+  when:
+    - _storage_test_expected_crypttab_entries | int == 1
+    - storage_test_volume.crypttab_options | d(None) is not none
+
 - name: Clear test variables
   set_fact:
     _storage_test_expected_crypttab_entries: null
