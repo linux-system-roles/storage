@@ -402,6 +402,7 @@ try:
     from blivet3.formats import fslib, get_format
     from blivet3.partitioning import do_partitioning, parted
     from blivet3.size import Size
+    from blivet3.static_data.lvm_info import pvs_info
     from blivet3.udev import trigger
     from blivet3.util import set_up_logging
     BLIVET_PACKAGE = 'blivet3'
@@ -419,6 +420,7 @@ except ImportError:
         from blivet.formats import fslib, get_format
         from blivet.partitioning import do_partitioning, parted
         from blivet.size import Size
+        from blivet.static_data.lvm_info import pvs_info
         from blivet.udev import trigger
         from blivet.util import set_up_logging
         BLIVET_PACKAGE = 'blivet'
@@ -2020,11 +2022,25 @@ class BlivetLVMPool(BlivetPool):
                 # the action now manually, see https://bugzilla.redhat.com/show_bug.cgi?id=2076956
                 # self._blivet.devicetree.actions.add(ac)
                 ac.apply()
+                # XXX workaround for a bug fixed in blivet 3.4.1
+                # (https://github.com/storaged-project/blivet/commit/bb52a4ef): applying
+                # ActionRemoveMember sets pv.format.free to None
+                # (LVMVolumeGroupDevice._remove_parent) and the LVMPhysicalVolume.free
+                # getter then crashes with "'unicode'/'str' object has no attribute 'path'"
+                # because it does pvs_info.cache.get(self.device.path) where format.device
+                # is a (unicode) string, not a device; re-populate the cached value the same
+                # way the fixed getter does so that ac.execute() below works
+                if pv.format._free is None:
+                    pv_info = pvs_info.cache.get(pv.path)
+                    if pv_info is not None:
+                        pv.format.free = Size(pv_info.pv_free)
                 ac.execute()
             except Exception as e:
-                raise BlivetAnsibleError("failed to remove member '%s' from pool '%s': %s" % (pv.name,
-                                                                                              self._pool['name'],
-                                                                                              str(e)))
+                log.error(traceback.format_exc())
+                raise BlivetAnsibleError("failed to remove member '%s' from pool '%s': %s\n%s" % (pv.name,
+                                                                                                  self._pool['name'],
+                                                                                                  str(e),
+                                                                                                  traceback.format_exc()))
             # XXX workaround for https://github.com/storaged-project/blivet/pull/1040
             pv.format.vg_name = None
 
