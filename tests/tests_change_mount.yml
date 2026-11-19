@@ -119,8 +119,7 @@
 
     - name: Get the mount ids of the mount points, parent first
       command: >-
-        findmnt --raw --noheadings --output ID
-        --mountpoint {{ mount_order_prefix ~ item }}
+        findmnt --raw --noheadings --output ID {{ mount_order_prefix ~ item }}
       loop:
         - "{{ mount_order_top }}"
         - "{{ mount_order_sub }}"
