@@ -250,8 +250,20 @@
             name: stratisd
             state: stopped
             enabled: false
+          tags: tests::cleanup
+
+        - name: Gather package facts
+          package_facts:
+          no_log: "{{ ansible_verbosity < 3 }}"
+          tags: tests::cleanup
 
         - name: Remove stratis packages
+          # remove all stratis packages, not just __storage_stratis_packages -
+          # blivet may require additional packages e.g. stratisd-dracut;
+          # dnf5 cannot remove stratisd while an installed package that
+          # requires it (e.g. stratisd-dracut) is still installed
           package:
-            name: "{{ __storage_stratis_packages }}"
+            name: "{{ (ansible_facts.packages | default({})).keys() |
+              select('search', '^stratis') | list }}"
             state: absent
+          tags: tests::cleanup
