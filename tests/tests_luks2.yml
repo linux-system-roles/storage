@@ -107,6 +107,36 @@
             encryption_password: yabbadabbadoo
             encryption_luks_version: luks2
 
+    # Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
+    - name: Verify crypttab was loaded during the first role invocation
+      when: ansible_facts['service_mgr'] == 'systemd'
+      block:
+        # systemd-escape on EL7 rejects --template for this unit.
+        - name: Escape the new cryptsetup instance name
+          command:
+            argv:
+              - systemd-escape
+              - --
+              - "{{ blivet_output.crypts[0].name }}"
+          register: storage_test_cryptsetup_instance
+          changed_when: false
+
+        - name: Inspect the new cryptsetup unit without reloading systemd
+          command:
+            argv:
+              - systemctl
+              - show
+              - "systemd-cryptsetup@{{ storage_test_cryptsetup_instance.stdout }}.service"
+              - --property=LoadState,SourcePath
+          register: storage_test_cryptsetup_state
+          changed_when: false
+
+        - name: Require the generated crypttab unit before any role rerun
+          assert:
+            that:
+              - "'LoadState=loaded' in storage_test_cryptsetup_state.stdout_lines"
+              - "'SourcePath=/etc/crypttab' in storage_test_cryptsetup_state.stdout_lines"
+
     - name: Verify role results
       include_tasks: verify-role-results.yml
 
