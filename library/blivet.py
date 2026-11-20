@@ -2641,12 +2641,33 @@ def run_module():
 
         actions.append(action)
 
+    def udev_trigger_device(device):
+        """Trigger a udev change event for the device and wait for udev."""
+        sys_path = device.path
+        if os.path.islink(sys_path):
+            sys_path = os.readlink(sys_path)
+        trigger(action='change', subsystem='block', name=os.path.basename(sys_path))
+
+    # Assisted by goose using model(s) glm-5-3
     def ensure_udev_update(action):
         if action.is_create or action.is_configure:
-            sys_path = action.device.path
-            if os.path.islink(sys_path):
-                sys_path = os.readlink(action.device.path)
-            trigger(action='change', subsystem='block', name=os.path.basename(sys_path))
+            udev_trigger_device(action.device)
+
+            # The md superblocks of the member devices are written by mdadm
+            # when the array is created, which is after the "create format
+            # mdmember" actions for the members have already triggered udev
+            # updates for the members above.  If udev never processes a
+            # change event for a member after its superblock has been
+            # written, the udev database will not show the member as being
+            # part of the array.  A subsequent run will then not recognize
+            # the member as an md member and may schedule destructive
+            # actions (e.g. destroying and recreating the array).  blivet
+            # >= 3.12.0 does this in MDRaidArrayDevice._create() (upstream
+            # commit 8f0585933d); do it here so that the role also works
+            # with older versions of blivet.
+            if isinstance(action.device, devices.MDRaidArrayDevice):
+                for member in action.device.members:
+                    udev_trigger_device(member)
 
     def action_dict(action):
         return dict(action=action.type_desc_str,
