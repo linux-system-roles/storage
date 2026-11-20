@@ -404,7 +404,7 @@ try:
     from blivet3.partitioning import do_partitioning, parted
     from blivet3.size import Size
     from blivet3.udev import trigger
-    from blivet3.util import set_up_logging
+    from blivet3.util import get_sysfs_attr, set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
     LIB_IMP_ERR3 = traceback.format_exc()
@@ -421,7 +421,7 @@ except ImportError:
         from blivet.partitioning import do_partitioning, parted
         from blivet.size import Size
         from blivet.udev import trigger
-        from blivet.util import set_up_logging
+        from blivet.util import get_sysfs_attr, set_up_logging
         BLIVET_PACKAGE = 'blivet'
     except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
@@ -807,11 +807,14 @@ class BlivetVolume(BlivetBase):
             raise BlivetAnsibleError("cannot read LUKS data offset for '%s': %s" % (raw.path, e))
 
         payload_size = raw.size - offset
-        # The last partial encryption sector cannot be mapped.
         unused = payload_size - self._device.size
-        if unused < 0 or unused >= self._device.sector_size:
-            raise BlivetAnsibleError("LUKS mapping '%s' is %s, but its backing device has %s of payload"
-                                     % (self._device.name, self._device.size, payload_size))
+        if unused:
+            # Older Blivet has no sector_size property. Only accept a tail
+            # smaller than one logical sector of the actual mapper.
+            sector_size = int(get_sysfs_attr(self._device.sysfs_path, "queue/logical_block_size") or 0)
+            if not 0 < unused < sector_size:
+                raise BlivetAnsibleError("LUKS mapping '%s' is %s, but its backing device has %s of payload"
+                                         % (self._device.name, self._device.size, payload_size))
         if size != raw.size:
             # Older Blivet planners subtract the same constant for both LUKS versions.
             planned_offset = getattr(raw.format, '_header_size', None) or devicelibs.crypto.LUKS_METADATA_SIZE
@@ -839,6 +842,9 @@ class BlivetVolume(BlivetBase):
                 pass
 
             if not device.resizable or not self._device.resizable:
+                if device == self._device:
+                    # Preserve the role's no-op for unsupported plain devices.
+                    return
                 raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" %
                                          (self._volume['name'], device.size, size))
 

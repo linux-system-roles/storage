@@ -1,5 +1,5 @@
 """Exercise resize planning without a block device or a Blivet installation."""
-# Assisted by OpenCode using model GPT-6.1 Sol
+# Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
 from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
@@ -45,7 +45,7 @@ class Device(object):
         self.name = name
         self.type = "luks/dm-crypt" if raw else "lvmlv"
         self.size = Bytes(size)
-        self.sector_size = 1
+        self.sysfs_path = "/sys/block/dm-1"
         self.format = fmt
         self.raw_device = raw if raw else self
         self.parents = [raw] if raw else []
@@ -85,6 +85,7 @@ def volume(monkeypatch):
     info = namedtuple("LUKSInfo", ["metadata_size"])(10)
     monkeypatch.setattr(blivet, "BlockDev", type("BD", (), {"crypto_luks_info": staticmethod(lambda path: info)}), raising=False)
     monkeypatch.setattr(blivet, "Size", Bytes, raising=False)
+    monkeypatch.setattr(blivet, "get_sysfs_attr", lambda path, attr: "1", raising=False)
     fs = Device("custom-map", 90, Format("xfs", refreshed), raw)
     volume = blivet.BlivetVolume(Backend(), dict(name="lv"))
     volume._device = fs
@@ -130,13 +131,24 @@ def test_matching_raw_target_with_short_mapping_is_not_converged(volume):
     assert not refreshed and not fs.format.unmounted and not v._blivet.calls
 
 
-def test_unmappable_tail_is_not_a_short_mapping(volume):
+def test_unmappable_tail_is_not_a_short_mapping(volume, monkeypatch):
     v, raw, fs, refreshed = volume
-    fs.sector_size = 4
+    monkeypatch.setattr(blivet, "get_sysfs_attr", lambda path, attr: "4")
     fs.size = Bytes(88)  # 90 bytes of payload, 88 whole-sector bytes.
     v._get_size = lambda: raw.size
     v._resize()
     assert not refreshed and not v._blivet.calls
+
+
+@pytest.mark.parametrize("sector,missing", [("4", 4), (None, 1)])
+def test_short_mapping_without_a_proven_partial_sector_is_rejected(volume, monkeypatch, sector, missing):
+    v, raw, fs, refreshed = volume
+    fs.size -= missing
+    v._get_size = lambda: raw.size
+    monkeypatch.setattr(blivet, "get_sysfs_attr", lambda path, attr: sector)
+    with pytest.raises(blivet.BlivetAnsibleError, match="LUKS mapping.*payload"):
+        v._resize()
+    assert not v._blivet.calls
 
 
 def test_inferred_size_preserves_raw_volume(volume):
@@ -205,6 +217,15 @@ def test_plain_volume_still_targets_itself(volume):
     v._resize()
     assert refreshed == ["xfs"]
     assert v._blivet.calls == [(raw, 120)]
+
+
+def test_unresizable_plain_volume_keeps_legacy_noop(volume):
+    v, raw, fs, refreshed = volume
+    raw.format = fs.format
+    raw.format.supported = False
+    v._device = raw
+    v._resize()
+    assert not raw.format.unmounted and not v._blivet.calls
 
 
 @pytest.mark.parametrize("operation,state", [
