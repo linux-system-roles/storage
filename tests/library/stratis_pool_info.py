@@ -1,19 +1,93 @@
-#!/usr/bin/env python
+# Assisted by goose using model(s) glm-5-3
 
-# Helper script for gathering information about stratis pools using stratis DBus API.
+from __future__ import absolute_import, division, print_function
 
-# The script is meant to be a supporting tool for the storage role tests
+__metaclass__ = type
 
-import sys
-from collections import namedtuple
+ANSIBLE_METADATA = {
+    'metadata_version': '1.1',
+    'status': ['preview'],
+    'supported_by': 'community'
+}
+
+DOCUMENTATION = '''
+---
+module: stratis_pool_info
+
+short_description: Get information about a Stratis pool
+
+version_added: "2.13.0"
+
+description:
+    - "WARNING: Do not use this module directly! It is only for role internal use."
+    - "Gathers information about a Stratis pool using the stratis DBus API."
+
+requirements: [pygobject]
+
+options:
+    pool_name:
+        description:
+            - Name of the Stratis pool
+        required: true
+        type: str
+
+author:
+    - Vojtech Trefny (@vtrefny)
+'''
+
+EXAMPLES = '''
+- name: Get information about the Stratis pool foo
+  stratis_pool_info:
+    pool_name: foo
+  register: storage_test_stratis_report
+
+- name: Print the pool information
+  debug:
+    msg: "{{ storage_test_stratis_report.pool_info }}"
+'''
+
+RETURN = '''
+pool_info:
+    description:
+        - Information about the pool, C(null) if the pool does not exist
+    type: dict
+    returned: success
+    contains:
+        name:
+            description: Name of the pool
+            type: str
+            returned: always
+        encrypted:
+            description: Whether the pool is encrypted
+            type: bool
+            returned: always
+        key_desc:
+            description: Kernel keyring description of the pool key
+            type: str
+            returned: always
+        clevis_pin:
+            description: Name of the Clevis pin used by the pool
+            type: str
+            returned: always
+        clevis_args:
+            description: Clevis configuration of the pool
+            type: dict
+            returned: always
+'''
 
 import json
+from collections import namedtuple
 
-import gi  # pylint: disable=import-error
-gi.require_version("GLib", "2.0")
-gi.require_version("Gio", "2.0")
+try:
+    import gi  # pylint: disable=import-error
+    gi.require_version("GLib", "2.0")
+    gi.require_version("Gio", "2.0")
+    from gi.repository import GLib, Gio  # pylint: disable=import-error
+    HAS_GI = True
+except ImportError:
+    HAS_GI = False
 
-from gi.repository import GLib, Gio  # pylint: disable=import-error
+from ansible.module_utils.basic import AnsibleModule
 
 STRATIS_SERVICE = "org.storage.stratis3"
 STRATIS_PATH = "/org/storage/stratis3"
@@ -21,7 +95,6 @@ STRATIS_POOL_INTF = STRATIS_SERVICE + ".pool.r0"
 
 # Code for working with DBus, taken from blivet/safe_dbus.py
 DBUS_PROPS_IFACE = "org.freedesktop.DBus.Properties"
-DBUS_INTRO_IFACE = "org.freedesktop.DBus.Introspectable"
 
 
 class SafeDBusError(Exception):
@@ -51,7 +124,7 @@ def call_sync(service, obj_path, iface, method, args, connection=None, fds=None)
         try:
             connection = get_new_system_connection()
         except GLib.GError as gerr:
-            raise DBusCallError("Unable to connect to system bus: %s" % gerr) from gerr
+            raise DBusCallError("Unable to connect to system bus: %s" % gerr)
 
     if connection.is_closed():
         raise DBusCallError("Connection is closed")
@@ -63,7 +136,7 @@ def call_sync(service, obj_path, iface, method, args, connection=None, fds=None)
     except GLib.GError as gerr:
         msg = "Failed to call %s method on %s with %s arguments: %s" % \
               (method, obj_path, args, gerr.message)  # pylint: disable=no-member
-        raise DBusCallError(msg) from gerr
+        raise DBusCallError(msg)
 
     if ret is None:
         msg = "No return from %s method on %s with %s arguments" % (method, obj_path,
@@ -80,15 +153,9 @@ def get_properties_sync(service, obj_path, iface, connection=None):
     return ret
 
 
-# Extracting and printing Stratis pool information
+# Extracting Stratis pool information
 StratisPoolInfo = namedtuple("StratisPoolInfo", ["name", "encrypted", "key_desc",
                                                  "clevis_pin", "clevis_args"])
-
-
-def _print_pool_info_json(pool_info):
-    pi_dict = pool_info._asdict()
-    pi_json = json.dumps(pi_dict)
-    print(pi_json)
 
 
 def _get_pool_info(pool_path):
@@ -128,7 +195,9 @@ def _get_pool_info(pool_path):
                            clevis_args=clevis_args)
 
 
-def main(pool_name):
+def get_pool_info(pool_name):
+    """Return information about the given Stratis pool or None."""
+
     objects = call_sync(STRATIS_SERVICE,
                         STRATIS_PATH,
                         "org.freedesktop.DBus.ObjectManager",
@@ -136,20 +205,42 @@ def main(pool_name):
                         None)[0]
 
     for path, interfaces in objects.items():
-        if STRATIS_POOL_INTF in interfaces.keys():
+        if STRATIS_POOL_INTF in interfaces:
             pool_info = _get_pool_info(path)
             if pool_info and pool_info.name == pool_name:
-                _print_pool_info_json(pool_info)
-                return True
+                return pool_info._asdict()
 
-    print(json.dumps(None))
-    return True
+    return None
 
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python %s <pool name>" % sys.argv[0], file=sys.stderr)
-        sys.exit(1)
+def run_module():
+    module_args = dict(
+        pool_name=dict(type='str', required=True),
+    )
 
-    succ = main(sys.argv[1])
-    sys.exit(0) if succ else sys.exit(1)
+    result = dict(
+        changed=False,
+        pool_info=None,
+    )
+
+    module = AnsibleModule(argument_spec=module_args,
+                           supports_check_mode=True)
+
+    if not HAS_GI:
+        module.fail_json(msg="This module requires PyGObject "
+                             "(the python gi module) to be installed")
+
+    try:
+        result['pool_info'] = get_pool_info(module.params['pool_name'])
+    except DBusCallError as e:
+        module.fail_json(msg="Unable to get Stratis pool information: %s" % e)
+
+    module.exit_json(**result)
+
+
+def main():
+    run_module()
+
+
+if __name__ == '__main__':
+    main()

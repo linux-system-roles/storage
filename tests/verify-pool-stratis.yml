@@ -4,21 +4,17 @@
   when: storage_test_pool.type == 'stratis'
   block:
     - name: Get stratis pool information
-      ansible.builtin.script: >-
-        scripts/stratis_pool_info.py
-        "{{ storage_test_pool.name }}"
-      args:
-        executable: "{{ ansible_facts['python'].executable }}"
+      stratis_pool_info:
+        pool_name: "{{ storage_test_pool.name }}"
       register: storage_test_stratis_report
-      changed_when: false
 
-    - name: Print script output
+    - name: Print pool information
       debug:
-        msg: "{{ storage_test_stratis_report.stdout }}"
+        msg: "{{ storage_test_stratis_report.pool_info }}"
 
     - name: Get information about Stratis
       set_fact:
-        _stratis_pool_info: "{{ storage_test_stratis_report.stdout | from_json }}"
+        _stratis_pool_info: "{{ storage_test_stratis_report.pool_info }}"
 
     - name: Verify that the pools was created
       assert:
