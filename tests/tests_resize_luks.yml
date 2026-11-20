@@ -1,5 +1,5 @@
 ---
-# Assisted by OpenCode using model GPT-6.1 Sol
+# Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
 - name: Test existing LUKS2 volume resizing
   hosts: all
   become: true
@@ -90,6 +90,7 @@
               - "{{ storage_test_resize_mapper }}"
             stdin: "{{ storage_test_resize_password }}"
             stdin_add_newline: false
+          register: storage_test_resize_open
           changed_when: true
           no_log: true
 
@@ -98,8 +99,9 @@
             argv: [mkfs.xfs, "/dev/mapper/{{ storage_test_resize_mapper }}"]
           changed_when: true
 
+        # Ansible 2.9 provides mount as a builtin without the posix collection.
         - name: Mount the fixture
-          ansible.posix.mount:
+          mount:  # noqa fqcn
             path: "{{ storage_test_resize_mount }}"
             src: "/dev/mapper/{{ storage_test_resize_mapper }}"
             fstype: xfs
@@ -130,6 +132,7 @@
         - name: Save the initial state
           ansible.builtin.set_fact:
             storage_test_resize_before: "{{ storage_test_resize_state }}"
+            storage_test_resize_python: "{{ ansible_facts['python']['executable'] }}"
 
         - name: Predict growth without changing the encrypted stack
           ansible.builtin.include_tasks:
@@ -260,7 +263,7 @@
               storage_safe_mode: true
 
         - name: Unmount only the fixture for the offline shrink test
-          ansible.posix.mount:
+          mount:  # noqa fqcn
             path: "{{ storage_test_resize_mount }}"
             state: unmounted
 
@@ -275,7 +278,7 @@
               storage_safe_mode: true
 
         - name: Remount the unchanged fixture
-          ansible.posix.mount:
+          mount:  # noqa fqcn
             path: "{{ storage_test_resize_mount }}"
             src: "UUID={{ storage_test_resize_before.uuid }}"
             fstype: xfs
@@ -312,7 +315,7 @@
         - name: Read the size Blivet reserves for a new LUKS2 header
           ansible.builtin.command:
             argv:
-              - "{{ ansible_facts['python']['executable'] | d('/usr/bin/python3') }}"
+              - "{{ storage_test_resize_python }}"
               - -c
               - |
                 try:
@@ -345,20 +348,27 @@
 
       always:
         - name: Remove only the fixture mount and its fstab entry
-          tags: [tests::cleanup]
-          ansible.posix.mount:
+          tags: tests::cleanup
+          mount:  # noqa fqcn
             path: "{{ storage_test_resize_mount }}"
             state: absent
 
         - name: Remove only the fixture crypttab row
-          tags: [tests::cleanup]
+          tags: tests::cleanup
           ansible.builtin.lineinfile:
             path: /etc/crypttab
             regexp: "^{{ storage_test_resize_mapper }}\\s"
             state: absent
 
+        - name: Close the custom mapper opened by this test before removing its LV
+          tags: tests::cleanup
+          ansible.builtin.command:
+            argv: [cryptsetup, close, "{{ storage_test_resize_mapper }}"]
+            removes: "/dev/mapper/{{ storage_test_resize_mapper }}"
+          when: storage_test_resize_open.rc | default(1) == 0
+
         - name: Remove the disposable pool
-          tags: [tests::cleanup]
+          tags: tests::cleanup
           ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_safe_mode: false
@@ -369,6 +379,6 @@
                 state: absent
 
         - name: Refresh systemd after removing fixture mount and crypttab entries
-          tags: [tests::cleanup]
+          tags: tests::cleanup
           ansible.builtin.systemd:
             daemon_reload: true

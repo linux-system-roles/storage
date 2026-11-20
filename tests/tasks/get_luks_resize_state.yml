@@ -1,5 +1,5 @@
 ---
-# Assisted by OpenCode using model GPT-6.1 Sol
+# Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
 - name: Gather the interpreter fact after expected role failures clear facts
   ansible.builtin.setup:
     gather_subset:
@@ -22,9 +22,10 @@
         raw, mapped, mount = sys.argv[1:]
         def run(*args):
             return subprocess.check_output(args).decode().strip()
-        metadata = json.loads(run("cryptsetup", "luksDump",
-                                  "--dump-json-metadata", raw))
-        offset = int(metadata["segments"]["0"]["offset"])
+        # Older cryptsetup can dump LUKS2 but has no --dump-json-metadata.
+        metadata = run("cryptsetup", "luksDump", raw)
+        offset = int(re.search(r"(?m)^Data segments:\s+0: crypt\s+offset:\s+(\d+) \[bytes\]",
+                               metadata).group(1))
         with open(raw, "rb") as stream:
             header = hashlib.sha256(stream.read(offset)).hexdigest()
         with open(mount + "/sentinel", "rb") as stream:
@@ -36,8 +37,7 @@
             mapper_bytes=int(run("blockdev", "--getsize64", mapped)),
             fs_bytes=int(geometry.group(1)) * int(geometry.group(2)),
             offset=offset, header_sha256=header,
-            metadata_sha256=hashlib.sha256(
-                json.dumps(metadata, sort_keys=True).encode()).hexdigest(),
+            metadata_sha256=hashlib.sha256(metadata.encode()).hexdigest(),
             uuid=run("blkid", "-s", "UUID", "-o", "value", mapped),
             lv_uuid=run("lvs", "--noheadings", "-o", "lv_uuid", raw),
             sentinel_sha256=sentinel)))
@@ -45,6 +45,8 @@
       - "/dev/mapper/{{ storage_test_resize_mapper }}"
       - "{{ storage_test_resize_mount }}"
   register: storage_test_resize_state_command
+  environment:
+    LC_ALL: C
   changed_when: false
   check_mode: false
 
