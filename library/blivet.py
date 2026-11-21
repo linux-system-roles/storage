@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# Assisted by OpenCode using model GPT-6.1 Sol
 from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
@@ -380,8 +381,11 @@ volumes:
 '''
 
 import copy
+import errno
 import logging
 import os
+import shutil
+import tempfile
 import traceback
 import inspect
 import re
@@ -395,16 +399,16 @@ try:
     from blivet3.callbacks import callbacks
     from blivet3 import devicelibs
     from blivet3 import devices
+    from blivet3 import udev
     from blivet3.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
     from blivet3.devicefactory import DEFAULT_THPOOL_RESERVE
-    from blivet3.errors import RaidError
+    from blivet3.errors import LUKSError, RaidError
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import fslib, get_format
     from blivet3.partitioning import do_partitioning, parted
     from blivet3.size import Size
     from blivet3.static_data.lvm_info import pvs_info
-    from blivet3.udev import trigger
-    from blivet3.util import set_up_logging
+    from blivet3.util import get_sysfs_attr, set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
     LIB_IMP_ERR3 = traceback.format_exc()
@@ -413,16 +417,16 @@ except ImportError:
         from blivet.callbacks import callbacks
         from blivet import devicelibs
         from blivet import devices
+        from blivet import udev
         from blivet.deviceaction import ActionConfigureFormat, ActionResizeFormat, ActionAddMember, ActionRemoveMember
         from blivet.devicefactory import DEFAULT_THPOOL_RESERVE
-        from blivet.errors import RaidError
+        from blivet.errors import LUKSError, RaidError
         from blivet.flags import flags as blivet_flags
         from blivet.formats import fslib, get_format
         from blivet.partitioning import do_partitioning, parted
         from blivet.size import Size
         from blivet.static_data.lvm_info import pvs_info
-        from blivet.udev import trigger
-        from blivet.util import set_up_logging
+        from blivet.util import get_sysfs_attr, set_up_logging
         BLIVET_PACKAGE = 'blivet'
     except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
@@ -437,6 +441,8 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage_lsr.argument_validator import validate_parameters
 
 if BLIVET_PACKAGE:
+    from gi.repository import BlockDev, GLib
+
     blivet_flags.debug = True
     blivet_flags.allow_online_fs_resize = True
     blivet_flags.gfs2 = True
@@ -456,6 +462,9 @@ use_partitions = None  # create partitions on pool backing device disks?
 destroy_partition_device = None  # destroy partition backing devices when removing pools?
 disklabel_type = None  # user-specified disklabel type
 safe_mode = None       # do not remove any existing devices or formatting
+check_mode = False
+temporary_luks_formats = []
+temporary_luks_udev = None
 pool_defaults = dict()
 volume_defaults = dict()
 
@@ -480,6 +489,95 @@ class BlivetAnsibleError(Exception):
     pass
 
 
+# Assisted by OpenCode using model GPT-6.2 Astra
+class CheckModeLUKSUdev(object):
+    """Keep systemd from starting consumers of mappings opened only for inspection."""
+
+    rules_dir = '/run/udev/rules.d'
+    systemd_dir = '/run/systemd/system'
+
+    def __init__(self, module):
+        self.module = module
+        self.directory = None
+        self.dir_fd = None
+        self.rule = None
+
+    def _reload(self):
+        rc, _, err = self.module.run_command(['udevadm', 'control', '--reload-rules'])
+        if rc:
+            raise BlivetAnsibleError("failed to reload temporary LUKS udev rule: %s" % err)
+
+    def protect(self, name):
+        if not os.path.isdir(self.systemd_dir):
+            return
+        if not name or '/' in name or '\x00' in name:
+            raise BlivetAnsibleError("invalid temporary LUKS mapping name")
+
+        if self.directory is None:
+            try:
+                os.mkdir(self.rules_dir, 0o755)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+            self.directory = tempfile.mkdtemp(prefix='99-zz-storage-luks-', dir=self.rules_dir)
+            self.dir_fd = os.open(self.directory, os.O_RDONLY | os.O_DIRECTORY | getattr(os, 'O_CLOEXEC', 0))
+
+        # Keep names out of udev syntax. The process-owned directory descriptor
+        # makes the rule inert on exit, even if the module is interrupted.
+        prefix = os.path.basename(self.directory) + '-'
+        with open(os.path.join(self.directory, prefix + name), 'a'):
+            pass
+        if self.rule is None:
+            with tempfile.NamedTemporaryFile(prefix='99-zz-storage-luks-', suffix='.rules',
+                                             dir=self.rules_dir, mode='w', delete=False) as stream:
+                self.rule = stream.name
+                stream.write('SUBSYSTEM=="block", KERNEL=="dm-*", ENV{DM_UUID}=="CRYPT-LUKS*", '
+                             'TEST=="/proc/%d/fd/%d/%s$env{DM_NAME}", ENV{SYSTEMD_READY}="0"\n'
+                             % (os.getpid(), self.dir_fd, prefix))
+            self._reload()
+
+    def restore(self):
+        if self.dir_fd is not None:
+            os.close(self.dir_fd)
+        if self.directory is not None:
+            shutil.rmtree(self.directory)
+        if self.rule is not None:
+            os.unlink(self.rule)
+            self._reload()
+
+
+def get_existing_luks_map_name(blivet_obj, device):
+    """Find an unambiguous, unused crypttab name for a closed LUKS device."""
+    if not os.path.exists('/etc/crypttab'):
+        return None
+
+    entries = []
+    with open('/etc/crypttab') as stream:
+        for line in stream:
+            if line.lstrip().startswith('#'):
+                continue
+            fields = line.split()
+            if len(fields) >= 2:
+                entries.append((fields[0], blivet_obj.devicetree.resolve_device(fields[1])))
+
+    names = set(name for name, backing in entries if backing == device)
+    if not names:
+        return None
+    if len(names) != 1:
+        raise BlivetAnsibleError("ambiguous crypttab names for device '%s'" % device.path)
+
+    name = names.pop()
+    if any(entry_name == name and backing != device for entry_name, backing in entries):
+        raise BlivetAnsibleError("ambiguous crypttab name '%s'" % name)
+    if name in ('.', '..') or '/' in name or '\x00' in name:
+        raise BlivetAnsibleError("invalid crypttab name '%s'" % name)
+
+    path = '/dev/mapper/' + name
+    if blivet_obj.devicetree.resolve_device(path) is not None or os.path.lexists(path):
+        raise BlivetAnsibleError("crypttab name '%s' is already in use" % name)
+    return name
+
+
 class BlivetBase(object):
     blivet_device_class = None
     _type = None
@@ -499,8 +597,11 @@ class BlivetBase(object):
         if device == device.raw_device and self._spec_dict['encryption']:
             # add luks
             luks_name = "luks-%s" % device._name
-            if safe_mode and (device.original_format.type is not None
-                              or device.original_format.name != get_format(None).name):
+            # Assisted by OpenCode using model GPT-6.1 Sol
+            # New devices can already have a planned format that does not exist yet.
+            if safe_mode and device.original_format.exists and (
+                    device.original_format.type is not None
+                    or device.original_format.name != get_format(None).name):
                 raise BlivetAnsibleError("cannot remove existing formatting on device '%s' in safe mode due to adding encryption" %
                                          device._name)
             if not device.format.exists:
@@ -665,15 +766,45 @@ class BlivetVolume(BlivetBase):
             return
 
         if device.format.type == 'luks':
-            # XXX If we have no key we will always re-encrypt.
-            device.format._key_file = self._volume.get('encryption_key')
-            device.format.passphrase = self._volume.get('encryption_password')
-
-            # set up the original format as well since it'll get used for processing
-            device.original_format._key_file = self._volume.get('encryption_key')
-            device.original_format.passphrase = self._volume.get('encryption_password')
+            # Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
+            # Keep both formats configured for subsequent action processing.
+            for fmt in (device.format, device.original_format):
+                if self._volume.get('encryption_key'):
+                    if hasattr(fmt, '_key_file'):
+                        # Older Blivet exposes this field through a read-only property.
+                        fmt._key_file = self._volume['encryption_key']
+                    else:
+                        fmt.key_file = self._volume['encryption_key']
+                if self._volume.get('encryption_password'):
+                    fmt.passphrase = self._volume['encryption_password']
             if device.isleaf:
-                self._blivet.devicetree.populate()
+                if device.format.has_key and self._volume.get('encryption') is not False:
+                    # Populate discovers mappings but does not reopen known formats.
+                    was_open = device.format.status
+                    if not was_open:
+                        name = get_existing_luks_map_name(self._blivet, device)
+                        if name:
+                            for fmt in (device.format, device.original_format):
+                                fmt.map_name = name
+                        if check_mode:
+                            temporary_luks_udev.protect(device.format.map_name)
+                    try:
+                        device.format.setup()
+                    except LUKSError as e:
+                        raise BlivetAnsibleError("failed to unlock volume '%s': %s" % (self._volume['name'], str(e)))
+                    if check_mode and not was_open:
+                        temporary_luks_formats.append(device.format)
+                    # The backing device is already known. Discover its mapper
+                    # without re-probing unrelated disks (notably multipath).
+                    udev.settle()
+                    path = "/dev/mapper/%s" % device.format.map_name
+                    info = udev.get_device(device_node=path)
+                    if info is not None:
+                        self._blivet.devicetree.handle_device(info)
+                    if device.isleaf:
+                        raise BlivetAnsibleError("failed to discover unlocked volume '%s'" % self._volume['name'])
+                else:
+                    self._blivet.devicetree.populate()
 
             if not device.isleaf:
                 device = device.children[0]
@@ -698,7 +829,7 @@ class BlivetVolume(BlivetBase):
             luks_fmt = self._device.format
 
         if param_name == 'size':
-            self._volume['size'] = int(self._device.size.convert_to())
+            self._volume['size'] = int(self._device.raw_device.size.convert_to())
         elif param_name == 'fs_type' and (self._device.format.type or self._device.format.name != get_format(None).name):
             self._volume['fs_type'] = self._device.format.type
         elif param_name == 'fs_label':
@@ -794,44 +925,87 @@ class BlivetVolume(BlivetBase):
     def _manage_cache(self):
         pass
 
+    # Assisted by OpenCode using model GPT-6.2 Astra
+    def _check_luks_resize(self, raw, size):
+        """Validate a direct, existing LUKS mapping before scheduling any resize."""
+        try:
+            if hasattr(BlockDev, "crypto_luks_get_metadata_size"):  # libblockdev 2
+                offset = Size(BlockDev.crypto_luks_get_metadata_size(raw.path))
+            else:  # libblockdev 3
+                offset = Size(BlockDev.crypto_luks_info(raw.path).metadata_size)
+        except (GLib.Error, AttributeError) as e:
+            raise BlivetAnsibleError("cannot read LUKS data offset for '%s': %s" % (raw.path, e))
+
+        payload_size = raw.size - offset
+        unused = payload_size - self._device.size
+        if unused:
+            # Older Blivet has no sector_size property. Only accept a tail
+            # smaller than one logical sector of the actual mapper.
+            sector_size = int(get_sysfs_attr(self._device.sysfs_path, "queue/logical_block_size") or 0)
+            if not 0 < unused < sector_size:
+                raise BlivetAnsibleError("LUKS mapping '%s' is %s, but its backing device has %s of payload"
+                                         % (self._device.name, self._device.size, payload_size))
+        if size != raw.size:
+            # Older Blivet planners subtract the same constant for both LUKS versions.
+            planned_offset = getattr(raw.format, '_header_size', None) or devicelibs.crypto.LUKS_METADATA_SIZE
+            if planned_offset != offset:
+                raise BlivetAnsibleError("cannot resize '%s': Blivet assumes a LUKS data offset of %s, but the on-disk offset is %s"
+                                         % (raw.path, planned_offset, offset))
+
     def _resize(self):
         """ Schedule actions as needed to ensure the device has the desired size. """
         size = self._get_size()
+        # Match creation: size describes the backing volume, not the LUKS payload.
+        device = self._device.raw_device
 
-        if size and self._device.size != size:
+        if size and self._device.exists and self._device.type == "luks/dm-crypt" and self._device.parents[0] == device:
+            self._check_luks_resize(device, size)
+
+        if size and device.size != size:
+            if device != self._device:
+                # LUKS resizability depends on size information for both layers.
+                device.format.update_size_info()
             try:
                 self._device.format.update_size_info()
             except AttributeError:
                 # Error handling is done next.
                 pass
 
-            if not self._device.resizable:
-                return
+            if not device.resizable or not self._device.resizable:
+                if device == self._device:
+                    # Preserve the role's no-op for unsupported plain devices.
+                    return
+                raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" %
+                                         (self._volume['name'], device.size, size))
 
-            if size > self._device.size:
-                trim_percent = abs((1.0 - float(self._device.max_size / size)) * 100)
-                log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
-                if size > self._device.max_size and trim_percent <= MAX_TRIM_PERCENT:
+            # Keep filesystem limits in the same size domain as the raw target.
+            metadata_size = device.size - self._device.size
+            min_size = max(device.min_size, self._device.min_size + metadata_size)
+            max_size = min(device.max_size, self._device.max_size + metadata_size)
+            if size > device.size:
+                trim_percent = abs((1.0 - float(max_size / size)) * 100)
+                log.debug("resize: size=%s->%s ; trim=%s", device.size, size, trim_percent)
+                if size > max_size and trim_percent <= MAX_TRIM_PERCENT:
                     log.info("adjusting %s resize target from %s to %s to fit in free space",
                              self._volume['name'],
                              size,
-                             self._device.max_size)
-                    size = self._device.max_size
-                    if size == self._device.size:
+                             max_size)
+                    size = max_size
+                    if size == device.size:
                         return
-            elif size < self._device.size:
-                trim_percent = abs((1.0 - float(self._device.min_size / size)) * 100)
-                log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
-                if size < self._device.min_size and trim_percent <= MAX_TRIM_PERCENT:
+            elif size < device.size:
+                trim_percent = abs((1.0 - float(min_size / size)) * 100)
+                log.debug("resize: size=%s->%s ; trim=%s", device.size, size, trim_percent)
+                if size < min_size and trim_percent <= MAX_TRIM_PERCENT:
                     log.info("adjusting %s resize target from %s to %s match device min size",
                              self._volume['name'],
                              size,
-                             self._device.min_size)
-                    size = self._device.min_size
-                    if size == self._device.size:
+                             min_size)
+                    size = min_size
+                    if size == device.size:
                         return
 
-            if not self._device.min_size <= size <= self._device.max_size:
+            if not min_size <= size <= max_size:
                 raise BlivetAnsibleError("volume '%s' cannot be resized to '%s'" % (self._volume['name'], size))
 
             def _fs_unmount():
@@ -848,7 +1022,7 @@ class BlivetVolume(BlivetBase):
 
             if self._device.format.status and self._device.format.mountable:
                 if hasattr(self._device.format, "_resize_support") and hasattr(fslib, "FSResize"):
-                    if size > self._device.size:
+                    if size > device.size:
                         # online grow
                         if self._device.format._resize_support & fslib.FSResize.ONLINE_GROW:
                             log.debug("filesystem '%s' supports online grow, will attempt to resize '%s' while mounted",
@@ -856,7 +1030,7 @@ class BlivetVolume(BlivetBase):
                         else:
                             # online grow not supported, try unmount the device
                             _fs_unmount()
-                    elif size < self._device.size:
+                    elif size < device.size:
                         # online shrink
                         if self._device.format._resize_support & fslib.FSResize.ONLINE_SHRINK:
                             log.debug("filesystem '%s' supports online shrink, will attempt to resize '%s' while mounted",
@@ -869,13 +1043,10 @@ class BlivetVolume(BlivetBase):
                     _fs_unmount()
 
             try:
-                self._blivet.resize_device(self._device, size)
+                self._blivet.resize_device(device, size)
             except ValueError as e:
-                raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" % (self._device.name,
-                                                                                              self._device.size,
-                                                                                              size, str(e)))
-        elif size and self._device.exists and self._device.size != size and not self._device.resizable:
-            raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" % (self._device.name, self._device.size, size))
+                raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" %
+                                         (self._device.name, device.size, size, str(e)))
 
     def _reformat(self):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
@@ -909,6 +1080,7 @@ class BlivetVolume(BlivetBase):
         # look up the device
         self._look_up_device()
 
+        inherit_size = self._device is not None and self._volume.get('size') is None
         self._apply_defaults()
 
         # schedule destroy if appropriate
@@ -934,7 +1106,7 @@ class BlivetVolume(BlivetBase):
             raise BlivetAnsibleError("volume '%s' has a mount point but no mountable file system" % self._volume['name'])
 
         # schedule resize if appropriate
-        if self._device.raw_device.exists and self._volume['size']:
+        if self._device.raw_device.exists and self._volume['size'] and not inherit_size:
             self._resize()
 
         # save device identifiers for use by the role
@@ -2352,7 +2524,8 @@ def get_mount_info(pools, volumes, actions, fstab):
 def get_crypt_info(actions):
     info = list()
     for action in actions:
-        if not (action.is_format and action.format.type == 'luks'):
+        if not (action.is_format and action.format.type == 'luks'
+                and (action.is_create or action.is_destroy)):
             continue
 
         info.append(dict(backing_device=action.device.path,
@@ -2403,7 +2576,8 @@ def update_fstab_identifiers(b, pools, volumes):
             if device is None:
                 raise BlivetAnsibleError("failed to look up device for volume %s (%s/%s)" % (volume['name'], volume['_device'], volume['_mount_id']))
             volume['_mount_id'] = device.fstab_spec
-            if device.format.type == 'swap':
+            # Do not activate swap on a mapping opened only for check-mode inspection.
+            if device.format.type == 'swap' and not (check_mode and device.raw_device.format in temporary_luks_formats):
                 device.format.setup()
 
             if device.status:
@@ -2424,7 +2598,7 @@ def activate_swaps(b, pools, volumes):
     for volume in all_volumes:
         if volume['state'] == 'present':
             device = b.devicetree.resolve_device(volume['_mount_id'])
-            if device.format.type == 'swap':
+            if device.format.type == 'swap' and not (check_mode and device.raw_device.format in temporary_luks_formats):
                 device.format.setup()
 
 
@@ -2623,17 +2797,46 @@ def run_module():
     global uses_kmod_kvdo
     uses_kmod_kvdo = module.params['uses_kmod_kvdo']
 
+    global check_mode
+    check_mode = module.check_mode
+    del temporary_luks_formats[:]
+    global temporary_luks_udev
+    temporary_luks_udev = CheckModeLUKSUdev(module) if check_mode else None
+
+    # Finish discovery and restore temporary mappings before emitting any JSON.
+    errors = []
+    try:
+        _run_storage(module, result)
+    except Exception as e:
+        errors.append(str(e))
+    finally:
+        while temporary_luks_formats:
+            fmt = temporary_luks_formats.pop()
+            try:
+                fmt.teardown()
+            except Exception as e:
+                errors.append("failed to close temporary LUKS mapping '%s': %s" % (fmt.map_name, str(e)))
+        if temporary_luks_udev is not None:
+            try:
+                temporary_luks_udev.restore()
+            except Exception as e:
+                errors.append("failed to remove temporary LUKS udev rule: %s" % e)
+
+    if errors:
+        module.fail_json(msg="; ".join(errors), **result)
+    module.exit_json(**result)
+
+
+def _run_storage(module, result):
+    """Collect results before returning control for cleanup and JSON output."""
     b = Blivet()
     b.reset()
     fstab = FSTab(b)
     actions = list()
 
     if module.params['packages_only']:
-        try:
-            result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
-        except BlivetAnsibleError as e:
-            module.fail_json(msg=str(e), **result)
-        module.exit_json(**result)
+        result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        return
 
     def record_action(action):
         if action.is_format and action.format.type is None:
@@ -2646,7 +2849,7 @@ def run_module():
         sys_path = device.path
         if os.path.islink(sys_path):
             sys_path = os.readlink(sys_path)
-        trigger(action='change', subsystem='block', name=os.path.basename(sys_path))
+        udev.trigger(action='change', subsystem='block', name=os.path.basename(sys_path))
 
     # Assisted by goose using model(s) glm-5-3
     def ensure_udev_update(action):
@@ -2676,28 +2879,19 @@ def run_module():
 
     duplicates = find_duplicate_names(module.params['pools'])
     if duplicates:
-        module.fail_json(msg="multiple pools with the same name: {0}".format(",".join(duplicates)),
-                         **result)
+        raise BlivetAnsibleError("multiple pools with the same name: {0}".format(",".join(duplicates)))
     for pool in module.params['pools']:
         duplicates = find_duplicate_names(pool.get('volumes', list()))
         if duplicates:
-            module.fail_json(msg="multiple volumes in pool '{0}' with the "
-                                 "same name: {1}".format(pool['name'], ",".join(duplicates)),
-                             **result)
-        try:
-            manage_pool(b, pool)
-        except BlivetAnsibleError as e:
-            module.fail_json(msg=str(e), **result)
+            raise BlivetAnsibleError("multiple volumes in pool '{0}' with the "
+                                     "same name: {1}".format(pool['name'], ",".join(duplicates)))
+        manage_pool(b, pool)
 
     duplicates = find_duplicate_names(module.params['volumes'])
     if duplicates:
-        module.fail_json(msg="multiple volumes with the same name: {0}".format(",".join(duplicates)),
-                         **result)
+        raise BlivetAnsibleError("multiple volumes with the same name: {0}".format(",".join(duplicates)))
     for volume in module.params['volumes']:
-        try:
-            manage_volume(b, volume)
-        except BlivetAnsibleError as e:
-            module.fail_json(msg=str(e), **result)
+        manage_volume(b, volume)
 
     scheduled = b.devicetree.actions.find()
     result['packages'] = b.packages[:]
@@ -2715,9 +2909,14 @@ def run_module():
         try:
             b.devicetree.actions.process(devices=b.devicetree.devices, dry_run=module.check_mode)
         except Exception as e:
-            module.fail_json(msg="Failed to commit changes to disk: %s" % str(e), **result)
-        finally:
+            # Assisted by OpenCode using model GPT-6.2 Astra
+            # Only completed actions are known to have changed storage.
+            result['changed'] = bool(actions)
+            raise BlivetAnsibleError("Failed to commit changes to disk: %s" % str(e))
+        else:
+            # A successful dry run predicts a change without executing actions.
             result['changed'] = True
+        finally:
             result['actions'] = [action_dict(a) for a in actions]
 
     update_fstab_identifiers(b, module.params['pools'], module.params['volumes'])
@@ -2728,9 +2927,6 @@ def run_module():
     result['leaves'] = [d.path for d in b.devicetree.leaves]
     result['pools'] = module.params['pools']
     result['volumes'] = module.params['volumes']
-
-    # success - return result
-    module.exit_json(**result)
 
 
 def main():

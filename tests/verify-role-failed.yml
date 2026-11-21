@@ -35,7 +35,7 @@
         that:
           - blivet_output.failed
           - blivet_output.msg is search(__storage_failed_regex)
-          - not blivet_output.changed
+          - blivet_output.changed == (__storage_failed_changed | default(false) | bool)
         msg: "{{ __storage_failed_msg }}"
       when:
         - __storage_failed_regex is defined
