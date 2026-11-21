@@ -1,0 +1,384 @@
+---
+# Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
+- name: Test existing LUKS2 volume resizing
+  hosts: all
+  become: true
+  vars:
+    __storage_min_size: 6g
+    __storage_max_return: 1
+    storage_test_resize_vg: resize_luks
+    storage_test_resize_raw: /dev/resize_luks/resize_lv
+    storage_test_resize_mapper: storage-resize-custom
+    storage_test_resize_mount: /opt/storage-resize-luks
+    storage_test_resize_password: test-only-resize-passphrase
+    storage_test_resize_size: "2 GiB"
+    storage_test_resize_pool:
+      name: "{{ storage_test_resize_vg }}"
+      type: lvm
+      disks: "{{ unused_disks }}"
+      volumes:
+        - name: resize_lv
+          size: "{{ storage_test_resize_size }}"
+          fs_type: xfs
+          encryption: true
+          encryption_luks_version: luks2
+          encryption_password: "{{ storage_test_resize_password }}"
+          mount_point: "{{ storage_test_resize_mount }}"
+          mount_options: defaults,noatime
+  tags:
+    - tests::lvm
+  tasks:
+    - name: Prepare the role and discover unused disks
+      ansible.builtin.include_tasks: tasks/setup.yml
+      vars:
+        __storage_get_package_facts: true
+
+    - name: Install cryptsetup for the LUKS fixture
+      ansible.builtin.package:
+        name: cryptsetup
+        state: present
+        use: "{{ (__storage_is_ostree | d(false)) | ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
+
+    - name: Check whether the fixture mountpoint already exists
+      ansible.builtin.stat:
+        path: "{{ storage_test_resize_mount }}"
+      register: storage_test_resize_mount_stat
+
+    - name: Require an unused fixture mountpoint
+      ansible.builtin.assert:
+        that: not storage_test_resize_mount_stat.stat.exists
+
+    - name: Exercise an existing, custom-named encrypted stack
+      block:
+        - name: Create an unformatted LV for the existing-volume fixture
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: "{{ storage_test_resize_vg }}"
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: resize_lv
+                    size: "1 GiB"
+                    fs_type: unformatted
+                    encryption: false
+
+        - name: Format the disposable LV with LUKS2
+          ansible.builtin.command:
+            argv:
+              - cryptsetup
+              - luksFormat
+              - --batch-mode
+              - --type
+              - luks2
+              - --key-file
+              - "-"
+              - "{{ storage_test_resize_raw }}"
+            stdin: "{{ storage_test_resize_password }}"
+            stdin_add_newline: false
+          changed_when: true
+          no_log: true
+
+        - name: Open the existing volume with a custom mapper name
+          ansible.builtin.command:
+            argv:
+              - cryptsetup
+              - open
+              - --key-file
+              - "-"
+              - "{{ storage_test_resize_raw }}"
+              - "{{ storage_test_resize_mapper }}"
+            stdin: "{{ storage_test_resize_password }}"
+            stdin_add_newline: false
+          register: storage_test_resize_open
+          changed_when: true
+          no_log: true
+
+        - name: Create XFS on the existing mapping
+          ansible.builtin.command:
+            argv: [mkfs.xfs, "/dev/mapper/{{ storage_test_resize_mapper }}"]
+          changed_when: true
+
+        # Ansible 2.9 provides mount as a builtin without the posix collection.
+        - name: Mount the fixture
+          mount:  # noqa fqcn
+            path: "{{ storage_test_resize_mount }}"
+            src: "/dev/mapper/{{ storage_test_resize_mapper }}"
+            fstype: xfs
+            opts: defaults,noatime
+            state: mounted
+
+        - name: Create a preservation sentinel
+          ansible.builtin.copy:
+            dest: "{{ storage_test_resize_mount }}/sentinel"
+            content: "existing encrypted volume preservation\n"
+            mode: "0600"
+
+        - name: Record the existing custom mapper and its unlock policy
+          ansible.builtin.lineinfile:
+            path: /etc/crypttab
+            line: "{{ storage_test_resize_mapper }} {{ storage_test_resize_raw }} none noauto"
+            create: true
+            mode: "0600"
+
+        - name: Save the crypttab baseline
+          ansible.builtin.slurp:
+            src: /etc/crypttab
+          register: storage_test_resize_crypttab_before
+
+        - name: Read initial encrypted stack state
+          ansible.builtin.include_tasks: tasks/get_luks_resize_state.yml
+
+        - name: Save the initial state
+          ansible.builtin.set_fact:
+            storage_test_resize_before: "{{ storage_test_resize_state }}"
+            storage_test_resize_python: "{{ ansible_facts['python']['executable'] }}"
+
+        - name: Predict growth without changing the encrypted stack
+          ansible.builtin.include_tasks:
+            file: tasks/run_role_with_clear_facts.yml
+            apply:
+              check_mode: true
+          vars:
+            storage_safe_mode: true
+            storage_pools: ["{{ storage_test_resize_pool }}"]
+
+        - name: Require a predicted device change
+          ansible.builtin.assert:
+            that: blivet_output.changed
+
+        - name: Read the state after check mode
+          ansible.builtin.include_tasks: tasks/get_luks_resize_state.yml
+
+        - name: Verify check mode preserved all measured state
+          ansible.builtin.assert:
+            that: storage_test_resize_state == storage_test_resize_before
+
+        - name: Grow the existing encrypted volume to an absolute size
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools: ["{{ storage_test_resize_pool }}"]
+
+        - name: Read absolute-size result
+          ansible.builtin.include_tasks: tasks/get_luks_resize_state.yml
+
+        - name: Require the exact backing-volume size
+          ansible.builtin.assert:
+            that: storage_test_resize_state.raw_bytes == 2147483648
+
+        - name: Read VG extent geometry for the percentage target
+          ansible.builtin.command:
+            argv:
+              - vgs
+              - "{{ storage_test_resize_vg }}"
+              - --noheadings
+              - --nosuffix
+              - --units
+              - b
+              - -o
+              - vg_extent_count,vg_extent_size
+          register: storage_test_resize_geometry
+          changed_when: false
+
+        - name: Grow using the existing total-VG percentage syntax
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_test_resize_size: "95%"
+            storage_pools: ["{{ storage_test_resize_pool }}"]
+
+        - name: Read percentage result
+          ansible.builtin.include_tasks: tasks/get_luks_resize_state.yml
+
+        - name: Verify exact extent rounding and preserved identities and metadata
+          ansible.builtin.assert:
+            that:
+              - storage_test_resize_state.raw_bytes ==
+                (((storage_test_resize_geometry.stdout.split()[0] | int) * 95 + 99)
+                // 100) * (storage_test_resize_geometry.stdout.split()[1] | int)
+              - storage_test_resize_state.uuid == storage_test_resize_before.uuid
+              - storage_test_resize_state.lv_uuid == storage_test_resize_before.lv_uuid
+              - storage_test_resize_state.header_sha256 == storage_test_resize_before.header_sha256
+              - storage_test_resize_state.metadata_sha256 == storage_test_resize_before.metadata_sha256
+              - storage_test_resize_state.sentinel_sha256 == storage_test_resize_before.sentinel_sha256
+
+        - name: Save the converged state
+          ansible.builtin.set_fact:
+            storage_test_resize_converged: "{{ storage_test_resize_state }}"
+
+        - name: Repeat the percentage target
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_test_resize_size: "95%"
+            storage_pools: ["{{ storage_test_resize_pool }}"]
+
+        - name: Require no repeated device change
+          ansible.builtin.assert:
+            that: not blivet_output.changed
+
+        - name: Check the converged percentage target
+          ansible.builtin.include_tasks:
+            file: tasks/run_role_with_clear_facts.yml
+            apply:
+              check_mode: true
+          vars:
+            storage_safe_mode: true
+            storage_test_resize_size: "95%"
+            storage_pools: ["{{ storage_test_resize_pool }}"]
+
+        - name: Require an unchanged check result
+          ansible.builtin.assert:
+            that: not blivet_output.changed
+
+        - name: Preserve size when the size input is omitted
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: "{{ storage_test_resize_vg }}"
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: resize_lv
+                    encryption: true
+                    encryption_password: "{{ storage_test_resize_password }}"
+                    fs_type: xfs
+                    mount_point: "{{ storage_test_resize_mount }}"
+                    mount_options: defaults,noatime
+
+        - name: Require no inferred metadata-size adjustment
+          ansible.builtin.assert:
+            that: not blivet_output.changed
+
+        - name: Reject a mounted XFS shrink in safe mode
+          ansible.builtin.include_tasks: verify-role-failed.yml
+          vars:
+            storage_test_resize_size: "1 GiB"
+            __storage_failed_regex: volume.+cannot be resized|must be unmounted to be resized in safe mode
+            __storage_failed_msg: Mounted XFS shrink was not rejected
+            __storage_failed_params:
+              storage_pools: ["{{ storage_test_resize_pool }}"]
+              storage_safe_mode: true
+
+        - name: Unmount only the fixture for the offline shrink test
+          mount:  # noqa fqcn
+            path: "{{ storage_test_resize_mount }}"
+            state: unmounted
+
+        - name: Reject an unsupported offline XFS shrink
+          ansible.builtin.include_tasks: verify-role-failed.yml
+          vars:
+            storage_test_resize_size: "1 GiB"
+            __storage_failed_regex: volume.+cannot be resized
+            __storage_failed_msg: XFS shrink was not rejected
+            __storage_failed_params:
+              storage_pools: ["{{ storage_test_resize_pool }}"]
+              storage_safe_mode: true
+
+        - name: Remount the unchanged fixture
+          mount:  # noqa fqcn
+            path: "{{ storage_test_resize_mount }}"
+            src: "UUID={{ storage_test_resize_before.uuid }}"
+            fstype: xfs
+            opts: defaults,noatime
+            state: mounted
+
+        - name: Read final encrypted stack state
+          ansible.builtin.include_tasks: tasks/get_luks_resize_state.yml
+
+        - name: Require unchanged state after reruns, omitted size and rejected shrink
+          ansible.builtin.assert:
+            that: storage_test_resize_state == storage_test_resize_converged
+
+        - name: Read crypttab after resizing
+          ansible.builtin.slurp:
+            src: /etc/crypttab
+          register: storage_test_resize_crypttab_after
+
+        - name: Preserve the existing mapper's crypttab row and options
+          ansible.builtin.assert:
+            that: storage_test_resize_crypttab_after.content ==
+              storage_test_resize_crypttab_before.content
+
+      # Assisted by OpenCode using model GPT-6.2 Astra
+      rescue:
+        - name: Only accept a check-mode refusal for an incompatible Blivet offset
+          ansible.builtin.assert:
+            that:
+              - storage_test_resize_before is defined
+              - blivet_output is failed
+              - not blivet_output.changed
+              - "'Blivet assumes a LUKS data offset' in blivet_output.msg"
+
+        - name: Read the size Blivet reserves for a new LUKS2 header
+          ansible.builtin.command:
+            argv:
+              - "{{ storage_test_resize_python }}"
+              - -c
+              - |
+                try:
+                    from blivet3.formats import get_format
+                except ImportError:
+                    from blivet.formats import get_format
+                print(int(get_format("luks", luks_version="luks2").min_size))
+          register: storage_test_resize_header
+          changed_when: false
+
+        - name: Confirm that this provider cannot plan the fixture's actual offset
+          ansible.builtin.assert:
+            that: storage_test_resize_header.stdout | int != storage_test_resize_before.offset
+
+        - name: Require the same refusal when applying the resize
+          ansible.builtin.include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: Blivet assumes a LUKS data offset
+            __storage_failed_msg: Incompatible LUKS resize was not rejected before applying changes
+            __storage_failed_params:
+              storage_pools: ["{{ storage_test_resize_pool }}"]
+              storage_safe_mode: true
+
+        - name: Read the state after refusing the resize
+          ansible.builtin.include_tasks: tasks/get_luks_resize_state.yml
+
+        - name: Verify neither attempt changed the encrypted stack
+          ansible.builtin.assert:
+            that: storage_test_resize_state == storage_test_resize_before
+
+      always:
+        - name: Remove only the fixture mount and its fstab entry
+          tags: tests::cleanup
+          mount:  # noqa fqcn
+            path: "{{ storage_test_resize_mount }}"
+            state: absent
+
+        - name: Remove only the fixture crypttab row
+          tags: tests::cleanup
+          ansible.builtin.lineinfile:
+            path: /etc/crypttab
+            regexp: "^{{ storage_test_resize_mapper }}\\s"
+            state: absent
+
+        - name: Close the custom mapper opened by this test before removing its LV
+          tags: tests::cleanup
+          ansible.builtin.command:
+            argv: [cryptsetup, close, "{{ storage_test_resize_mapper }}"]
+            removes: "/dev/mapper/{{ storage_test_resize_mapper }}"
+          when: storage_test_resize_open.rc | default(1) == 0
+
+        - name: Remove the disposable pool
+          tags: tests::cleanup
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools:
+              - name: "{{ storage_test_resize_vg }}"
+                type: lvm
+                disks: "{{ unused_disks }}"
+                state: absent
+
+        - name: Refresh systemd after removing fixture mount and crypttab entries
+          tags: tests::cleanup
+          ansible.builtin.systemd:
+            daemon_reload: true

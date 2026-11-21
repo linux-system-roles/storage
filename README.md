@@ -193,7 +193,14 @@ variables:
 
 - `size`
 
-  The `size` specifies the size of the file system. The format for this is intended to
+  The `size` specifies the size of the volume. For an encrypted volume, this
+  includes the encryption metadata; the usable file system is smaller.
+  Creation and resizing use the same backing-volume size.
+  Before resizing an existing LUKS mapping, the role checks that Blivet's
+  assumed data offset matches the on-disk value. When `size` is specified,
+  a mapping that does not span the available payload is reported even if the
+  backing volume is already at the requested size.
+  The format for this is intended to
   be human-readable, e.g.: "10g", "50 GiB". The size of LVM volumes can be specified as a
   percentage of the pool/VG size, eg: "50%" as of v1.4.2.
 

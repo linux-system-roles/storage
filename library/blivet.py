@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# Assisted by OpenCode using model GPT-6.1 Sol
 from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
@@ -407,7 +408,7 @@ try:
     from blivet3.partitioning import do_partitioning, parted
     from blivet3.size import Size
     from blivet3.static_data.lvm_info import pvs_info
-    from blivet3.util import set_up_logging
+    from blivet3.util import get_sysfs_attr, set_up_logging
     BLIVET_PACKAGE = 'blivet3'
 except ImportError:
     LIB_IMP_ERR3 = traceback.format_exc()
@@ -425,7 +426,7 @@ except ImportError:
         from blivet.partitioning import do_partitioning, parted
         from blivet.size import Size
         from blivet.static_data.lvm_info import pvs_info
-        from blivet.util import set_up_logging
+        from blivet.util import get_sysfs_attr, set_up_logging
         BLIVET_PACKAGE = 'blivet'
     except ImportError:
         LIB_IMP_ERR = traceback.format_exc()
@@ -440,6 +441,8 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage_lsr.argument_validator import validate_parameters
 
 if BLIVET_PACKAGE:
+    from gi.repository import BlockDev, GLib
+
     blivet_flags.debug = True
     blivet_flags.allow_online_fs_resize = True
     blivet_flags.gfs2 = True
@@ -826,7 +829,7 @@ class BlivetVolume(BlivetBase):
             luks_fmt = self._device.format
 
         if param_name == 'size':
-            self._volume['size'] = int(self._device.size.convert_to())
+            self._volume['size'] = int(self._device.raw_device.size.convert_to())
         elif param_name == 'fs_type' and (self._device.format.type or self._device.format.name != get_format(None).name):
             self._volume['fs_type'] = self._device.format.type
         elif param_name == 'fs_label':
@@ -922,44 +925,87 @@ class BlivetVolume(BlivetBase):
     def _manage_cache(self):
         pass
 
+    # Assisted by OpenCode using model GPT-6.2 Astra
+    def _check_luks_resize(self, raw, size):
+        """Validate a direct, existing LUKS mapping before scheduling any resize."""
+        try:
+            if hasattr(BlockDev, "crypto_luks_get_metadata_size"):  # libblockdev 2
+                offset = Size(BlockDev.crypto_luks_get_metadata_size(raw.path))
+            else:  # libblockdev 3
+                offset = Size(BlockDev.crypto_luks_info(raw.path).metadata_size)
+        except (GLib.Error, AttributeError) as e:
+            raise BlivetAnsibleError("cannot read LUKS data offset for '%s': %s" % (raw.path, e))
+
+        payload_size = raw.size - offset
+        unused = payload_size - self._device.size
+        if unused:
+            # Older Blivet has no sector_size property. Only accept a tail
+            # smaller than one logical sector of the actual mapper.
+            sector_size = int(get_sysfs_attr(self._device.sysfs_path, "queue/logical_block_size") or 0)
+            if not 0 < unused < sector_size:
+                raise BlivetAnsibleError("LUKS mapping '%s' is %s, but its backing device has %s of payload"
+                                         % (self._device.name, self._device.size, payload_size))
+        if size != raw.size:
+            # Older Blivet planners subtract the same constant for both LUKS versions.
+            planned_offset = getattr(raw.format, '_header_size', None) or devicelibs.crypto.LUKS_METADATA_SIZE
+            if planned_offset != offset:
+                raise BlivetAnsibleError("cannot resize '%s': Blivet assumes a LUKS data offset of %s, but the on-disk offset is %s"
+                                         % (raw.path, planned_offset, offset))
+
     def _resize(self):
         """ Schedule actions as needed to ensure the device has the desired size. """
         size = self._get_size()
+        # Match creation: size describes the backing volume, not the LUKS payload.
+        device = self._device.raw_device
 
-        if size and self._device.size != size:
+        if size and self._device.exists and self._device.type == "luks/dm-crypt" and self._device.parents[0] == device:
+            self._check_luks_resize(device, size)
+
+        if size and device.size != size:
+            if device != self._device:
+                # LUKS resizability depends on size information for both layers.
+                device.format.update_size_info()
             try:
                 self._device.format.update_size_info()
             except AttributeError:
                 # Error handling is done next.
                 pass
 
-            if not self._device.resizable:
-                return
+            if not device.resizable or not self._device.resizable:
+                if device == self._device:
+                    # Preserve the role's no-op for unsupported plain devices.
+                    return
+                raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" %
+                                         (self._volume['name'], device.size, size))
 
-            if size > self._device.size:
-                trim_percent = abs((1.0 - float(self._device.max_size / size)) * 100)
-                log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
-                if size > self._device.max_size and trim_percent <= MAX_TRIM_PERCENT:
+            # Keep filesystem limits in the same size domain as the raw target.
+            metadata_size = device.size - self._device.size
+            min_size = max(device.min_size, self._device.min_size + metadata_size)
+            max_size = min(device.max_size, self._device.max_size + metadata_size)
+            if size > device.size:
+                trim_percent = abs((1.0 - float(max_size / size)) * 100)
+                log.debug("resize: size=%s->%s ; trim=%s", device.size, size, trim_percent)
+                if size > max_size and trim_percent <= MAX_TRIM_PERCENT:
                     log.info("adjusting %s resize target from %s to %s to fit in free space",
                              self._volume['name'],
                              size,
-                             self._device.max_size)
-                    size = self._device.max_size
-                    if size == self._device.size:
+                             max_size)
+                    size = max_size
+                    if size == device.size:
                         return
-            elif size < self._device.size:
-                trim_percent = abs((1.0 - float(self._device.min_size / size)) * 100)
-                log.debug("resize: size=%s->%s ; trim=%s", self._device.size, size, trim_percent)
-                if size < self._device.min_size and trim_percent <= MAX_TRIM_PERCENT:
+            elif size < device.size:
+                trim_percent = abs((1.0 - float(min_size / size)) * 100)
+                log.debug("resize: size=%s->%s ; trim=%s", device.size, size, trim_percent)
+                if size < min_size and trim_percent <= MAX_TRIM_PERCENT:
                     log.info("adjusting %s resize target from %s to %s match device min size",
                              self._volume['name'],
                              size,
-                             self._device.min_size)
-                    size = self._device.min_size
-                    if size == self._device.size:
+                             min_size)
+                    size = min_size
+                    if size == device.size:
                         return
 
-            if not self._device.min_size <= size <= self._device.max_size:
+            if not min_size <= size <= max_size:
                 raise BlivetAnsibleError("volume '%s' cannot be resized to '%s'" % (self._volume['name'], size))
 
             def _fs_unmount():
@@ -976,7 +1022,7 @@ class BlivetVolume(BlivetBase):
 
             if self._device.format.status and self._device.format.mountable:
                 if hasattr(self._device.format, "_resize_support") and hasattr(fslib, "FSResize"):
-                    if size > self._device.size:
+                    if size > device.size:
                         # online grow
                         if self._device.format._resize_support & fslib.FSResize.ONLINE_GROW:
                             log.debug("filesystem '%s' supports online grow, will attempt to resize '%s' while mounted",
@@ -984,7 +1030,7 @@ class BlivetVolume(BlivetBase):
                         else:
                             # online grow not supported, try unmount the device
                             _fs_unmount()
-                    elif size < self._device.size:
+                    elif size < device.size:
                         # online shrink
                         if self._device.format._resize_support & fslib.FSResize.ONLINE_SHRINK:
                             log.debug("filesystem '%s' supports online shrink, will attempt to resize '%s' while mounted",
@@ -997,13 +1043,10 @@ class BlivetVolume(BlivetBase):
                     _fs_unmount()
 
             try:
-                self._blivet.resize_device(self._device, size)
+                self._blivet.resize_device(device, size)
             except ValueError as e:
-                raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" % (self._device.name,
-                                                                                              self._device.size,
-                                                                                              size, str(e)))
-        elif size and self._device.exists and self._device.size != size and not self._device.resizable:
-            raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s" % (self._device.name, self._device.size, size))
+                raise BlivetAnsibleError("volume '%s' cannot be resized from %s to %s: %s" %
+                                         (self._device.name, device.size, size, str(e)))
 
     def _reformat(self):
         """ Schedule actions as needed to ensure the volume is formatted as specified. """
@@ -1037,6 +1080,7 @@ class BlivetVolume(BlivetBase):
         # look up the device
         self._look_up_device()
 
+        inherit_size = self._device is not None and self._volume.get('size') is None
         self._apply_defaults()
 
         # schedule destroy if appropriate
@@ -1062,7 +1106,7 @@ class BlivetVolume(BlivetBase):
             raise BlivetAnsibleError("volume '%s' has a mount point but no mountable file system" % self._volume['name'])
 
         # schedule resize if appropriate
-        if self._device.raw_device.exists and self._volume['size']:
+        if self._device.raw_device.exists and self._volume['size'] and not inherit_size:
             self._resize()
 
         # save device identifiers for use by the role
@@ -2480,7 +2524,8 @@ def get_mount_info(pools, volumes, actions, fstab):
 def get_crypt_info(actions):
     info = list()
     for action in actions:
-        if not (action.is_format and action.format.type == 'luks'):
+        if not (action.is_format and action.format.type == 'luks'
+                and (action.is_create or action.is_destroy)):
             continue
 
         info.append(dict(backing_device=action.device.path,
