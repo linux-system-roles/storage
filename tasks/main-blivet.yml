@@ -30,13 +30,13 @@
   debug:
     var: storage_pools | d([])
     verbosity: 1
-  no_log: "{{ __storage_manage_tpm2 | bool }}"
+  no_log: "{{ storage_secure_logging }}"
 
 - name: Show storage_volumes
   debug:
     var: storage_volumes | d([])
     verbosity: 1
-  no_log: "{{ __storage_manage_tpm2 | bool }}"
+  no_log: "{{ storage_secure_logging }}"
 
 - name: Get required packages
   blivet:
@@ -49,7 +49,7 @@
     packages_only: true
     uses_kmod_kvdo: "{{ __storage_uses_kmod_kvdo }}"
   register: package_info
-  no_log: "{{ __storage_manage_tpm2 | bool }}"
+  no_log: "{{ storage_secure_logging }}"
   when: storage_skip_checks is not defined or
         not "packages_installed" in storage_skip_checks
 
@@ -130,7 +130,7 @@
         uses_kmod_kvdo: "{{ __storage_uses_kmod_kvdo }}"
         destroy_partition_device: "{{ storage_destroy_partition_device }}"
       register: blivet_output
-      no_log: "{{ __storage_manage_tpm2 | bool }}"
+      no_log: "{{ storage_secure_logging }}"
 
     - name: Workaround for udev issue on some platforms
       command: udevadm trigger --subsystem-match=block
@@ -160,7 +160,7 @@
   rescue:
     - name: Failed message
       fail:
-        msg: "{{ ansible_failed_result.msg | d('Storage device setup failed') if (__storage_manage_tpm2 | bool) else ansible_failed_result }}"
+        msg: "{{ ansible_failed_result.msg | d('Storage device setup failed') if (storage_secure_logging | bool) else ansible_failed_result }}"
   always:
     - name: Unmask the systemd cryptsetup services
       systemd:
@@ -170,28 +170,38 @@
       loop: "{{ storage_cryptsetup_services }}"
 
 # Assisted by OpenCode using model GPT-6.2 Astra
-- name: Enroll TPM2 tokens before publishing boot entries
-  luks_tpm2:
-    device: "{{ request.path }}"
-    expected_uuid: "{{ request.uuid | d(omit, true) }}"
-    planned: "{{ request.planned }}"
-    pcrs: "{{ volume.encryption_tpm2.pcrs }}"
-    mode: "{{ volume.encryption_tpm2.mode | d('enroll') }}"
-    encryption_password: "{{ volume.encryption_password | d(storage_volume_defaults.encryption_password | d(none), true) | d(omit, true) }}"
-    encryption_key: "{{ volume.encryption_key | d(storage_volume_defaults.encryption_key | d(none), true) | d(omit, true) }}"
-  vars:
-    volume: "{{ storage_volumes[request.volume] if request.pool == -1 else storage_pools[request.pool].volumes[request.volume] }}"
-  loop: "{{ blivet_output.tpm2_enrollments | d([]) }}"
-  loop_control:
-    loop_var: request
-    label: "{{ request.path }}"
-  register: __storage_tpm2_update
+- name: Manage TPM2 enrollment before publishing boot entries
+  block:
+    - name: Enroll the requested tokens
+      luks_tpm2:
+        device: "{{ request.path }}"
+        expected_uuid: "{{ request.uuid | d(omit, true) }}"
+        planned: "{{ request.planned }}"
+        pcrs: "{{ volume.encryption_tpm2.pcrs }}"
+        mode: "{{ volume.encryption_tpm2.mode | d('enroll') }}"
+        encryption_password: "{{ volume.encryption_password | d(storage_volume_defaults.encryption_password | d(none), true) | d(omit, true) }}"
+        encryption_key: "{{ volume.encryption_key | d(storage_volume_defaults.encryption_key | d(none), true) | d(omit, true) }}"
+      vars:
+        volume: "{{ storage_volumes[request.volume] if request.pool == -1 else storage_pools[request.pool].volumes[request.volume] }}"
+      loop: "{{ blivet_output.tpm2_enrollments | d([]) }}"
+      loop_control:
+        loop_var: request
+        label: "{{ request.path }}"
+      register: __storage_tpm2_update
+      no_log: "{{ storage_secure_logging }}"
+  rescue:
+    - name: Report the TPM enrollment error without the invocation arguments
+      ansible.builtin.fail:
+        msg: >-
+          {{ __storage_tpm2_update.results | d([]) | selectattr('failed', 'defined')
+             | selectattr('failed') | selectattr('msg', 'defined') | map(attribute='msg')
+             | first | d('TPM2 enrollment failed') }}
 
 - name: Show blivet_output
   debug:
     var: blivet_output
     verbosity: 1
-  no_log: "{{ __storage_manage_tpm2 | bool }}"
+  no_log: "{{ storage_secure_logging }}"
 
 # - name: Print mod args
 #   debug:
@@ -200,12 +210,12 @@
 - name: Set the list of pools for test verification
   set_fact:
     _storage_pools_list: "{{ blivet_output.pools }}"
-  no_log: "{{ __storage_manage_tpm2 | bool }}"
+  no_log: "{{ storage_secure_logging }}"
 
 - name: Set the list of volumes for test verification
   set_fact:
     _storage_volumes_list: "{{ blivet_output.volumes }}"
-  no_log: "{{ __storage_manage_tpm2 | bool }}"
+  no_log: "{{ storage_secure_logging }}"
 
 # Mount Management
 #

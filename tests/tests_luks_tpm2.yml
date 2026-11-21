@@ -82,7 +82,7 @@
             stdin: "{{ storage_test_tpm_dual.encryption_password }}"
             stdin_add_newline: false
           changed_when: false
-          no_log: true  # disposable test credential
+          no_log: "{{ storage_secure_logging | d(true) }}"
 
         - name: Verify token-only unlock without a fallback or prompt
           ansible.builtin.command:

@@ -8,6 +8,10 @@ argument_specs:
       including file systems, LVM volume groups, Stratis pools,
       RAID arrays, and encrypted volumes with minimal input.
     options:
+      storage_secure_logging:
+        type: bool
+        default: true
+        description: Hide tasks that handle credential-bearing volume declarations and results.
       storage_provider:
         type: str
         default: blivet

@@ -32,9 +32,6 @@ __storage_manage_stratis: "{{ (storage_pool_defaults.type | default('lvm')) == '
 __storage_write_log_file: false
 
 # Assisted by OpenCode using model GPT-6.2 Astra
-__storage_manage_tpm2: >-
-  {{ ((storage_volumes | d([])) + (storage_pools | d([]) | selectattr('volumes', 'defined') | map(attribute='volumes') | flatten))
-     | selectattr('encryption_tpm2', 'defined') | rejectattr('encryption_tpm2', 'none') | list | length > 0 }}
 __storage_tpm_packages: >-
   {{ ['systemd-cryptsetup', 'libtss2-tcti-device0'] if ansible_facts['os_family'] == 'Debian'
      else ['systemd-udev', 'tpm2-tss'] }}

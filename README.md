@@ -383,6 +383,10 @@ variables:
   without writing a keyslot. A volume with `crypttab_options: noauto` may
   still have a token; conversely `tpm2-device=auto` does not request enrollment.
 
+  Leave `storage_secure_logging: true` (the default) to suppress task output
+  containing volume credentials. The internal TPM module never passes an
+  unlock secret on the command line.
+
   For a **new TPM-only volume**, set `encryption_tpm2: {mode: only, pcrs: [7]}`
   and do not set `encryption_key` or `encryption_password`. This requires
   systemd-creds and Blivet with LUKS2 subsystem support. The role persists a

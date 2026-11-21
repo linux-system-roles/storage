@@ -1,6 +1,7 @@
 ---
 # defaults file for template
 storage_provider: "blivet"
+storage_secure_logging: true
 storage_use_partitions: null
 # yamllint disable-line rule:line-length
 storage_disklabel_type: null  # leave unset to allow the role to select an appropriate label type
