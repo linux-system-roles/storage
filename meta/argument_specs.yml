@@ -257,6 +257,14 @@ argument_specs:
                 description: >
                   Unique PCR indices (0 through 23) to bind on the local TPM.
                   An explicit empty list binds to the TPM without a PCR policy.
+              mode:
+                type: str
+                choices: [enroll, only]
+                default: enroll
+                description: >
+                  Enroll preserves existing unlock methods. Only creates a
+                  TPM-only volume or adopts an already TPM-only volume; it
+                  never converts an existing password-protected volume.
           compression:
             type: bool
             description: >

@@ -376,13 +376,31 @@ variables:
       crypttab_options: tpm2-device=auto
   ```
 
-  Enrollment keeps the passphrase or `encryption_key` file.
+  The default `mode: enroll` keeps the passphrase or `encryption_key` file.
   Either the TPM or that credential can unlock the volume. The role tests a
   matching token without prompting; an ambiguous, incompatible or unusable
   token fails rather than being replaced. Check mode predicts enrollment
   without writing a keyslot. A volume with `crypttab_options: noauto` may
   still have a token; conversely `tpm2-device=auto` does not request enrollment.
 
+  For a **new TPM-only volume**, set `encryption_tpm2: {mode: only, pcrs: [7]}`
+  and do not set `encryption_key` or `encryption_password`. This requires
+  systemd-creds and Blivet with LUKS2 subsystem support. The role persists a
+  TPM-sealed temporary credential under `/var/lib/storage-lsr-tpm2/` on the
+  managed host **before** formatting. A random identifier in the new LUKS2
+  subsystem field ties an interrupted transaction to its credential. Rerun
+  with the same declaration, TPM and PCR state to finish it. The role tests
+  the actual enrolled token before dropping **only its own temporary key**,
+  verifies the final header, then clears the marker and sealed credential.
+  Do not remove a pending credential or alter the PCR state during creation.
+  An interruption before the format or after clearing the marker may leave an
+  unused sealed credential on the host.
+
+  `mode: only` also accepts an existing, verifiably TPM-only volume. It **never
+  converts existing user keyslots** into a TPM-only setup. A completed TPM-only
+  volume has no independent unlock credential: loss of that TPM or a PCR policy
+  mismatch can make the data inaccessible. TPM+PIN, signed PCR policies, key
+  rotation and recovery after TPM replacement are outside this interface.
 
 - `deduplication`
 

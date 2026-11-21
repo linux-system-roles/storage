@@ -111,6 +111,11 @@ options:
                                 type: list
                                 elements: int
                                 required: true
+                            mode:
+                                description: Keep existing unlock methods or create a new TPM-only volume
+                                type: str
+                                choices: [enroll, only]
+                                default: enroll
                     encryption:
                         description: encryption
                         type: bool
@@ -231,6 +236,11 @@ options:
                         type: list
                         elements: int
                         required: true
+                    mode:
+                        description: Keep existing unlock methods or create a new TPM-only volume
+                        type: str
+                        choices: [enroll, only]
+                        default: enroll
             encryption:
                 description: encryption
                 type: bool
@@ -636,15 +646,21 @@ class BlivetBase(object):
                 fmt = get_format(None)
 
             if self._tpm:
+                if self._tpm.only and device.original_format.exists and (
+                        device.original_format.type is not None or device.original_format.name != get_format(None).name):
+                    raise TPM2Error("TPM-only creation requires a new or unformatted device")
                 self._tpm.new(device.path)
-            self._blivet.format_device(device,
-                                       get_format("luks",
-                                                  name=luks_name,
-                                                  cipher=self._spec_dict.get('encryption_cipher'),
-                                                  key_size=self._spec_dict.get('encryption_key_size'),
-                                                  luks_version=self._spec_dict.get('encryption_luks_version'),
-                                                  passphrase=self._spec_dict.get('encryption_password') or None,
-                                                  key_file=self._spec_dict.get('encryption_key') or None))
+            pending = self._tpm.pending if self._tpm else None
+            fmt_args = dict(subsystem=pending.marker) if pending else {}
+            luks = get_format("luks", name=luks_name,
+                              cipher=self._spec_dict.get('encryption_cipher'),
+                              key_size=self._spec_dict.get('encryption_key_size'),
+                              luks_version=self._spec_dict.get('encryption_luks_version'),
+                              passphrase=pending.password if pending else self._spec_dict.get('encryption_password') or None,
+                              key_file=self._spec_dict.get('encryption_key') or None, **fmt_args)
+            if pending and getattr(luks, 'subsystem', None) != pending.marker:
+                raise TPM2Error("TPM-only creation requires Blivet with LUKS2 subsystem support")
+            self._blivet.format_device(device, luks)
 
             if not device.format.has_key:
                 raise BlivetAnsibleError("encrypted %s '%s' missing key/password" % (self._type, self._spec_dict['name']))
@@ -807,6 +823,8 @@ class BlivetVolume(BlivetBase):
                         fmt.key_file = self._volume['encryption_key']
                 if self._volume.get('encryption_password'):
                     fmt.passphrase = self._volume['encryption_password']
+                if self._tpm and self._tpm.pending and self._tpm.token is None:
+                    fmt.passphrase = self._tpm.pending.password
             if device.isleaf:
                 use_token = (self._tpm is not None and self._tpm.token is not None
                              and not (self._volume.get('encryption_password') or self._volume.get('encryption_key')))
@@ -1133,6 +1151,8 @@ class BlivetVolume(BlivetBase):
                 raise TPM2Error("encryption_tpm2 requires an encrypted volume")
             if self._volume.get('encryption_luks_version') not in (None, 'luks2'):
                 raise TPM2Error("encryption_tpm2 requires a LUKS2 volume")
+            if self._tpm.only and (self._volume.get('encryption_key') or self._volume.get('encryption_password')):
+                raise TPM2Error("TPM-only mode cannot use password or key file defaults")
             if self._device and self._device != self._device.raw_device and self._tpm.path is None:
                 self._tpm.existing(self._device.raw_device.path, self._device.raw_device.format.uuid)
             if self._volume.get('encryption_luks_version') is None:
@@ -2813,7 +2833,8 @@ def run_module():
     # see https://github.com/linux-system-roles/storage/pull/546
     common_volume_opts = dict(crypttab_options=dict(type='str'),
                               encryption_tpm2=dict(type='dict', default=None,
-                                                   options=dict(pcrs=dict(type='list', elements='int', required=True))),
+                                                   options=dict(pcrs=dict(type='list', elements='int', required=True),
+                                                                mode=dict(type='str', choices=['enroll', 'only'], default='enroll'))),
                               encryption=dict(type='bool'),
                               encryption_cipher=dict(type='str'),
                               encryption_key=dict(type='str', no_log=False),
@@ -3070,6 +3091,9 @@ def _run_storage(module, result):
     result['crypts'] = get_crypt_info(scheduled, crypttab_options, crypttab)
     result['packages'] = b.packages[:]
 
+    for enrollment in b._storage_tpm_enrollments.values():
+        enrollment.before_commit()
+
     for action in scheduled:
         if action.is_destroy and action.is_format and action.format.exists and \
            (action.format.mountable or action.format.type == "swap"):
@@ -3101,7 +3125,7 @@ def _run_storage(module, result):
     for pi, vols in groups:
         for vi, vol in enumerate(vols):
             enrollment = b._storage_tpm_enrollments.get(id(vol))
-            if not enrollment or enrollment.token is not None:
+            if not enrollment or (enrollment.token is not None and not enrollment.pending):
                 continue
             raw = b.devicetree.resolve_device(vol['_raw_device'])
             if raw is None or raw.format.type != 'luks' or raw.format.luks_version != 'luks2':

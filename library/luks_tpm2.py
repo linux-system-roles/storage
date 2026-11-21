@@ -11,8 +11,7 @@ module: luks_tpm2
 short_description: Enroll a TPM2 token in a LUKS2 volume identified by Blivet
 description:
     - Internal module used by the storage role after its device actions complete.
-version_added: "1.0.0"
-author: "Linux System Roles"
+author: "Bata Roland Krisztián (@bataroland)"
 options:
     device:
         description: Path to the backing device, not the cleartext mapping.
@@ -30,6 +29,11 @@ options:
         required: true
         type: list
         elements: int
+    mode:
+        description: Add a token or finalize a newly prepared TPM-only volume.
+        type: str
+        choices: [enroll, only]
+        default: enroll
     encryption_password:
         description: Existing unlock password, if used.
         type: str
@@ -56,6 +60,7 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(device=dict(type='path', required=True), expected_uuid=dict(type='str'),
                            planned=dict(type='bool', default=False), pcrs=dict(type='list', elements='int', required=True),
+                           mode=dict(type='str', choices=['enroll', 'only'], default='enroll'),
                            encryption_password=dict(type='str', no_log=True), encryption_key=dict(type='path', no_log=False)),
         supports_check_mode=True)
     p = module.params
@@ -65,7 +70,7 @@ def main():
             if not module.check_mode:
                 module.fail_json(msg="planned headers are valid only in check mode")
             module.exit_json(changed=True)
-        spec = dict(encryption_tpm2=dict(pcrs=p['pcrs']),
+        spec = dict(encryption_tpm2=dict(mode=p['mode'], pcrs=p['pcrs']),
                     encryption_password=p['encryption_password'], encryption_key=p['encryption_key'])
         request = Enrollment(spec, module.check_mode)
         request.existing(p['device'], p['expected_uuid'])

@@ -176,6 +176,7 @@
     expected_uuid: "{{ request.uuid | d(omit, true) }}"
     planned: "{{ request.planned }}"
     pcrs: "{{ volume.encryption_tpm2.pcrs }}"
+    mode: "{{ volume.encryption_tpm2.mode | d('enroll') }}"
     encryption_password: "{{ volume.encryption_password | d(storage_volume_defaults.encryption_password | d(none), true) | d(omit, true) }}"
     encryption_key: "{{ volume.encryption_key | d(storage_volume_defaults.encryption_key | d(none), true) | d(omit, true) }}"
   vars:

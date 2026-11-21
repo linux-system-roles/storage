@@ -16,12 +16,21 @@
       encryption_luks_version: luks2
       encryption_password: test-fixture-passphrase
       crypttab_options: noauto
+    storage_test_tpm_only:
+      name: exclusive
+      size: 768 MiB
+      fs_type: xfs
+      encryption: true
+      encryption_luks_version: luks2
+      encryption_tpm2: {mode: only, pcrs: [7]}
+      crypttab_options: noauto
     storage_test_tpm_pool:
       name: "{{ storage_test_tpm_vg }}"
       type: lvm
       disks: "{{ unused_disks }}"
       volumes:
         - "{{ storage_test_tpm_dual | combine({'encryption_tpm2': {'pcrs': [7]}}) }}"
+        - "{{ storage_test_tpm_only }}"
   tags:
     - tests::lvm
   tasks:
@@ -39,7 +48,7 @@
       changed_when: false
       failed_when: storage_test_tpm_vg in storage_test_tpm_groups.stdout.split()
 
-    - name: Exercise additional TPM enrollment
+    - name: Exercise password-only, additional TPM and TPM-only enrollment
       block:
         - name: Start with a password-only volume
           ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
@@ -62,7 +71,7 @@
           changed_when: false
           failed_when: (storage_test_tpm_check.stdout | from_json).tokens | length != 0
 
-        - name: Enroll the existing volume with the requested PCRs
+        - name: Enroll the existing volume and create the TPM-only volume
           ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             storage_pools: ["{{ storage_test_tpm_pool }}"]
@@ -78,7 +87,7 @@
         - name: Verify token-only unlock without a fallback or prompt
           ansible.builtin.command:
             argv: [cryptsetup, open, --test-passphrase, --token-only, --batch-mode, "/dev/{{ storage_test_tpm_vg }}/{{ item }}"]
-          loop: [dual]
+          loop: [dual, exclusive]
           changed_when: false
 
         - name: Read the resulting LUKS2 slot and token counts
@@ -92,6 +101,7 @@
             (storage_test_tpm_dump.stdout | from_json).tokens | length != 1
           loop:
             - {name: dual, slots: 2}
+            - {name: exclusive, slots: 1}
 
         - name: Repeat enrollment
           ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
@@ -104,6 +114,15 @@
               - not blivet_output.changed
               - blivet_output.tpm2_enrollments | length == 0
               - __storage_tpm2_update is not changed
+
+        - name: Refuse to convert an existing passphrase slot to TPM-only
+          ansible.builtin.include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_params:
+              storage_pools:
+                - "{{ storage_test_tpm_pool | combine({'volumes': [storage_test_tpm_only | combine({'name': 'dual'})]}) }}"
+            __storage_failed_regex: refusing to convert existing keyslots
+            __storage_failed_msg: An operator-owned passphrase slot must not be removed
 
       always:
         - name: Remove only the disposable pool
