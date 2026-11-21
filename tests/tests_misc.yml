@@ -49,38 +49,45 @@
     - name: Verify results - 2
       include_tasks: verify-role-results.yml
 
-    - name: >-
-        Test for correct handling of invalid parameter when creating ext4
-        filesystem
-      include_tasks: verify-role-failed.yml
-      vars:
-        __storage_failed_regex: >-
-          Failed to commit changes to disk.*(FSError.*format failed:
-          1.*/dev/mapper/foo-test1|
-          Process reported exit code 1: mke2fs: invalid block size - 389)
-        __storage_failed_msg: >-
-          Unexpected behavior when creating ext4 filesystem with invalid
-          parameter
-        __storage_failed_params:
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  fs_type: ext4
-                  size: "{{ volume1_size }}"
-                  fs_create_options: -Fb 389
-                  mount_point: "{{ mount_location }}"
+    # Assisted by OpenCode using model GPT-6.2 Astra
+    - name: Test a failed ext4 format on a newly created LV
+      block:
+        - name: Reject the invalid ext4 block size
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_changed: true  # The backing devices already exist when mkfs fails.
+            __storage_failed_regex: >-
+              Failed to commit changes to disk.*(FSError.*format failed:
+              1.*/dev/mapper/foo-test1|
+              Process reported exit code 1: mke2fs: invalid block size - 389)
+            __storage_failed_msg: >-
+              Unexpected behavior when creating ext4 filesystem with invalid
+              parameter
+            __storage_failed_params:
+              storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      fs_type: ext4
+                      size: "{{ volume1_size }}"
+                      fs_create_options: -Fb 389
+                      mount_point: "{{ mount_location }}"
 
-    - name: Remove the volume group created above - 2
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            state: absent
+        - name: Verify the completed device creation was reported
+          assert:
+            that: "'create device' in (blivet_output.actions | map(attribute='action') | list)"
+      always:
+        - name: Remove the volume group left by the failed format
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                state: absent
+          tags: tests::cleanup
 
     - name: >-
         Create one LVM logical volume under one volume group, size

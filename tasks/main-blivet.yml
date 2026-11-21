@@ -90,7 +90,7 @@
       selectattr('name', 'defined') |
       selectattr('status', 'defined') |
       rejectattr('status', 'match', '^not-found$') |
-      rejectattr('status', 'match', '^masked$') |
+      rejectattr('status', 'match', '^masked') |
       rejectattr('status', 'match', '^failed$') |
       map(attribute='name') |
       select('match', '^systemd-cryptsetup@') |
@@ -101,13 +101,14 @@
       service_facts:
       no_log: "{{ ansible_verbosity < 2 }}"
       when:
-        - not "services" in ansible_facts
         - not "cryptsetup_services" in storage_skip_checks | d([])
 
     - name: Mask the systemd cryptsetup services
       systemd:
         name: "{{ item }}"
         masked: true
+      # Discovery can open LUKS mappings even in check mode; block auto-activation.
+      check_mode: false
       loop: "{{ storage_cryptsetup_services }}"
 
     - name: Manage the pools and volumes to match the specified state
@@ -160,6 +161,7 @@
       systemd:
         name: "{{ item }}"
         masked: false
+      check_mode: false
       loop: "{{ storage_cryptsetup_services }}"
 
 - name: Show blivet_output
