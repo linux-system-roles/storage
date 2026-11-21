@@ -30,6 +30,7 @@ def test_action_result(monkeypatch, completed, failed, check_mode, changed):
     b.devicetree.actions.find.return_value = [action]
     monkeypatch.setattr(blivet, "Blivet", lambda: b, raising=False)
     monkeypatch.setattr(blivet, "FSTab", lambda unused: None)
+    monkeypatch.setattr(blivet, "CryptTab", lambda unused: None)
     hooks = []
     callbacks = mock.Mock()
     callbacks.action_executed.add.side_effect = hooks.append

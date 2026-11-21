@@ -244,6 +244,19 @@ argument_specs:
               `/etc/crypttab`. Omit to preserve existing options;
               use an empty string to remove the options field.
               Applies to volumes with their own LUKS encryption.
+          encryption_tpm2:
+            type: dict
+            description: >
+              Enroll a systemd TPM2 token on this volume's own LUKS2 header.
+              Omit to leave tokens unchanged. Independent of crypttab_options.
+            options:
+              pcrs:
+                type: list
+                elements: int
+                required: true
+                description: >
+                  Unique PCR indices (0 through 23) to bind on the local TPM.
+                  An explicit empty list binds to the TPM without a PCR policy.
           compression:
             type: bool
             description: >

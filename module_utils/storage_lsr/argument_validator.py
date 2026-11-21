@@ -137,7 +137,7 @@ def _validate_parameters(argument_spec, parameters, error_log=None, updated_para
                     updated_params[spec] = None
 
         elif value.get('type') == 'dict':
-            if 'options' not in value:
+            if parameters[spec] is None or 'options' not in value:
                 # generic dict, no way to check its contents
                 updated_params[spec] = parameters[spec]
             else:

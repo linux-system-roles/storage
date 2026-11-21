@@ -102,6 +102,15 @@ options:
                     crypttab_options:
                         description: Comma-separated options for the LUKS volume in /etc/crypttab
                         type: str
+                    encryption_tpm2:
+                        description: Enroll a systemd TPM2 token for this LUKS2 volume
+                        type: dict
+                        suboptions:
+                            pcrs:
+                                description: PCR indices to bind (0 through 23)
+                                type: list
+                                elements: int
+                                required: true
                     encryption:
                         description: encryption
                         type: bool
@@ -213,6 +222,15 @@ options:
             crypttab_options:
                 description: Comma-separated options for the LUKS volume in /etc/crypttab
                 type: str
+            encryption_tpm2:
+                description: Enroll a systemd TPM2 token for this LUKS2 volume
+                type: dict
+                suboptions:
+                    pcrs:
+                        description: PCR indices to bind (0 through 23)
+                        type: list
+                        elements: int
+                        required: true
             encryption:
                 description: encryption
                 type: bool
@@ -445,6 +463,7 @@ except ImportError:
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage_lsr.argument_validator import STRING_TYPE, validate_parameters
+from ansible.module_utils.storage_lsr.tpm2 import Enrollment, TPM2Error
 
 if BLIVET_PACKAGE:
     from gi.repository import BlockDev, GLib
@@ -592,6 +611,7 @@ class BlivetBase(object):
         self._blivet = blivet_obj
         self._spec_dict = spec_dict
         self._device = None
+        self._tpm = None
 
     def _get_format(self):
         # abstract method
@@ -615,6 +635,8 @@ class BlivetBase(object):
             else:
                 fmt = get_format(None)
 
+            if self._tpm:
+                self._tpm.new(device.path)
             self._blivet.format_device(device,
                                        get_format("luks",
                                                   name=luks_name,
@@ -772,6 +794,8 @@ class BlivetVolume(BlivetBase):
             return
 
         if device.format.type == 'luks':
+            if self._tpm:
+                self._tpm.existing(device.path, device.format.uuid)
             # Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
             # Keep both formats configured for subsequent action processing.
             for fmt in (device.format, device.original_format):
@@ -784,7 +808,9 @@ class BlivetVolume(BlivetBase):
                 if self._volume.get('encryption_password'):
                     fmt.passphrase = self._volume['encryption_password']
             if device.isleaf:
-                if device.format.has_key and self._volume.get('encryption') is not False:
+                use_token = (self._tpm is not None and self._tpm.token is not None
+                             and not (self._volume.get('encryption_password') or self._volume.get('encryption_key')))
+                if (use_token or device.format.has_key) and self._volume.get('encryption') is not False:
                     # Populate discovers mappings but does not reopen known formats.
                     was_open = device.format.status
                     if not was_open:
@@ -795,7 +821,10 @@ class BlivetVolume(BlivetBase):
                         if check_mode:
                             temporary_luks_udev.protect(device.format.map_name)
                     try:
-                        device.format.setup()
+                        if use_token and not was_open:
+                            self._tpm.token_open(device.format.map_name)
+                        else:
+                            device.format.setup()
                     except LUKSError as e:
                         raise BlivetAnsibleError("failed to unlock volume '%s': %s" % (self._volume['name'], str(e)))
                     if check_mode and not was_open:
@@ -1086,11 +1115,28 @@ class BlivetVolume(BlivetBase):
 
     def manage(self):
         """ Schedule actions to configure this volume according to the yaml input. """
+        if self.ultimately_present and self._volume.get('encryption_tpm2') is not None:
+            if isinstance(self, BlivetStratisVolume):
+                raise TPM2Error("encryption_tpm2 is for LUKS2 volumes, not Stratis")
+            for field in ('encryption_key', 'encryption_password'):
+                if self._volume.get(field) is None:
+                    self._volume[field] = volume_defaults.get(field)
+            self._tpm = Enrollment(self._volume, check_mode)
+            self._blivet._storage_tpm_enrollments[id(self._volume)] = self._tpm
         # look up the device
         self._look_up_device()
 
         inherit_size = self._device is not None and self._volume.get('size') is None
         self._apply_defaults()
+        if self._tpm:
+            if not self._volume['encryption']:
+                raise TPM2Error("encryption_tpm2 requires an encrypted volume")
+            if self._volume.get('encryption_luks_version') not in (None, 'luks2'):
+                raise TPM2Error("encryption_tpm2 requires a LUKS2 volume")
+            if self._device and self._device != self._device.raw_device and self._tpm.path is None:
+                self._tpm.existing(self._device.raw_device.path, self._device.raw_device.format.uuid)
+            if self._volume.get('encryption_luks_version') is None:
+                self._volume['encryption_luks_version'] = 'luks2'
 
         # schedule destroy if appropriate
         if not self.ultimately_present:
@@ -2766,6 +2812,8 @@ def run_module():
     # it as no_log=False for ansible-test.
     # see https://github.com/linux-system-roles/storage/pull/546
     common_volume_opts = dict(crypttab_options=dict(type='str'),
+                              encryption_tpm2=dict(type='dict', default=None,
+                                                   options=dict(pcrs=dict(type='list', elements='int', required=True))),
                               encryption=dict(type='bool'),
                               encryption_cipher=dict(type='str'),
                               encryption_key=dict(type='str', no_log=False),
@@ -2864,6 +2912,12 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
 
+    # Generic defaults are dictionaries rather than typed volume parameters.
+    for field in ('volume_defaults', 'pool_defaults'):
+        password = (module.params.get(field) or {}).get('encryption_password')
+        if password:
+            module.no_log_values.add(password)
+
     errors, updated_params = validate_parameters(module_args, module.params)
     if errors:
         module.fail_json(msg="Parameter check failed: %s" % errors)
@@ -2903,6 +2957,8 @@ def run_module():
     global volume_defaults
     if 'volume_defaults' in module.params:
         volume_defaults = module.params['volume_defaults']
+        if volume_defaults and volume_defaults.get('encryption_tpm2') is not None:
+            module.fail_json(msg="set encryption_tpm2 on the individual volume, not in volume_defaults")
 
     global uses_kmod_kvdo
     uses_kmod_kvdo = module.params['uses_kmod_kvdo']
@@ -2946,9 +3002,12 @@ def _run_storage(module, result):
 
     if module.params['packages_only']:
         result['packages'] = get_required_packages(b, module.params['pools'], module.params['volumes'])
+        groups = [module.params['volumes']] + [p['volumes'] for p in module.params['pools'] if p['state'] == 'present']
+        result['tpm2_required'] = any(v.get('encryption_tpm2') is not None and v['state'] == 'present' for group in groups for v in group)
         return
 
     crypttab = CryptTab(b.devicetree)
+    b._storage_tpm_enrollments = {}
 
     def record_action(action):
         if action.is_format and action.format.type is None:
@@ -3033,6 +3092,22 @@ def _run_storage(module, result):
             result['changed'] = True
         finally:
             result['actions'] = [action_dict(a) for a in actions]
+
+    # Return only device identity and input indices, never unlock material.
+    # The role runs enrollment *after* restoring the service masks, but before
+    # publishing a boot entry. This also keeps token-only edits out of actions.
+    result['tpm2_enrollments'] = []
+    groups = [(-1, module.params['volumes'])] + [(idx, pool['volumes']) for idx, pool in enumerate(module.params['pools'])]
+    for pi, vols in groups:
+        for vi, vol in enumerate(vols):
+            enrollment = b._storage_tpm_enrollments.get(id(vol))
+            if not enrollment or enrollment.token is not None:
+                continue
+            raw = b.devicetree.resolve_device(vol['_raw_device'])
+            if raw is None or raw.format.type != 'luks' or raw.format.luks_version != 'luks2':
+                raise TPM2Error("cannot resolve the requested LUKS2 backing volume")
+            result['tpm2_enrollments'].append(dict(pool=pi, volume=vi, path=raw.path, uuid=raw.format.uuid,
+                                                   planned=bool(module.check_mode and enrollment.is_new)))
 
     update_fstab_identifiers(b, module.params['pools'], module.params['volumes'])
     activate_swaps(b, module.params['pools'], module.params['volumes'])

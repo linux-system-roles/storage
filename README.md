@@ -355,6 +355,35 @@ variables:
   These options control unlocking, independently of `mount_options` in
   `/etc/fstab`. Specifying a TPM option does not enroll a token.
 
+- `encryption_tpm2`
+
+  Enroll the local TPM2 in a **volume's own LUKS2 header**. This is separate
+  from `crypttab_options` (boot policy) and from Clevis encryption of Stratis
+  pools. Omit this per-volume setting to leave tokens alone. A single TPM2,
+  systemd-cryptenroll with `--unlock-key-file` (systemd 252 or later) and
+  cryptsetup with the systemd TPM2 token plugin are required on the managed
+  host. Supply `pcrs` explicitly: a list of unique integers from 0 to 23;
+  `[]` binds to the TPM without measuring any PCR. Choose PCRs appropriate to
+  that host and its update/recovery policy.
+
+  ```yaml
+  volumes:
+    - name: records
+      encryption: true
+      encryption_password: "{{ vault_records_passphrase }}"
+      encryption_tpm2:
+        pcrs: [7]
+      crypttab_options: tpm2-device=auto
+  ```
+
+  Enrollment keeps the passphrase or `encryption_key` file.
+  Either the TPM or that credential can unlock the volume. The role tests a
+  matching token without prompting; an ambiguous, incompatible or unusable
+  token fails rather than being replaced. Check mode predicts enrollment
+  without writing a keyslot. A volume with `crypttab_options: noauto` may
+  still have a token; conversely `tpm2-device=auto` does not request enrollment.
+
+
 - `deduplication`
 
   This specifies whether the Virtual Data Optimizer (VDO) will be used.
