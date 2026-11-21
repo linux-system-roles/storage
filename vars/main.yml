@@ -31,6 +31,11 @@ __storage_manage_stratis: "{{ (storage_pool_defaults.type | default('lvm')) == '
 
 __storage_write_log_file: false
 
+# Assisted by OpenCode using model GPT-6.2 Astra
+__storage_tpm_packages: >-
+  {{ ['systemd-cryptsetup', 'libtss2-tcti-device0'] if ansible_facts['os_family'] == 'Debian'
+     else ['systemd-udev', 'tpm2-tss'] }}
+
 # BEGIN - DO NOT EDIT THIS BLOCK - rh distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __storage_rh_distros:

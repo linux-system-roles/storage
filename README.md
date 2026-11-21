@@ -193,7 +193,14 @@ variables:
 
 - `size`
 
-  The `size` specifies the size of the file system. The format for this is intended to
+  The `size` specifies the size of the volume. For an encrypted volume, this
+  includes the encryption metadata; the usable file system is smaller.
+  Creation and resizing use the same backing-volume size.
+  Before resizing an existing LUKS mapping, the role checks that Blivet's
+  assumed data offset matches the on-disk value. When `size` is specified,
+  a mapping that does not span the available payload is reported even if the
+  backing volume is already at the requested size.
+  The format for this is intended to
   be human-readable, e.g.: "10g", "50 GiB". The size of LVM volumes can be specified as a
   percentage of the pool/VG size, eg: "50%" as of v1.4.2.
 
@@ -296,6 +303,22 @@ variables:
               all data on that volume will be removed as part of the process of
               adding/removing the encryption layer.
 
+  Providing a passphrase or key file lets the role reopen a closed encrypted
+  volume to inspect its existing filesystem. In check mode, mappings opened for
+  this inspection are closed again before the module returns, including on
+  failure. Mappings that were already open are left open. Check mode does not
+  mount or reformat the filesystem. Failure to close a temporary mapping is
+  reported as an error.
+
+  The role temporarily masks discovered cryptsetup services during inspection,
+  including in check mode, and restores their unmasked state in its cleanup block.
+  Services already masked (persistently or at runtime) are left masked.
+
+  When reopening, an unambiguous existing `/etc/crypttab` entry supplies the mapper
+  name. Conflicting or occupied names cause an error; already-open mappings keep
+  their names. Reopening does not rewrite crypttab or change LUKS keys or options.
+  Swap on a mapping opened only for check-mode inspection is not activated.
+
 - `encryption_password`
 
   This string specifies a password or passphrase used to unlock/open the LUKS volume.
@@ -318,6 +341,70 @@ variables:
 - `encryption_luks_version`
 
   This integer specifies the LUKS version to use.
+
+- `crypttab_options`
+
+  Set the fourth field of this LUKS volume's `/etc/crypttab` entry to a
+  comma-separated string, for example `crypttab_options: noauto` or
+  `crypttab_options: tpm2-device=auto,nofail`.
+  This applies to standalone volumes and volumes in a pool, not to encrypted
+  pool members. Omitting the setting preserves existing options; on a new
+  volume the default is to write no options. Use `""` to clear the field.
+  Existing mapper names, device identifiers and key files are preserved.
+  The role must be able to open an existing volume to manage it.
+  These options control unlocking, independently of `mount_options` in
+  `/etc/fstab`. Specifying a TPM option does not enroll a token.
+
+- `encryption_tpm2`
+
+  Enroll the local TPM2 in a **volume's own LUKS2 header**. This is separate
+  from `crypttab_options` (boot policy) and from Clevis encryption of Stratis
+  pools. Omit this per-volume setting to leave tokens alone. A single TPM2,
+  systemd-cryptenroll with `--unlock-key-file` (systemd 252 or later) and
+  cryptsetup with the systemd TPM2 token plugin are required on the managed
+  host. Supply `pcrs` explicitly: a list of unique integers from 0 to 23;
+  `[]` binds to the TPM without measuring any PCR. Choose PCRs appropriate to
+  that host and its update/recovery policy.
+
+  ```yaml
+  volumes:
+    - name: records
+      encryption: true
+      encryption_password: "{{ vault_records_passphrase }}"
+      encryption_tpm2:
+        pcrs: [7]
+      crypttab_options: tpm2-device=auto
+  ```
+
+  The default `mode: enroll` keeps the passphrase or `encryption_key` file.
+  Either the TPM or that credential can unlock the volume. The role tests a
+  matching token without prompting; an ambiguous, incompatible or unusable
+  token fails rather than being replaced. Check mode predicts enrollment
+  without writing a keyslot. A volume with `crypttab_options: noauto` may
+  still have a token; conversely `tpm2-device=auto` does not request enrollment.
+
+  Leave `storage_secure_logging: true` (the default) to suppress task output
+  containing volume credentials. The internal TPM module never passes an
+  unlock secret on the command line.
+
+  For a **new TPM-only volume**, set `encryption_tpm2: {mode: only, pcrs: [7]}`
+  and do not set `encryption_key` or `encryption_password`. This requires
+  systemd-creds and Blivet with LUKS2 subsystem support. The role persists a
+  TPM-sealed temporary credential under `/var/lib/storage-lsr-tpm2/` on the
+  managed host **before** formatting. A random identifier in the new LUKS2
+  subsystem field ties an interrupted transaction to its credential. Rerun
+  with the same declaration, TPM and PCR state to finish it. The role tests
+  the actual enrolled token before dropping **only its own temporary key**,
+  verifies the final header, then clears the marker and sealed credential.
+  Do not remove a pending credential or alter the PCR state during creation.
+  An interruption before the format or after clearing the marker may leave an
+  unused sealed credential on the host.
+
+  `mode: only` also accepts an existing, verifiably TPM-only volume. It **never
+  converts existing user keyslots** into a TPM-only setup. A completed TPM-only
+  volume has no independent unlock credential: loss of that TPM or a PCR policy
+  mismatch can make the data inaccessible. TPM+PIN, signed PCR policies, key
+  rotation and recovery after TPM replacement are outside this interface.
 
 - `deduplication`
 
@@ -442,6 +529,43 @@ platforms with "buggy" udev.
           fs_label: images
 
 ```
+
+### Inspect an existing encrypted volume
+
+This example checks an existing encrypted LV using a passphrase supplied by an
+encrypted variable file (for example, Ansible Vault). No plaintext passphrase is
+stored in the playbook. Alternatively, replace `encryption_password` with
+`encryption_key: /root/existing-volume.key`; the key file must already exist on
+the managed host.
+
+```yaml
+- name: Check an existing encrypted volume
+  hosts: storage_hosts
+  check_mode: true
+  vars:
+    storage_safe_mode: true
+    storage_pools:
+      - name: app
+        type: lvm
+        volumes:
+          - name: secret
+            encryption: true
+            encryption_password: "{{ vault_existing_volume_passphrase }}"
+            mount_point: /srv/secret
+  tasks:
+    - name: Inspect storage without logging credential-bearing results
+      include_role:
+        name: linux-system-roles.storage
+        apply:
+          no_log: true
+      no_log: true
+```
+
+Check mode can temporarily open the closed mapping to inspect its existing
+filesystem, but closes that temporary mapping before returning, even on failure.
+It does not mount or reformat the filesystem. A mapping that was already open
+stays open. Omitting `check_mode: true` applies the declaration normally and leaves
+the declared encrypted volume open and mounted.
 
 ## rpm-ostree
 

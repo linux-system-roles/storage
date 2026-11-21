@@ -104,9 +104,45 @@
             mount_point: "{{ mount_location }}"
             encryption: true
             encryption_password: yabbadabbadoo
+            crypttab_options: noauto
 
     - name: Verify role results
       include_tasks: verify-role-results.yml
+
+    # Assisted by OpenCode using model GPT-6.2 Astra
+    - name: Change only the unlock options of the existing volume
+      vars:
+        storage_volumes:
+          - name: foo
+            type: disk
+            disks: "{{ unused_disks }}"
+            mount_point: "{{ mount_location }}"
+            encryption_password: yabbadabbadoo
+            crypttab_options: noauto,nofail
+      block:
+        - name: Preview the options change
+          ansible.builtin.include_tasks:
+            file: tasks/run_role_with_clear_facts.yml
+            apply:
+              check_mode: true
+
+        - name: Verify the predicted change
+          ansible.builtin.assert:
+            that:
+              - __storage_crypttab_update is changed
+              - not blivet_output.changed
+
+        - name: Apply the same options
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+
+        - name: Verify check mode left the change to be applied
+          ansible.builtin.assert:
+            that:
+              - __storage_crypttab_update is changed
+              - not blivet_output.changed
+
+    - name: Verify updated volume options
+      ansible.builtin.include_tasks: verify-role-results.yml
 
     - name: Create test file
       import_tasks: create-test-file.yml
@@ -382,6 +418,7 @@
                 encryption_luks_version: luks1
                 encryption_key_size: 512
                 encryption_cipher: "{{ __luks_cipher }}"
+                crypttab_options: noauto
 
     - name: Verify role results - 7
       include_tasks: verify-role-results.yml
@@ -403,6 +440,7 @@
       assert:
         that:
           - not blivet_output.changed
+          - __storage_crypttab_update is not changed
           - blivet_output.pools[0].volumes[0].encryption
           - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks1'
 

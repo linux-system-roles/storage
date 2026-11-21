@@ -8,6 +8,10 @@ argument_specs:
       including file systems, LVM volume groups, Stratis pools,
       RAID arrays, and encrypted volumes with minimal input.
     options:
+      storage_secure_logging:
+        type: bool
+        default: true
+        description: Hide tasks that handle credential-bearing volume declarations and results.
       storage_provider:
         type: str
         default: blivet
@@ -237,6 +241,34 @@ argument_specs:
             description: >
               LUKS version to use for the volume, such as
               `luks1` or `luks2`.
+          crypttab_options:
+            type: str
+            description: >
+              Comma-separated options for the volume's entry in
+              `/etc/crypttab`. Omit to preserve existing options;
+              use an empty string to remove the options field.
+              Applies to volumes with their own LUKS encryption.
+          encryption_tpm2:
+            type: dict
+            description: >
+              Enroll a systemd TPM2 token on this volume's own LUKS2 header.
+              Omit to leave tokens unchanged. Independent of crypttab_options.
+            options:
+              pcrs:
+                type: list
+                elements: int
+                required: true
+                description: >
+                  Unique PCR indices (0 through 23) to bind on the local TPM.
+                  An explicit empty list binds to the TPM without a PCR policy.
+              mode:
+                type: str
+                choices: [enroll, only]
+                default: enroll
+                description: >
+                  Enroll preserves existing unlock methods. Only creates a
+                  TPM-only volume or adopts an already TPM-only volume; it
+                  never converts an existing password-protected volume.
           compression:
             type: bool
             description: >
@@ -509,6 +541,7 @@ argument_specs:
           encryption_cipher: null
           encryption_key_size: null
           encryption_luks_version: null
+          crypttab_options: null
           compression: null
           deduplication: null
           vdo_pool_size: null

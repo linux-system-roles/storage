@@ -1,5 +1,24 @@
 # SPDX-License-Identifier: MIT
 ---
+# Assisted by OpenCode using model GPT-6.2 Astra
+- name: Validate TPM enrollment and encryption settings together
+  ansible.builtin.assert:
+    that:
+      - item.encryption is not defined or item.encryption is none or (item.encryption | bool)
+      - item.encryption_luks_version | d('luks2', true) == 'luks2'
+      - >-
+        item.encryption_tpm2.mode | d('enroll') != 'only' or
+        (not (item.encryption_password | d(false)) and not (item.encryption_key | d(false)))
+    fail_msg: TPM enrollment requires LUKS2, and TPM-only creation cannot include a user unlock credential.
+  loop: >-
+    {{ ((storage_volumes | d([])) +
+        (storage_pools | d([]) | selectattr('volumes', 'defined') | map(attribute='volumes') | flatten))
+       | selectattr('encryption_tpm2', 'defined') | rejectattr('encryption_tpm2', 'none') | list }}
+  loop_control:
+    label: "{{ item.name | d('unnamed') }}"
+  when: item.state | d('present') == 'present'
+  no_log: "{{ storage_secure_logging }}"
+
 - name: Assert storage_use_partitions is null or a boolean
   ansible.builtin.assert:
     that:
@@ -38,6 +57,7 @@
       or float, or a size string starting with a digit,
       got {{ item.size | type_debug }}: {{ item.size }}
   loop: "{{ storage_volumes | default([]) }}"
+  no_log: "{{ storage_secure_logging }}"
   loop_control:
     index_var: idx
     label: "{{ item.name | d('unnamed') }}"
@@ -62,6 +82,7 @@
       integer or float, or a size string starting with a digit,
       got {{ item.cache_size | type_debug }}: {{ item.cache_size }}
   loop: "{{ storage_volumes | default([]) }}"
+  no_log: "{{ storage_secure_logging }}"
   loop_control:
     index_var: idx
     label: "{{ item.name | d('unnamed') }}"
@@ -86,6 +107,7 @@
   loop: >-
     {{ storage_pools | default([])
        | subelements('volumes', skip_missing=True) }}
+  no_log: "{{ storage_secure_logging }}"
   loop_control:
     label: "{{ item.0.name | d('unnamed') }}/{{ item.1.name | d('unnamed') }}"
   when: item.1.size is defined
@@ -112,6 +134,7 @@
   loop: >-
     {{ storage_pools | default([])
        | subelements('volumes', skip_missing=True) }}
+  no_log: "{{ storage_secure_logging }}"
   loop_control:
     label: "{{ item.0.name | d('unnamed') }}/{{ item.1.name | d('unnamed') }}"
   when: item.1.cache_size is defined

@@ -107,6 +107,36 @@
             encryption_password: yabbadabbadoo
             encryption_luks_version: luks2
 
+    # Assisted by OpenCode using models GPT-6.1 Sol, GPT-6.2 Astra
+    - name: Verify crypttab was loaded during the first role invocation
+      when: ansible_facts['service_mgr'] == 'systemd'
+      block:
+        # systemd-escape on EL7 rejects --template for this unit.
+        - name: Escape the new cryptsetup instance name
+          command:
+            argv:
+              - systemd-escape
+              - --
+              - "{{ blivet_output.crypts[0].name }}"
+          register: storage_test_cryptsetup_instance
+          changed_when: false
+
+        - name: Inspect the new cryptsetup unit without reloading systemd
+          command:
+            argv:
+              - systemctl
+              - show
+              - "systemd-cryptsetup@{{ storage_test_cryptsetup_instance.stdout }}.service"
+              - --property=LoadState,SourcePath
+          register: storage_test_cryptsetup_state
+          changed_when: false
+
+        - name: Require the generated crypttab unit before any role rerun
+          assert:
+            that:
+              - "'LoadState=loaded' in storage_test_cryptsetup_state.stdout_lines"
+              - "'SourcePath=/etc/crypttab' in storage_test_cryptsetup_state.stdout_lines"
+
     - name: Verify role results
       include_tasks: verify-role-results.yml
 
@@ -312,6 +342,10 @@
 
     - name: Test key file handling
       block:
+        - name: Initialize key-file reopening cleanup state
+          set_fact:
+            storage_test_luks_key_restore: null
+
         - name: Create a key file
           tempfile:
             prefix: storage_test
@@ -345,180 +379,461 @@
 
         - name: Verify role results - 6
           include_tasks: verify-role-results.yml
+
+        # Assisted by OpenCode using model GPT-6.1 Sol
+        - name: Create test file before key-file reopening
+          import_tasks: create-test-file.yml
+
+        - name: Record identifiers before reopening a key-file volume
+          set_fact:
+            storage_test_luks_device: "{{ blivet_output.pools[0].volumes[0]._device }}"
+            storage_test_luks_mount_id: "{{ blivet_output.pools[0].volumes[0]._mount_id }}"
+            storage_test_luks_key_restore:
+              device: "{{ blivet_output.pools[0].volumes[0]._device }}"
+              raw_device: "{{ blivet_output.pools[0].volumes[0]._raw_device }}"
+              key: "{{ storage_test_key_file.path }}"
+
+        - name: Record LUKS metadata before an incorrect key attempt
+          command:
+            argv: [cryptsetup, luksDump, "{{ storage_test_luks_key_restore.raw_device }}"]
+          register: storage_test_luks_metadata_before
+          changed_when: false
+
+        - name: Create an incorrect key file
+          tempfile:
+            prefix: storage_test
+            suffix: wronglukskey
+          register: storage_test_wrong_key_file
+          changed_when: false
+
+        - name: Write an incorrect disposable key
+          copy:
+            dest: "{{ storage_test_wrong_key_file.path }}"
+            content: deliberately-incorrect-test-key
+            mode: "0600"
+          changed_when: false
+
+        - name: Unmount the key-file volume
+          command:
+            argv: [umount, --, "{{ mount_location }}"]
+          changed_when: true
+
+        - name: Close the key-file volume
+          command:
+            argv: [cryptsetup, close, "{{ storage_test_luks_device | basename }}"]
+          changed_when: true
+
+        - name: Reject reopening with an incorrect key file
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: failed to unlock volume
+            __storage_failed_msg: Incorrect key unexpectedly reopened the volume
+            __storage_failed_params:
+              storage_safe_mode: true
+              storage_pools:
+                - name: foo
+                  type: partition
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      type: partition
+                      mount_point: "{{ mount_location }}"
+                      size: 4g
+                      encryption: true
+                      encryption_key: "{{ storage_test_wrong_key_file.path }}"
+                      encryption_luks_version: luks2
+
+        - name: Inspect the mapping after the incorrect key attempt
+          stat:
+            path: "{{ storage_test_luks_device }}"
+          register: storage_test_luks_wrong_key_mapping
+
+        - name: Inspect LUKS metadata after the incorrect key attempt
+          command:
+            argv: [cryptsetup, luksDump, "{{ storage_test_luks_key_restore.raw_device }}"]
+          register: storage_test_luks_metadata_after
+          changed_when: false
+
+        - name: Assert that an incorrect key preserves the closed LUKS format
+          assert:
+            that:
+              - not storage_test_luks_wrong_key_mapping.stat.exists
+              - storage_test_luks_metadata_after.stdout == storage_test_luks_metadata_before.stdout
+
+        - name: Reopen the volume with its key file in safe mode
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: partition
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    type: partition
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_key: "{{ storage_test_key_file.path }}"
+                    encryption_luks_version: luks2
+
+        - name: Assert preservation of the reopened key-file volume
+          assert:
+            that:
+              - not blivet_output.changed
+              - blivet_output.actions | length == 0
+              - blivet_output.crypts | length == 0
+              - blivet_output.pools[0].volumes[0]._device == storage_test_luks_device
+              - blivet_output.pools[0].volumes[0]._mount_id == storage_test_luks_mount_id
+
+        - name: Verify data preservation after key-file reopening
+          import_tasks: verify-data-preservation.yml
       always:
+        - name: Restore the key-file fixture before deleting its credentials
+          include_tasks: tasks/restore_luks_volume.yml
+          vars:
+            storage_test_luks_restore: "{{ storage_test_luks_key_restore }}"
+          when: storage_test_luks_key_restore | default(none) is not none
+          tags: tests::cleanup
+
+        - name: Remove the incorrect key file
+          file:
+            path: "{{ storage_test_wrong_key_file.path }}"
+            state: absent
+          when: storage_test_wrong_key_file.path is defined
+          changed_when: false
+          tags: tests::cleanup
+
         - name: Remove the key file
           file:
             path: "{{ storage_test_key_file.path }}"
             state: absent
+          when: storage_test_key_file.path is defined
           changed_when: false
+          tags: tests::cleanup
 
     ##
     ## LVM
     ##
 
-    - name: Test for correct handling of new encrypted volume w/ no key - 3
-      include_tasks: verify-role-failed.yml
-      vars:
-        __storage_failed_regex: encrypted volume.*missing key
-        __storage_failed_msg: >-
-          Unexpected behavior w/ encrypted pool w/ no key
-        __storage_failed_params:
-          storage_safe_mode: false
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  mount_point: "{{ mount_location }}"
-                  size: 4g
-                  encryption: true
-                  encryption_luks_version: luks2
+    # Assisted by OpenCode using model GPT-6.1 Sol
+    - name: Test encrypted LVM volumes with guaranteed cleanup
+      block:
+        - name: Remove the partition fixture before safe-mode LVM creation
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools: []
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                state: absent
+          tags: tests::cleanup
 
-    - name: Create an encrypted lvm volume w/ default fs
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
-                encryption: true
-                encryption_password: yabbadabbadoo
-                encryption_luks_version: luks2
-                encryption_key_size: 512
-                encryption_cipher: "{{ __luks_cipher }}"
+        - name: Test for correct handling of new encrypted volume w/ no key - 3
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: encrypted volume.*missing key
+            __storage_failed_msg: >-
+              Unexpected behavior w/ encrypted pool w/ no key
+            __storage_failed_params:
+              storage_safe_mode: false
+              storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      mount_point: "{{ mount_location }}"
+                      size: 4g
+                      encryption: true
+                      encryption_luks_version: luks2
 
-    - name: Verify role results - 7
-      include_tasks: verify-role-results.yml
+        - name: Create an encrypted lvm volume w/ default fs in safe mode
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_password: yabbadabbadoo
+                    encryption_luks_version: luks2
+                    encryption_key_size: 512
+                    encryption_cipher: "{{ __luks_cipher }}"
 
-    - name: Verify preservation of encryption settings on existing LVM volume
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
+        - name: Verify role results - 7
+          include_tasks: verify-role-results.yml
 
-    - name: Assert preservation of encryption settings on existing LVM volume
-      assert:
-        that:
-          - not blivet_output.changed
-          - blivet_output.pools[0].volumes[0].encryption
-          - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks2'
+        - name: Verify preservation of encryption settings on existing LVM volume
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: true
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
 
-    - name: Verify role results - 8
-      include_tasks: verify-role-results.yml
+        - name: Assert preservation of encryption settings on existing LVM volume
+          assert:
+            that:
+              - not blivet_output.changed
+              - blivet_output.pools[0].volumes[0].encryption
+              - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks2'
 
-    - name: Create test file - 5
-      import_tasks: create-test-file.yml
+        - name: Verify role results - 8
+          include_tasks: verify-role-results.yml
 
-    - name: Test for correct handling of safe_mode - 5
-      include_tasks: verify-role-failed.yml
-      vars:
-        __storage_failed_regex: >-
-          cannot remove existing formatting.*in safe mode due to encryption
-          removal
-        __storage_failed_msg: >-
-          Unexpected behavior w/ existing volume in safe mode
-        __storage_failed_params:
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  mount_point: "{{ mount_location }}"
-                  size: 4g
-                  encryption: false
-                  encryption_password: yabbadabbadoo
-                  encryption_luks_version: luks2
+        - name: Create test file - 5
+          import_tasks: create-test-file.yml
 
-    - name: Verify data preservation - 5
-      import_tasks: verify-data-preservation.yml
+        - name: Record identifiers before reopening the LVM volume
+          set_fact:
+            storage_test_luks_device: "{{ blivet_output.pools[0].volumes[0]._device }}"
+            storage_test_luks_mount_id: "{{ blivet_output.pools[0].volumes[0]._mount_id }}"
+            storage_test_luks_restore:
+              device: "{{ blivet_output.pools[0].volumes[0]._device }}"
+              raw_device: "{{ blivet_output.pools[0].volumes[0]._raw_device }}"
+              password: yabbadabbadoo
 
-    - name: Remove the encryption layer - 3
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
-                encryption: false
-                encryption_password: yabbadabbadoo
-                encryption_luks_version: luks2
+        - name: Test closed LVM inspection and reopening
+          # Assisted by OpenCode using model GPT-6.2 Astra
+          vars:
+            storage_test_luks_unit_name: "systemd-cryptsetup@{{ storage_test_luks_instance.stdout }}.service"
+          block:
+            - name: Unmount the LVM volume
+              command:
+                argv: [umount, --, "{{ mount_location }}"]
+              changed_when: true
 
-    - name: Verify role results - 9
-      include_tasks: verify-role-results.yml
+            - name: Prepare systemd state assertions for closed LVM inspection
+              when: ansible_facts['service_mgr'] == 'systemd'
+              block:
+                - name: Escape the fixture cryptsetup instance name
+                  command:
+                    argv:
+                      - systemd-escape
+                      - --
+                      - "{{ storage_test_luks_device | basename }}"
+                  register: storage_test_luks_instance
+                  changed_when: false
 
-    - name: Create test file - 6
-      import_tasks: create-test-file.yml
+                # On EL7, stopping an active service after manually closing its
+                # mapper makes ExecStop fail, so it cannot be our inactive baseline.
+                - name: Stop only the fixture's cryptsetup service
+                  systemd:
+                    name: "{{ storage_test_luks_unit_name }}"
+                    state: stopped
 
-    - name: Test for correct handling of safe_mode - 6
-      include_tasks: verify-role-failed.yml
-      vars:
-        __storage_failed_regex: >-
-          cannot remove existing formatting.*in safe mode due to adding
-          encryption
-        __storage_failed_msg: >-
-          Unexpected behavior w/ existing volume in safe mode
-        __storage_failed_params:
-          storage_pools:
-            - name: foo
-              type: lvm
-              disks: "{{ unused_disks }}"
-              volumes:
-                - name: test1
-                  mount_point: "{{ mount_location }}"
-                  size: 4g
-                  encryption: true
-                  encryption_password: yabbadabbadoo
-                  encryption_luks_version: luks2
+                - name: Record the inactive fixture service state
+                  command:
+                    argv:
+                      - systemctl
+                      - show
+                      - "{{ storage_test_luks_unit_name }}"
+                      - --property=ActiveState,SubState,UnitFileState
+                  register: storage_test_luks_unit_before
+                  changed_when: false
 
-    - name: Verify data preservation - 6
-      import_tasks: verify-data-preservation.yml
+                # Do not clear facts before the role: cached discovery can be stale.
+                - name: Seed stale service discovery without the new cryptsetup unit
+                  set_fact:
+                    services: {}
+                    cacheable: true
 
-    - name: Add encryption to the volume - 3
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_safe_mode: false
-        storage_pools:
-          - name: foo
-            type: lvm
-            disks: "{{ unused_disks }}"
-            volumes:
-              - name: test1
-                mount_point: "{{ mount_location }}"
-                size: 4g
-                encryption: true
-                encryption_password: yabbadabbadoo
-                encryption_luks_version: luks2
+            - name: Close the LVM volume if the service did not close it
+              command:
+                argv: [cryptsetup, close, "{{ storage_test_luks_device | basename }}"]
+                removes: "{{ storage_test_luks_device }}"
 
-    - name: Verify role results - 10
-      include_tasks: verify-role-results.yml
+            - name: Check reopening without leaving the LVM mapping open
+              include_role:
+                name: linux-system-roles.storage
+                apply:
+                  check_mode: true
+              vars:
+                storage_safe_mode: true
+                storage_pools:
+                  - name: foo
+                    type: lvm
+                    disks: "{{ unused_disks }}"
+                    volumes:
+                      - name: test1
+                        mount_point: "{{ mount_location }}"
+                        size: 4g
+                        encryption_password: yabbadabbadoo
 
-    - name: Clean up
-      include_tasks: tasks/run_role_with_clear_facts.yml
-      vars:
-        storage_volumes:
-          - name: foo
-            type: disk
-            disks: "{{ unused_disks }}"
-            state: absent
+            - name: Inspect the mapping after check mode
+              stat:
+                path: "{{ storage_test_luks_device }}"
+              register: storage_test_luks_after_check
 
-    - name: Verify role results - 11
-      include_tasks: verify-role-results.yml
+            - name: Assert that check mode restored the closed mapping
+              assert:
+                that: not storage_test_luks_after_check.stat.exists
+
+            - name: Verify cryptsetup service preservation after check mode
+              when: ansible_facts['service_mgr'] == 'systemd'
+              block:
+                - name: Read the fixture service state after inspection
+                  command:
+                    argv:
+                      - systemctl
+                      - show
+                      - "{{ storage_test_luks_unit_name }}"
+                      - --property=ActiveState,SubState,UnitFileState
+                  register: storage_test_luks_unit_after
+                  changed_when: false
+
+                - name: Require unchanged inactive service and original masking
+                  assert:
+                    that:
+                      - storage_test_luks_unit_after.stdout == storage_test_luks_unit_before.stdout
+                      - "'ActiveState=inactive' in storage_test_luks_unit_after.stdout"
+
+            - name: Verify preservation of encryption settings on a reopened LVM volume
+              include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                storage_safe_mode: true
+                storage_pools:
+                  - name: foo
+                    type: lvm
+                    disks: "{{ unused_disks }}"
+                    volumes:
+                      - name: test1
+                        mount_point: "{{ mount_location }}"
+                        size: 4g
+                        encryption_password: yabbadabbadoo
+
+            - name: Assert reopening preserved the mapper and filesystem identifiers
+              assert:
+                that:
+                  - not blivet_output.changed
+                  - blivet_output.actions | length == 0
+                  - blivet_output.crypts | length == 0
+                  - blivet_output.pools[0].volumes[0].encryption
+                  - blivet_output.pools[0].volumes[0].encryption_luks_version == 'luks2'
+                  - blivet_output.pools[0].volumes[0]._device == storage_test_luks_device
+                  - blivet_output.pools[0].volumes[0]._mount_id == storage_test_luks_mount_id
+
+            - name: Verify data preservation after reopening the LVM volume
+              import_tasks: verify-data-preservation.yml
+          always:
+            - name: Restore the original LVM mapping and mount
+              include_tasks: tasks/restore_luks_volume.yml
+              tags: tests::cleanup
+
+        - name: Test for correct handling of safe_mode - 5
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: >-
+              cannot remove existing formatting.*in safe mode due to encryption
+              removal
+            __storage_failed_msg: >-
+              Unexpected behavior w/ existing volume in safe mode
+            __storage_failed_params:
+              storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      mount_point: "{{ mount_location }}"
+                      size: 4g
+                      encryption: false
+                      encryption_password: yabbadabbadoo
+                      encryption_luks_version: luks2
+
+        - name: Verify data preservation - 5
+          import_tasks: verify-data-preservation.yml
+
+        - name: Remove the encryption layer - 3
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: false
+                    encryption_password: yabbadabbadoo
+                    encryption_luks_version: luks2
+
+        - name: Verify role results - 9
+          include_tasks: verify-role-results.yml
+
+        - name: Create test file - 6
+          import_tasks: create-test-file.yml
+
+        - name: Test for correct handling of safe_mode - 6
+          include_tasks: verify-role-failed.yml
+          vars:
+            __storage_failed_regex: >-
+              cannot remove existing formatting.*in safe mode due to adding
+              encryption
+            __storage_failed_msg: >-
+              Unexpected behavior w/ existing volume in safe mode
+            __storage_failed_params:
+              storage_pools:
+                - name: foo
+                  type: lvm
+                  disks: "{{ unused_disks }}"
+                  volumes:
+                    - name: test1
+                      mount_point: "{{ mount_location }}"
+                      size: 4g
+                      encryption: true
+                      encryption_password: yabbadabbadoo
+                      encryption_luks_version: luks2
+
+        - name: Verify data preservation - 6
+          import_tasks: verify-data-preservation.yml
+
+        - name: Add encryption to the volume - 3
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools:
+              - name: foo
+                type: lvm
+                disks: "{{ unused_disks }}"
+                volumes:
+                  - name: test1
+                    mount_point: "{{ mount_location }}"
+                    size: 4g
+                    encryption: true
+                    encryption_password: yabbadabbadoo
+                    encryption_luks_version: luks2
+
+        - name: Verify role results - 10
+          include_tasks: verify-role-results.yml
+      always:
+        - name: Clean up the LVM fixture
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            storage_safe_mode: false
+            storage_pools: []
+            storage_volumes:
+              - name: foo
+                type: disk
+                disks: "{{ unused_disks }}"
+                state: absent
+          tags: tests::cleanup
+
+        - name: Verify role results - 11
+          include_tasks: verify-role-results.yml
+          tags: tests::cleanup

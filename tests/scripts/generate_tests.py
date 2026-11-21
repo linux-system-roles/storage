@@ -57,7 +57,8 @@ def generate_file(org_filename, iface):
 
 
 # These are files for which we do not need scsi and nvme testing
-SKIP_FILES = set(("tests_lvm_pool_shared.yml",))
+# The opt-in TPM test varies the unlock method, not the disk interface.
+SKIP_FILES = set(("tests_lvm_pool_shared.yml", "tests_luks_tpm2.yml"))
 
 
 # will new test be generated based on this item?
