@@ -149,6 +149,8 @@ id="toc-storage_pools"><code>storage_pools</code></a></li>
 id="toc-storage_volumes"><code>storage_volumes</code></a></li>
 <li><a href="#storage_safe_mode"
 id="toc-storage_safe_mode"><code>storage_safe_mode</code></a></li>
+<li><a href="#storage_destroy_partition_device"
+id="toc-storage_destroy_partition_device"><code>storage_destroy_partition_device</code></a></li>
 <li><a href="#storage_udevadm_trigger"
 id="toc-storage_udevadm_trigger"><code>storage_udevadm_trigger</code></a></li>
 </ul></li>
@@ -230,6 +232,21 @@ the pool. Supported identifiers include: device node (like
 <code>/dev/sda</code> or <code>/dev/mapper/mpathb</code>), device node
 basename (like <code>sda</code> or <code>mpathb</code>), /dev/disk/
 symlink (like <code>/dev/disk/by-id/wwn-0x5000c5005bc37f3f</code>).</p>
+<p>For LVM pools an existing partition (like <code>sdb1</code> or
+<code>/dev/disk/by-partlabel/data</code>) can be listed instead of a
+whole disk and is used as a physical volume as it is. The partition
+itself is never created or resized by the role: anything on it is
+removed (not in <code>storage_safe_mode</code>) and it is formatted as a
+PV. When the pool is removed or the partition is removed from the pool,
+the partition is destroyed by default. Set
+<code>storage_destroy_partition_device</code> to <code>false</code> to
+wipe the partition contents while preserving the partition itself and
+the partition table. This applies to every partition below the pool,
+also when the pool is removed without repeating <code>disks</code>, and
+also to partitions that were created by the role because of
+<code>storage_use_partitions</code>. Extended partitions cannot be used.
+<code>storage_use_partitions</code> does not apply to members that are
+already partitions.</p>
 <p>For LVM pools this can be also used to add and remove disks to/from
 an existing pool. Disks in the list that are not used by the pool will
 be added to the pool. Disks that are currently used by the pool but not
@@ -476,6 +493,13 @@ table.</p></li>
 <h2 id="storage_safe_mode"><code>storage_safe_mode</code></h2>
 <p>When true (the default), an error will occur instead of automatically
 removing existing devices and/or formatting.</p>
+<h2
+id="storage_destroy_partition_device"><code>storage_destroy_partition_device</code></h2>
+<p>When true (the default), partitions that were given as pool members
+in <code>disks</code> are destroyed when the pool is removed or when
+they are removed from the pool. When false, only the contents of such
+partitions are wiped; the partition and the partition table are
+kept.</p>
 <h2
 id="storage_udevadm_trigger"><code>storage_udevadm_trigger</code></h2>
 <p>When true (the default is false), the role will use udevadm trigger
