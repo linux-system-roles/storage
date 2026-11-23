@@ -1,6 +1,50 @@
 Changelog
 =========
 
+[1.23.0] - 2026-11-23
+--------------------
+
+### New Features
+
+- feat: Argument spec implementation for storage role (#654)
+- feat: allow existing partitions as members of LVM pools (#671)
+
+### Bug Fixes
+
+- fix(packages): install mdadm for RAID support (#677)
+- fix: mount according to mount_depth (#678)
+- fix: mount an efi volume as vfat (#681)
+- fix: reload systemd after crypttab changes (#688)
+- fix: work around blivet < 3.4.1 failure to remove LVM pool members (#697)
+- fix: ensure udev sees md raid member formats after array creation (#700)
+
+### Other Changes
+
+- ci: no CI test by default - implement slash commands for CI tests [citest_skip] (#662)
+- ci: ansible-test-milestone is now version 2.23 - update sanity ignore files (#663)
+- ci: allow lsr org members to run ci tests (#664)
+- ci: Run Dependabot monthly and group changes in a single PR (#670)
+- ci: bump tox-lsr version 3.21.0, myrotvorets/set-commit-status-action, support leap-16.0 (#672)
+- ci: use shared actions and lock workflow dependencies (#673)
+- ci: use shared actions and lock workflow dependencies (#674)
+- ci: Use order 10 for centos vault task so that it runs first (#675)
+- test: check invalid inputs for correct error message (#676)
+- docs: add AI policy; update setup-python, codeql actions (#679)
+- ci: retry centos vault repo failures using new package_retry yum/dnf plugin (#680)
+- docs: tag markdown plain text blocks correctly (#682)
+- ci: Use a fixed 5 minute backoff for CentOS vault repos (#683)
+- ci: support Fedora 45, Ansible 2.22; drop Fedora 43 (#684)
+- ci: use ubuntu 24.04 for test envs that use py39 (#685)
+- ci: use ubuntu 26.04 with podman 5.x and disable apparmor restriction (#689)
+- test: mock get_format to fix failing python unit tests (#692)
+- test: fix findmnt args, use very invalid block size (#693)
+- docs: add AGENTS.md with shared developer conventions from .github (#694)
+- test: fix findmnt args, use very invalid block size (#696)
+- test: remove all installed stratis packages in tests_stratis.yml cleanup (#698)
+- docs: remove extra blank lines from .coderabbit.yaml (#699)
+- ci: update tox-lsr for support for tests/module_utils (#701)
+- test: move test-only modules to tests/library and tests/module_utils (#702)
+
 [1.22.1] - 2026-09-17
 --------------------
 
