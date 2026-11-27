@@ -31,18 +31,18 @@ argument_specs:
           When `false`, partition contents are removed but the
           partition device itself is preserved.
       storage_use_partitions:
-        type: raw
-        default: null
+        type: bool
         description: >
-          Whether to use partition-based layout. Accepts `true`,
-          `false`, or `null`. When `null`, the role selects an
-          appropriate layout automatically.
+          Whether to use partition-based layout. When undefined,
+          the role selects an appropriate layout automatically.
       storage_disklabel_type:
-        type: raw
-        default: null
+        type: str
+        choices:
+          - gpt
+          - msdos
         description: >
           The disk label type to use for partitioning, such as
-          `gpt` or `msdos`. When `null`, the role selects an
+          `gpt` or `msdos`. When undefined, the role selects an
           appropriate label type automatically.
       storage_udevadm_trigger:
         type: bool
@@ -462,16 +462,6 @@ argument_specs:
           volumes: []
           grow_to_fill: false
           encryption: false
-          encryption_password: null
-          encryption_key: null
-          encryption_cipher: null
-          encryption_key_size: null
-          encryption_luks_version: null
-          raid_level: null
-          raid_device_count: null
-          raid_spare_count: null
-          raid_chunk_size: null
-          raid_metadata_version: null
           shared: false
       storage_volume_defaults:
         type: dict
@@ -497,25 +487,7 @@ argument_specs:
           mount_check: 0
           mount_passno: 0
           mount_device_identifier: "uuid"
-          raid_level: null
-          raid_device_count: null
-          raid_spare_count: null
-          raid_chunk_size: null
-          raid_stripe_size: null
-          raid_metadata_version: null
           encryption: false
-          encryption_password: null
-          encryption_key: null
-          encryption_cipher: null
-          encryption_key_size: null
-          encryption_luks_version: null
-          compression: null
-          deduplication: null
-          vdo_pool_size: null
-          thin: null
-          thin_pool_name: null
-          thin_pool_size: null
           cached: false
           cache_size: 0
-          cache_mode: null
           cache_devices: []

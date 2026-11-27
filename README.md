@@ -412,6 +412,19 @@ When true (the default is false), the role will use udevadm trigger
 to cause udev changes to take effect immediately.  This may help on some
 platforms with "buggy" udev.
 
+### `storage_use_partitions`
+
+When set to `true`, the role will create partitions on disks for pool backing devices.
+When set to `false`, the role will use the whole disk.
+When undefined (the default), the role automatically selects an appropriate layout
+based on the system and pool type.
+
+### `storage_disklabel_type`
+
+This specifies the disk label (partition table) type to use, such as `gpt` or `msdos`.
+When undefined (the default), the role automatically selects an appropriate label type
+based on the system and disk size.
+
 ## Example Playbook
 
 ```yaml
