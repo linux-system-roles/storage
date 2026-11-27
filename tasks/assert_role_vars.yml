@@ -1,25 +1,5 @@
 # SPDX-License-Identifier: MIT
 ---
-- name: Assert storage_use_partitions is null or a boolean
-  ansible.builtin.assert:
-    that:
-      - >-
-        (storage_use_partitions is none)
-        or (storage_use_partitions is sameas true)
-        or (storage_use_partitions is sameas false)
-    fail_msg: >-
-      storage_use_partitions must be null or a boolean,
-      got {{ storage_use_partitions | type_debug }}
-
-- name: Assert storage_disklabel_type is null or a string
-  ansible.builtin.assert:
-    that:
-      - >-
-        (storage_disklabel_type is none)
-        or (storage_disklabel_type is string)
-    fail_msg: >-
-      storage_disklabel_type must be null or a string,
-      got {{ storage_disklabel_type | type_debug }}
 
 - name: Assert size in storage_volumes is a string, integer, or float
   ansible.builtin.assert:

@@ -1,9 +1,6 @@
 ---
 # defaults file for template
 storage_provider: "blivet"
-storage_use_partitions: null
-# yamllint disable-line rule:line-length
-storage_disklabel_type: null  # leave unset to allow the role to select an appropriate label type
 # yamllint disable-line rule:line-length
 storage_safe_mode: true  # fail instead of implicitly/automatically removing devices or formatting
 # yamllint enable-line rule:line-length
@@ -17,17 +14,6 @@ storage_pool_defaults:
   grow_to_fill: false
 
   encryption: false
-  encryption_password: null
-  encryption_key: null
-  encryption_cipher: null
-  encryption_key_size: null
-  encryption_luks_version: null
-
-  raid_level: null
-  raid_device_count: null
-  raid_spare_count: null
-  raid_chunk_size: null
-  raid_metadata_version: null
 
   shared: false
 
@@ -48,29 +34,8 @@ storage_volume_defaults:
   mount_passno: 0
   mount_device_identifier: "uuid"  # uuid|label|path
 
-  raid_level: null
-  raid_device_count: null
-  raid_spare_count: null
-  raid_chunk_size: null
-  raid_stripe_size: null
-  raid_metadata_version: null
-
   encryption: false
-  encryption_password: null
-  encryption_key: null
-  encryption_cipher: null
-  encryption_key_size: null
-  encryption_luks_version: null
-
-  compression: null
-  deduplication: null
-  vdo_pool_size: null
-
-  thin: null
-  thin_pool_name: null
-  thin_pool_size: null
 
   cached: false
   cache_size: 0
-  cache_mode: null
   cache_devices: []
